@@ -1,6 +1,9 @@
-export const TARGET_COUNT = 10;
+export const BOSS_COUNT = 10;
+export const PAPER_MONSTER_COUNT = 4;
+export const TARGET_COUNT = BOSS_COUNT + PAPER_MONSTER_COUNT;
 export const GRENADE_COUNT = 3;
 export const BOSS_MAX_HP = 240;
+export const PAPER_MONSTER_MAX_HP = BOSS_MAX_HP / 2;
 export const ARENA_HALF_SIZE = 52;
 
 export type WeaponId = "sniper" | "rifle" | "shotgun";
@@ -99,6 +102,7 @@ export const ENEMY_BLOCKERS = [
   ...ARENA_OBSTACLES.map(({ x, z, w, d }) => ({ x, z, w, d })),
   { x: -39, z: -34, w: 18, d: 16 },
   { x: 35, z: -34, w: 18, d: 18 },
+  { x: -6, z: 43, w: 4.2, d: 4.2 },
 ];
 
 export const TARGET_SPAWNS: [number, number, number][] = [
@@ -114,6 +118,13 @@ export const TARGET_SPAWNS: [number, number, number][] = [
   [46, 0, 42],
 ];
 
+export const PAPER_MONSTER_SPAWNS: [number, number, number][] = [
+  [-34, 0, 17],
+  [20, 0, 3],
+  [38, 0, 30],
+  [-3, 0, -20],
+];
+
 export const PICKUP_SPAWNS: [number, number, number][] = [
   [-7, 0.55, -20],
   [23, 0.55, 18],
@@ -122,16 +133,62 @@ export const PICKUP_SPAWNS: [number, number, number][] = [
   [0, 0.55, 46],
   [41, 0.55, -8],
   [-43, 0.55, 31],
-  [34, 8.7, -34],
+  [34, 9.05, -34],
 ];
 
-export const LADDER_ZONES = [
+export type LadderZone = {
+  x: number;
+  z: number;
+  w: number;
+  d: number;
+  minY: number;
+  maxY: number;
+  snapX: number;
+  snapZ: number;
+  exitX: number;
+  exitY: number;
+  exitZ: number;
+};
+
+export const LADDER_ZONES: LadderZone[] = [
   {
-    x: 44.1,
+    x: 44.35,
     z: -34,
-    w: 2.2,
-    d: 3.1,
-    minY: 0.5,
-    maxY: 9.2,
+    w: 2.7,
+    d: 3.3,
+    minY: 0.45,
+    maxY: 9.35,
+    snapX: 45.05,
+    snapZ: -34,
+    exitX: 42.35,
+    exitY: 9.12,
+    exitZ: -34,
   },
+  {
+    x: -3.85,
+    z: 43,
+    w: 2.8,
+    d: 3.0,
+    minY: 0.45,
+    maxY: 6.9,
+    snapX: -3.05,
+    snapZ: 43,
+    exitX: -4.9,
+    exitY: 6.75,
+    exitZ: 43,
+  },
+];
+
+export const REACTIVE_PLANTS = [
+  { id: "weed-a", kind: "weed", position: [-19, 0.65, 18] },
+  { id: "weed-b", kind: "weed", position: [12, 0.65, 20] },
+  { id: "weed-c", kind: "weed", position: [36, 0.65, 17] },
+  { id: "weed-d", kind: "weed", position: [-37, 0.65, -8] },
+  { id: "weed-e", kind: "weed", position: [8, 0.65, -35] },
+  { id: "flower-a", kind: "flower", position: [-25, 0.75, 36] },
+  { id: "flower-b", kind: "flower", position: [28, 0.75, 39] },
+  { id: "flower-c", kind: "flower", position: [41, 0.75, -20] },
+  { id: "sapling-a", kind: "sapling", position: [-45, 1.15, 23] },
+  { id: "sapling-b", kind: "sapling", position: [44, 1.15, 23] },
+  { id: "sapling-c", kind: "sapling", position: [3, 1.15, 37] },
 ] as const;
