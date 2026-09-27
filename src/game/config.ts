@@ -12,8 +12,10 @@ export type WeaponConfig = {
   damage: number;
   cooldownMs: number;
   pellets: number;
-  spread: number;
+  hipSpread: number;
+  aimedSpread: number;
   scopedFov: number;
+  maxRange: number;
 };
 
 export const WEAPONS: Record<WeaponId, WeaponConfig> = {
@@ -21,46 +23,59 @@ export const WEAPONS: Record<WeaponId, WeaponConfig> = {
     id: "sniper",
     label: "PAPER SNIPER",
     magazine: 5,
-    reserve: 20,
-    damage: 100,
-    cooldownMs: 850,
+    reserve: 25,
+    damage: 118,
+    cooldownMs: 900,
     pellets: 1,
-    spread: 0,
-    scopedFov: 30,
+    hipSpread: 0.052,
+    aimedSpread: 0.0004,
+    scopedFov: 12,
+    maxRange: 110,
   },
   rifle: {
     id: "rifle",
     label: "REPORT RIFLE",
-    magazine: 30,
-    reserve: 120,
-    damage: 34,
-    cooldownMs: 115,
+    magazine: 35,
+    reserve: 175,
+    damage: 29,
+    cooldownMs: 92,
     pellets: 1,
-    spread: 0.008,
-    scopedFov: 48,
+    hipSpread: 0.012,
+    aimedSpread: 0.0035,
+    scopedFov: 31,
+    maxRange: 92,
   },
   shotgun: {
     id: "shotgun",
     label: "STAPLE SHOTGUN",
     magazine: 6,
-    reserve: 30,
-    damage: 22,
-    cooldownMs: 720,
-    pellets: 7,
-    spread: 0.055,
-    scopedFov: 55,
+    reserve: 36,
+    damage: 28,
+    cooldownMs: 690,
+    pellets: 5,
+    hipSpread: 0.085,
+    aimedSpread: 0.067,
+    scopedFov: 64,
+    maxRange: 52,
   },
 };
 
 export const TARGET_SPAWNS: [number, number, number][] = [
-  [-20, 1, -18],
-  [-9, 1, -21],
-  [7, 1, -18],
-  [20, 1, -13],
-  [-19, 1, -2],
-  [17, 1, 2],
-  [-15, 1, 17],
-  [-3, 1, 20],
-  [11, 1, 18],
-  [22, 1, 14],
+  [-20, 0, -18],
+  [-9, 0, -21],
+  [7, 0, -18],
+  [20, 0, -13],
+  [-19, 0, -2],
+  [17, 0, 2],
+  [-15, 0, 17],
+  [-3, 0, 20],
+  [11, 0, 18],
+  [22, 0, 14],
+];
+
+export const PICKUP_SPAWNS: [number, number, number][] = [
+  [-5, 0.55, -13],
+  [18, 0.55, 8],
+  [-18, 0.55, 12],
+  [6, 0.55, 16],
 ];
