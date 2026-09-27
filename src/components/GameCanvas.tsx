@@ -8,6 +8,7 @@ import { HUD } from "./HUD";
 import { MenuOverlay } from "./MenuOverlay";
 import { PaperGrenadeSystem } from "./PaperGrenadeSystem";
 import { PlayerController } from "./PlayerController";
+import { PickupSystem } from "./PickupSystem";
 import { WeaponView } from "./WeaponView";
 import { TARGET_SPAWNS } from "../game/config";
 
@@ -25,6 +26,7 @@ export function GameCanvas() {
             <PlayerController />
             <CombatSystem />
             <PaperGrenadeSystem />
+            <PickupSystem />
             {TARGET_SPAWNS.map((spawn, index) => (
               <Dummy
                 key={index}

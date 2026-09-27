@@ -97,6 +97,8 @@ export function PlayerController() {
     const sliding = now < slideUntil.current;
     const crouching = Boolean(keys.current.KeyC) && !sliding;
     const sprinting = Boolean(keys.current.ShiftLeft || keys.current.ShiftRight) && !crouching && !sliding;
+    const speedMultiplier =
+      now < useGameStore.getState().speedBoostUntil ? 1.48 : 1;
 
     const position = rigid.translation();
     const nearGround = position.y <= 1.52;
@@ -104,12 +106,14 @@ export function PlayerController() {
     if (jumpQueued.current) jumpQueued.current = false;
 
     let horizontal = input.clone().multiplyScalar(
-      crouching ? CROUCH_SPEED : sprinting ? RUN_SPEED : WALK_SPEED,
+      (crouching ? CROUCH_SPEED : sprinting ? RUN_SPEED : WALK_SPEED) *
+        speedMultiplier,
     );
 
     if (sliding) {
       const remaining = Math.max(0, (slideUntil.current - now) / SLIDE_MS);
-      const slideStrength = THREE.MathUtils.lerp(WALK_SPEED, SLIDE_SPEED, remaining);
+      const slideStrength =
+        THREE.MathUtils.lerp(WALK_SPEED, SLIDE_SPEED, remaining) * speedMultiplier;
       horizontal = slideDirection.current.clone().multiplyScalar(slideStrength);
     }
 
@@ -119,7 +123,9 @@ export function PlayerController() {
       vertical = boosted ? BOOST_JUMP_SPEED : JUMP_SPEED;
       if (boosted) {
         const launchDirection = input.lengthSq() > 0 ? input : forward;
-        horizontal = launchDirection.clone().multiplyScalar(RUN_SPEED * 1.42);
+        horizontal = launchDirection
+          .clone()
+          .multiplyScalar(RUN_SPEED * 1.42 * speedMultiplier);
       }
       slideUntil.current = 0;
     }
