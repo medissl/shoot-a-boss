@@ -107,7 +107,6 @@ export function WeaponView() {
   const scoped = useGameStore((state) => state.scoped);
   const movementMode = useGameStore((state) => state.movementMode);
   const reloading = useGameStore((state) => state.reloading);
-  const reloading = useGameStore((state) => state.reloading);
   const [kick, setKick] = useState(false);
   const kickTimer = useRef<number | null>(null);
 
