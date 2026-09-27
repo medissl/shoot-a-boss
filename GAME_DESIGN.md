@@ -1,25 +1,50 @@
-# Shoot a Boss — Game Design / Build Plan
+# Shoot a Boss — Current Game Design
 
 ## Core pitch
 
-**Shoot a Boss** is a short browser FPS presented like an office comic that falls into a doodle dream.
+**Shoot a Boss** is a short browser FPS that looks like somebody drew an action game in a lined notebook.
 
-The player is an exhausted corporate worker who falls asleep after their cartoon boss dumps another impossible stack of paperwork on the desk. The dream turns the office into a boxed-in surreal arena populated by ten copies of the boss.
+The player is an exhausted office worker who falls asleep after their boss dumps another huge stack of paperwork onto the desk. The story is introduced as a six-panel blue-ink comic. The last panel blacks out and the player wakes inside a surreal paper-office dream populated by ten cartoon boss copies.
 
-The player clears the dream with three paper-themed weapons and throwable paper grenades. The tone is slapstick and bloodless: hits use flashes, paper bursts, health bars, and disappearing boss copies rather than gore.
+The tone is comedic and bloodless. Damage is communicated through ink flashes, tracer lines, health bars, paper grenades, and disappearing boss sprites.
 
-## Opening story
+## Visual language
 
-The site opens with a six-panel comic sequence:
+Primary reference:
+- warm white paper
+- blue ballpoint line work
+- blue cross-hatching
+- simple cel-like white/blue shading
+- handwritten UI
+- occasional orange accent for shots, grenades, and feedback
+- procedural 3D architecture with visible blue edge lines
+- 2D illustrated boss billboards facing the player
 
-1. The employee works alone late at night, exhausted.
-2. A round cartoon boss arrives and scolds them.
-3. The boss drops an absurd tower of paperwork onto the desk.
-4. Close-up: the employee is completely drained.
-5. The employee falls asleep at the desk.
-6. The office transforms into a paper dream arena filled with boss copies.
+The game deliberately avoids realistic textures and conventional polished 3D character models.
 
-The intro is built from HTML/CSS illustration rather than external art assets, keeping the project self-contained.
+## Story flow
+
+The website has no pre-game menu.
+
+1. Employee works alone late at night.
+2. Boss arrives and scolds them.
+3. Boss drops an absurd tower of paperwork onto the desk.
+4. Close-up: employee is completely exhausted.
+5. Employee falls asleep at the desk.
+6. The office follows them into the dream.
+
+Panels occupy the center of the viewport and move through the stage like comic frames. Advancing past panel six triggers a blackout followed by a fade directly into gameplay.
+
+## Pause flow
+
+ESC releases pointer lock and pauses.
+
+Pause contains only:
+- Resume
+- Restart
+- Camera sensitivity
+
+There is no return-to-menu action because there is no main menu.
 
 ## Controls
 
@@ -29,131 +54,135 @@ The intro is built from HTML/CSS illustration rather than external art assets, k
 | Shift (hold) | Run |
 | C | Crouch |
 | C while moving | Slide |
-| C then Space | Momentum / velocity boost jump |
+| C then Space | Momentum boost jump |
 | Space | Jump |
 | Mouse | Look |
-| Right click | Shoot |
-| Hold left click | Scope / aim |
+| Left click | Shoot |
+| Hold right click | Aim / scope |
 | 1 / 2 / 3 | Sniper / Rifle / Shotgun |
 | Mouse wheel | Cycle weapon |
 | R | Reload |
 | G | Throw paper grenade |
 | ESC | Pause / release pointer lock |
 
-## Screen flow
+## Movement
 
-1. **Comic intro**
-   - Six-panel sequential story
-   - Next / skip controls
-   - Final "Enter the dream" transition
+Current movement identity is intentionally fast and expressive:
 
-2. **Main menu**
-   - Game pitch and objective
-   - Compact control preview
-   - Start dream
+- normal walk
+- hold Shift to sprint
+- crouch with C
+- C while moving starts a slide
+- jump immediately after crouching/sliding for a forward velocity boost
+- speed pickups temporarily multiply movement speed
 
-3. **Gameplay**
-   - Pointer-lock first-person camera
-   - 10 boss copies
-   - Closed dream-office arena
-   - 3 weapons + paper grenades
-   - HP, ammo, grenade, and target HUD
-
-4. **Pause menu**
-   - Resume
-   - Restart
-   - Return to menu
-   - Options / complete controls
-   - Camera sensitivity
-
-5. **Win / lose**
-   - All 10 boss copies eliminated → win
-   - Player HP reaches 0 → lose
-
-## Visual direction
-
-- American-comic framing for the intro
-- Cream paper backgrounds
-- Heavy black ink outlines
-- Pale blue dream sky
-- Yellow/red comic accents
-- Low-poly 3D geometry
-- Buildings and cover = boxes / office blocks
-- Props = filing cabinets, giant coffee cup, paper trees
-- Boss copies = exaggerated round white-shirt mannequin with tie and angry brows
-- Weapons = hand-drawn SVG first-person overlays
-- UI = sketchbook cards with hard borders and offset shadows
-
-No external 3D models are required for the first version.
-
-## Map
-
-A roughly **56 × 56** unit square arena with solid perimeter walls.
-
-Inside:
-- blocky office-like structures
-- filing cabinet cover
-- oversized coffee-cup prop
-- paper trees
-- open sniper lanes
-- tight shotgun corners
-- central rifle cover
-
-Targets are distributed around the full arena so the player has to move rather than camp one location.
+The movement system should stay recognizable through future polish rather than being replaced by a generic FPS controller.
 
 ## Weapons
 
 ### Paper Sniper
 - 5-round magazine
-- high single-shot damage
-- slow fire rate
-- strongest zoom
-- rewards headshots
+- high damage
+- slow cycle
+- around 5–10× visual zoom compared with hip view
+- tiny spread while scoped
+- intentionally large hip-fire spread
 
 ### Report Rifle
-- 30-round magazine
+- 35-round magazine
+- automatic ~AK-like cadence
 - medium damage
-- fast fire rate
-- light spread
-- general-purpose weapon
+- 2–3× aim zoom
+- mild aimed spread
+- slightly looser hip spread
 
 ### Staple Shotgun
 - 6-round magazine
-- multiple pellets
+- exactly 5 pellets
+- almost no aim zoom
 - wide spread
-- strongest at close range
+- strong close range
+- pellet damage falls with distance
 
 ### Paper grenade
-- 3 per run
+- 3 carried at a time
 - thrown with `G`
 - short fuse
-- radial damage with distance falloff
-- crumpled-paper visual and doodle blast ring
+- radial falloff damage
+- crumpled-paper projectile and doodle burst
 
-## Movement identity
+## Shooting feedback
 
-The movement is intentionally a little expressive for a tiny browser FPS:
+- visible tracer for every bullet / pellet
+- target hit flash
+- orange accent on successful tracer hits
+- small weapon kick on fire
+- weapon-specific scope overlays
 
-- Walk with WASD
-- Hold Shift to sprint
-- Hold C without momentum to crouch
-- Tap/hold C while moving on the ground to slide
-- Jump immediately after crouching/sliding to receive a forward velocity boost
+Future polish:
+- paper impact particles
+- reload animation
+- muzzle scribble / flash
+- weapon audio
 
-This gives the project a movement mechanic worth demonstrating rather than feeling like only a static Three.js shooting demo.
+## Boss enemy
 
-## AI v1
+The old 3D mannequin has been removed.
 
-Two boss-copy personalities:
+Boss copies are now 2D Canvas-texture billboards:
+- fat cartoon office boss
+- white fill
+- blue outline / hatch shading
+- always yaw toward the player
+- fixed ground height
+- walk pose
+- punch pose
+- hit reaction
 
-- **Runner:** retreats when the player gets close and drifts sideways.
-- **Brawler:** approaches when nearby and punches on a short cooldown.
+Two simple behaviors remain:
 
-No navmesh is used in v1. Bosses stay inside the arena boundaries and can be upgraded to obstacle-aware navigation later.
+**Runner**
+- retreats when the player gets close
+- side-steps while escaping
 
-## Tech stack
+**Brawler**
+- closes distance
+- punches when inside melee range
 
-### Frontend / game
+Obstacle-aware navigation can be added later if needed.
+
+## Pickups
+
+Four respawning doodle pickups are distributed around the arena:
+
+**Paper bomb refill**
+- restores grenade capacity
+
+**Speed boost**
+- temporarily multiplies movement speed
+
+Pickups float / rotate, disappear after collection, and respawn after a delay.
+
+## Map
+
+A roughly **56 × 56** closed arena.
+
+Procedural props:
+- office block buildings
+- filing cabinets
+- oversized coffee cup
+- paper trees
+- central cover
+- perimeter walls
+- wireframe dream dome
+
+The layout keeps:
+- long sniper lanes
+- medium-range rifle routes
+- close shotgun corners
+
+## Stack
+
 - Vite
 - React 19
 - TypeScript
@@ -162,62 +191,40 @@ No navmesh is used in v1. Bosses stay inside the arena boundaries and can be upg
 - `@react-three/rapier`
 - Zustand
 
-### Assets
-- Procedural Three.js primitives
-- HTML/CSS comic illustration
-- SVG/CSS weapon overlays
-- No backend assets required
+No backend is needed.
 
-### Backend
-None.
+## Current implementation status
 
-The game has no account, save data, database, or upload requirement.
+### Completed in V2 refactor
+- [x] Refactor plan
+- [x] Remove main menu
+- [x] Comic carousel flow
+- [x] Comic blackout → game fade
+- [x] Blue-ink paper world
+- [x] Left-click shooting / right-click aim
+- [x] Automatic rifle
+- [x] Weapon-specific zoom / spread / falloff
+- [x] Visible bullet tracers
+- [x] New doodle weapon overlays
+- [x] Notebook HUD
+- [x] 2D boss billboard enemy
+- [x] Walk / punch / hit poses
+- [x] Grenade refill pickup
+- [x] Speed pickup
+- [x] Simplified pause overlay
 
-### Hosting
-- GitHub
-- GitHub Actions lint/build check
-- Vercel static deployment
-
-## Build workflow
-
-### Phase 1 — playable vertical slice
-- [x] Six-panel comic intro
-- [x] Main menu
-- [x] Procedural 3D arena
-- [x] Pointer-lock FPS camera
-- [x] WASD + jump
-- [x] Sprint
-- [x] Crouch / slide
-- [x] Crouch-jump velocity boost
-- [x] Three weapon switching
-- [x] Ammo / reload
-- [x] Shoot / scope controls
-- [x] Paper grenade
-- [x] 10 cartoon boss targets
-- [x] Runner + brawler AI
-- [x] HP / ammo / grenade / target HUD
-- [x] Pause / options / sensitivity
-- [x] Win and loss states
-
-### Phase 2 — game feel
-- [ ] Muzzle flash / recoil
-- [x] Target hit flash
-- [ ] Paper impact particles
+### Next polish
+- [ ] Browser playtest and bug pass
 - [ ] Reload animation
-- [ ] Footsteps and weapon sounds
-- [ ] Stronger slide camera feedback
-- [ ] Target obstacle avoidance
-- [ ] Spawn / defeat animation
-
-### Phase 3 — polish
-- [ ] Audio pass
+- [ ] Muzzle scribble
+- [ ] Paper impact particles
+- [ ] Weapon / movement audio
+- [ ] Boss obstacle avoidance
+- [ ] Defeat animation
 - [ ] Performance profiling
-- [ ] Desktop compatibility pass
-- [ ] Touch-device fallback message
-- [ ] README GIF + screenshots
-- [x] GitHub Actions
-- [ ] Vercel production deploy
+- [ ] Production Vercel deployment
+- [ ] README GIF / screenshots
 
 ## Scope rule
 
-Keep this intentionally small. The portfolio value is a polished, complete, funny browser FPS with a clear visual identity — not a giant FPS engine project.
+Keep it small. The goal is a memorable, polished browser game with a strong visual identity — not a general FPS engine.

@@ -1,27 +1,32 @@
 # Shoot a Boss
 
-A tiny browser FPS where an exhausted office worker falls asleep at their desk and dreams of escaping a surreal paper-built office arena filled with ten copies of their cartoon boss.
+A short browser FPS drawn like a blue-ink notebook sketch.
 
-The game is intentionally bloodless and comic-like: doodle weapons, paper grenades, exaggerated boss mannequins, hard ink outlines, and a six-panel opening story built directly in HTML/CSS.
+An exhausted office worker falls asleep at their desk after another impossible pile of paperwork lands in front of them. The website opens as a six-panel comic, blacks out, and drops straight into a surreal paper-office dream where ten cartoon boss copies are waiting.
 
-## Current features
+The game is intentionally slapstick and bloodless. Everything is built from code: procedural 3D geometry, SVG/CSS comic art, Canvas-rendered 2D boss sprites, doodle weapon overlays, and paper-style UI.
 
-- Six-panel comic-style opening sequence
-- First-person pointer-lock camera
-- Closed procedural 3D arena
-- 10 boss copies with runner / brawler behavior
+## Current direction
+
+- White paper / blue ballpoint visual system
+- Six-panel animated comic intro
+- Comic flows directly into gameplay — no main menu
+- Closed procedural dream-office arena
+- 10 billboard-style cartoon boss enemies
+- Runner and brawler behavior
 - Paper Sniper, Report Rifle, and Staple Shotgun
-- Right-click shooting and hold-left aiming
-- Reloading and ammo reserves
+- Left click to shoot
+- Hold right click to aim / scope
+- Automatic rifle fire
+- Visible bullet tracers
+- Weapon-specific zoom, accuracy, spread, and falloff
 - Paper grenade on `G`
-- WASD movement + jump
-- Hold Shift to run
-- `C` to crouch or slide while moving
-- Crouch/slide → jump momentum boost
-- HP / ammo / grenade / target HUD
-- Pause / restart / controls / sensitivity menu
+- Grenade-refill and temporary speed-boost pickups
+- Sprint, crouch, slide, and crouch-jump momentum boost
+- Notebook-style HP / ammo / target / grenade HUD
+- Pause overlay with resume, restart, and sensitivity only
 - Win and loss states
-- No backend, database, accounts, or external 3D assets
+- No backend, database, login, save system, or external 3D models
 
 ## Controls
 
@@ -29,17 +34,37 @@ The game is intentionally bloodless and comic-like: doodle weapons, paper grenad
 | --- | --- |
 | WASD | Move |
 | Shift | Run |
-| C | Crouch / slide |
-| C → Space | Velocity boost jump |
+| C | Crouch / slide while moving |
+| C → Space | Momentum boost jump |
 | Space | Jump |
 | Mouse | Look |
-| Right click | Shoot |
-| Hold left click | Scope / aim |
-| 1 / 2 / 3 | Switch weapon |
+| Left click | Shoot |
+| Hold right click | Aim / scope |
+| 1 / 2 / 3 | Sniper / Rifle / Shotgun |
 | Mouse wheel | Cycle weapon |
 | R | Reload |
 | G | Throw paper grenade |
 | ESC | Pause |
+
+## Weapons
+
+**Paper Sniper**
+- heavy single-shot damage
+- very strong zoom
+- accurate while scoped
+- deliberately unreliable when hip-fired
+
+**Report Rifle**
+- automatic fire
+- medium damage
+- light 2–3× aim zoom
+- mild spread
+
+**Staple Shotgun**
+- 5 pellets per shot
+- almost no zoom
+- strongest up close
+- wide spread and distance falloff
 
 ## Stack
 
@@ -50,7 +75,8 @@ The game is intentionally bloodless and comic-like: doodle weapons, paper grenad
 - Drei
 - Rapier physics
 - Zustand
-- Vercel
+- GitHub Actions
+- Vercel-ready static build
 
 ## Local development
 
@@ -66,6 +92,7 @@ npm run lint
 npm run build
 ```
 
-## Design notes
+## Design / build docs
 
-See [`GAME_DESIGN.md`](./GAME_DESIGN.md) for the narrative, controls, map design, movement system, weapons, AI, and development plan.
+- [`V2_BUILD_GUIDE.md`](./V2_BUILD_GUIDE.md) — the notebook-FPS refactor checklist
+- [`GAME_DESIGN.md`](./GAME_DESIGN.md) — current narrative, systems, map, weapons, and remaining polish
