@@ -27,14 +27,18 @@ export function GameCanvas() {
             <CombatSystem />
             <PaperGrenadeSystem />
             <PickupSystem />
-            {TARGET_SPAWNS.map((spawn, index) => (
-              <Dummy
-                key={index}
-                id={`target-${index}`}
-                spawn={spawn}
-                aggressive={index % 3 === 0}
-              />
-            ))}
+            {TARGET_SPAWNS.map((spawn, index) => {
+              const ranged = index % 3 === 1 || index === 8;
+              return (
+                <Dummy
+                  key={index}
+                  id={`target-${index}`}
+                  spawn={spawn}
+                  archetype={ranged ? "ranged" : "melee"}
+                  rangedWeapon={index % 2 === 0 ? "bow" : "handgun"}
+                />
+              );
+            })}
           </Physics>
         </Suspense>
       </Canvas>

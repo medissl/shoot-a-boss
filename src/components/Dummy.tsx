@@ -10,118 +10,138 @@ type GrenadeDetail = {
   damage: number;
 };
 
-type Pose = "idle" | "walk" | "punch";
+export type EnemyArchetype = "melee" | "ranged";
+export type RangedWeapon = "handgun" | "bow";
+type Pose = "idle" | "walk" | "punch" | "aim";
 
 const BLUE = "#2548b8";
 const PAPER = "#fbfaf4";
 const SHADE = "#dbe3ff";
-const ACCENT = "#d77b16";
+const RED = "#ef476f";
+const PINK = "#ff91b8";
 
-function drawBoss(canvas: HTMLCanvasElement, pose: Pose, hit: boolean) {
+function drawBoss(
+  canvas: HTMLCanvasElement,
+  pose: Pose,
+  hit: boolean,
+  archetype: EnemyArchetype,
+  rangedWeapon: RangedWeapon,
+) {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
 
-  const width = canvas.width;
-  const height = canvas.height;
-  ctx.clearRect(0, 0, width, height);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.save();
-  ctx.translate(width / 2, 35);
+  ctx.translate(canvas.width / 2, 34);
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
   ctx.strokeStyle = BLUE;
-  ctx.fillStyle = PAPER;
   ctx.lineWidth = 10;
 
-  if (hit) {
-    ctx.globalAlpha = 0.92;
-    ctx.fillStyle = "#fff0c8";
-  }
+  const skin = hit ? "#ff9bad" : "#f7d8bb";
+  const shirt = hit ? "#ff6f8d" : PAPER;
 
   // head
+  ctx.fillStyle = skin;
   ctx.beginPath();
-  ctx.ellipse(0, 115, 78, 70, -0.04, 0, Math.PI * 2);
+  ctx.ellipse(0, 114, 80, 71, -0.03, 0, Math.PI * 2);
   ctx.fill();
   ctx.stroke();
 
-  // ears
   ctx.beginPath();
-  ctx.arc(-78, 118, 16, Math.PI * 0.45, Math.PI * 1.55);
-  ctx.arc(78, 118, 16, -Math.PI * 0.55, Math.PI * 0.55);
+  ctx.arc(-80, 118, 16, Math.PI * 0.45, Math.PI * 1.55);
+  ctx.arc(80, 118, 16, -Math.PI * 0.55, Math.PI * 0.55);
   ctx.stroke();
 
-  // angry eyebrows + eyes
+  // angry face
   ctx.beginPath();
-  ctx.moveTo(-46, 87);
-  ctx.lineTo(-14, 98);
-  ctx.moveTo(14, 98);
-  ctx.lineTo(46, 87);
+  ctx.moveTo(-48, 85);
+  ctx.lineTo(-13, 98);
+  ctx.moveTo(13, 98);
+  ctx.lineTo(48, 85);
   ctx.stroke();
-  ctx.fillStyle = BLUE;
+
+  ctx.fillStyle = hit ? "#7a1730" : BLUE;
   ctx.beginPath();
-  ctx.arc(-28, 112, 7, 0, Math.PI * 2);
-  ctx.arc(28, 112, 7, 0, Math.PI * 2);
+  ctx.arc(-29, 112, 7, 0, Math.PI * 2);
+  ctx.arc(29, 112, 7, 0, Math.PI * 2);
   ctx.fill();
 
-  // mouth
-  ctx.strokeStyle = hit ? ACCENT : BLUE;
   ctx.beginPath();
-  ctx.moveTo(-34, 148);
-  ctx.quadraticCurveTo(0, 125, 34, 148);
+  ctx.moveTo(-35, 149);
+  ctx.quadraticCurveTo(0, 126, 35, 149);
   ctx.stroke();
-  ctx.strokeStyle = BLUE;
 
-  // torso
-  ctx.fillStyle = hit ? "#fff0c8" : PAPER;
+  // body
+  ctx.fillStyle = shirt;
   ctx.beginPath();
-  ctx.moveTo(-92, 195);
-  ctx.quadraticCurveTo(-132, 275, -112, 390);
-  ctx.quadraticCurveTo(0, 445, 112, 390);
-  ctx.quadraticCurveTo(132, 275, 92, 195);
+  ctx.moveTo(-92, 194);
+  ctx.quadraticCurveTo(-137, 278, -112, 393);
+  ctx.quadraticCurveTo(0, 447, 112, 393);
+  ctx.quadraticCurveTo(137, 278, 92, 194);
   ctx.closePath();
   ctx.fill();
   ctx.stroke();
 
-  // cross hatch shadow
+  // blue hatch/cel shade
   ctx.save();
-  ctx.globalAlpha = 0.28;
-  ctx.strokeStyle = BLUE;
+  ctx.beginPath();
+  ctx.moveTo(-92, 194);
+  ctx.quadraticCurveTo(-137, 278, -112, 393);
+  ctx.quadraticCurveTo(0, 447, 112, 393);
+  ctx.quadraticCurveTo(137, 278, 92, 194);
+  ctx.closePath();
+  ctx.clip();
+  ctx.globalAlpha = hit ? 0.17 : 0.26;
+  ctx.strokeStyle = hit ? "#861f39" : BLUE;
   ctx.lineWidth = 4;
-  for (let i = -92; i < 112; i += 20) {
+  for (let i = -155; i < 115; i += 20) {
     ctx.beginPath();
-    ctx.moveTo(i, 355);
-    ctx.lineTo(i + 70, 415);
+    ctx.moveTo(i, 315);
+    ctx.lineTo(i + 100, 430);
     ctx.stroke();
   }
   ctx.restore();
 
   // tie
-  ctx.fillStyle = SHADE;
+  ctx.fillStyle = hit ? "#7a1730" : SHADE;
   ctx.beginPath();
   ctx.moveTo(0, 202);
   ctx.lineTo(-20, 235);
-  ctx.lineTo(-5, 330);
-  ctx.lineTo(0, 345);
-  ctx.lineTo(6, 330);
+  ctx.lineTo(-6, 330);
+  ctx.lineTo(0, 347);
+  ctx.lineTo(7, 330);
   ctx.lineTo(20, 235);
   ctx.closePath();
   ctx.fill();
   ctx.stroke();
 
-  // arms
-  const walkOffset = pose === "walk" ? 16 : 0;
-  const leftHand = pose === "punch" ? [-150, 210] : [-145, 315 + walkOffset];
-  const rightHand = pose === "punch" ? [175, 195] : [145, 315 - walkOffset];
+  const walking = pose === "walk";
+  const punching = pose === "punch";
+  const aiming = pose === "aim";
 
+  const leftHand: [number, number] = punching
+    ? [-154, 211]
+    : aiming
+      ? [-134, 245]
+      : [-145, 315 + (walking ? 15 : 0)];
+
+  const rightHand: [number, number] = punching
+    ? [178, 193]
+    : aiming
+      ? [158, 220]
+      : [145, 315 - (walking ? 15 : 0)];
+
+  ctx.strokeStyle = BLUE;
   ctx.lineWidth = 18;
   ctx.beginPath();
-  ctx.moveTo(-84, 230);
+  ctx.moveTo(-84, 229);
   ctx.lineTo(leftHand[0], leftHand[1]);
-  ctx.moveTo(84, 230);
+  ctx.moveTo(84, 229);
   ctx.lineTo(rightHand[0], rightHand[1]);
   ctx.stroke();
 
-  // clenched fists
-  ctx.fillStyle = PAPER;
+  ctx.fillStyle = skin;
   ctx.lineWidth = 8;
   for (const [x, y] of [leftHand, rightHand]) {
     ctx.beginPath();
@@ -130,80 +150,158 @@ function drawBoss(canvas: HTMLCanvasElement, pose: Pose, hit: boolean) {
     ctx.stroke();
   }
 
+  // ranged prop
+  if (archetype === "ranged") {
+    ctx.strokeStyle = hit ? "#7a1730" : BLUE;
+    ctx.fillStyle = PAPER;
+    if (rangedWeapon === "handgun") {
+      ctx.lineWidth = 7;
+      ctx.beginPath();
+      ctx.moveTo(rightHand[0] - 4, rightHand[1] - 4);
+      ctx.lineTo(rightHand[0] + 72, rightHand[1] - 35);
+      ctx.lineTo(rightHand[0] + 83, rightHand[1] - 18);
+      ctx.lineTo(rightHand[0] + 20, rightHand[1] + 2);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(rightHand[0] + 14, rightHand[1]);
+      ctx.lineTo(rightHand[0] + 28, rightHand[1] + 43);
+      ctx.stroke();
+    } else {
+      ctx.lineWidth = 7;
+      ctx.beginPath();
+      ctx.arc(rightHand[0] + 15, rightHand[1], 58, -1.15, 1.15);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(rightHand[0] + 39, rightHand[1] - 52);
+      ctx.lineTo(rightHand[0] - 15, rightHand[1]);
+      ctx.lineTo(rightHand[0] + 39, rightHand[1] + 52);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(rightHand[0] - 19, rightHand[1]);
+      ctx.lineTo(rightHand[0] + 80, rightHand[1]);
+      ctx.stroke();
+    }
+  }
+
   // legs
-  const step = pose === "walk" ? 25 : 0;
+  const step = walking ? 24 : 0;
+  ctx.strokeStyle = BLUE;
   ctx.lineWidth = 22;
   ctx.beginPath();
   ctx.moveTo(-44, 405);
-  ctx.lineTo(-55 - step, 535);
+  ctx.lineTo(-55 - step, 536);
   ctx.moveTo(44, 405);
-  ctx.lineTo(55 + step, 535);
+  ctx.lineTo(55 + step, 536);
   ctx.stroke();
 
   ctx.lineWidth = 9;
   ctx.beginPath();
-  ctx.moveTo(-91 - step, 538);
-  ctx.lineTo(-34 - step, 538);
-  ctx.moveTo(34 + step, 538);
-  ctx.lineTo(91 + step, 538);
+  ctx.moveTo(-91 - step, 539);
+  ctx.lineTo(-34 - step, 539);
+  ctx.moveTo(34 + step, 539);
+  ctx.lineTo(91 + step, 539);
   ctx.stroke();
 
-  // motion / punch marks
-  if (pose === "punch") {
-    ctx.strokeStyle = ACCENT;
+  if (punching) {
+    ctx.strokeStyle = RED;
     ctx.lineWidth = 8;
     ctx.beginPath();
-    ctx.moveTo(190, 165);
-    ctx.lineTo(235, 145);
-    ctx.moveTo(192, 190);
-    ctx.lineTo(244, 190);
-    ctx.moveTo(186, 214);
-    ctx.lineTo(230, 235);
+    ctx.moveTo(192, 163);
+    ctx.lineTo(239, 141);
+    ctx.moveTo(195, 190);
+    ctx.lineTo(250, 190);
+    ctx.moveTo(187, 217);
+    ctx.lineTo(234, 242);
+    ctx.stroke();
+  }
+
+  if (hit) {
+    ctx.strokeStyle = PINK;
+    ctx.lineWidth = 8;
+    ctx.beginPath();
+    ctx.moveTo(-116, 64);
+    ctx.lineTo(-145, 39);
+    ctx.moveTo(112, 67);
+    ctx.lineTo(143, 40);
+    ctx.moveTo(-134, 170);
+    ctx.lineTo(-170, 181);
+    ctx.moveTo(132, 167);
+    ctx.lineTo(170, 180);
     ctx.stroke();
   }
 
   ctx.restore();
 }
 
+function setBeam(
+  mesh: THREE.Mesh,
+  start: THREE.Vector3,
+  end: THREE.Vector3,
+  thickness: number,
+) {
+  const direction = end.clone().sub(start);
+  const length = direction.length();
+  if (length <= 0.001) return;
+
+  mesh.position.copy(start).add(end).multiplyScalar(0.5);
+  mesh.scale.set(thickness, length, thickness);
+  mesh.quaternion.setFromUnitVectors(
+    new THREE.Vector3(0, 1, 0),
+    direction.normalize(),
+  );
+}
+
 export function Dummy({
   id,
   spawn,
-  aggressive,
+  archetype,
+  rangedWeapon,
 }: {
   id: string;
   spawn: [number, number, number];
-  aggressive: boolean;
+  archetype: EnemyArchetype;
+  rangedWeapon: RangedWeapon;
 }) {
   const group = useRef<THREE.Group>(null);
+  const warningRef = useRef<THREE.Mesh>(null);
+  const shotRef = useRef<THREE.Mesh>(null);
   const [hp, setHp] = useState(100);
   const [pose, setPose] = useState<Pose>("idle");
   const [hitFlash, setHitFlash] = useState(false);
+
   const canvas = useMemo(() => {
     const element = document.createElement("canvas");
     element.width = 512;
     element.height = 640;
     return element;
   }, []);
+
   const texture = useMemo(() => {
-    drawBoss(canvas, pose, hitFlash);
+    drawBoss(canvas, pose, hitFlash, archetype, rangedWeapon);
     const next = new THREE.CanvasTexture(canvas);
     next.colorSpace = THREE.SRGBColorSpace;
     next.minFilter = THREE.LinearFilter;
     next.magFilter = THREE.LinearFilter;
     return next;
-  }, [canvas, hitFlash, pose]);
+  }, [archetype, canvas, hitFlash, pose, rangedWeapon]);
+
   const poseRef = useRef<Pose>("idle");
   const punchUntil = useRef(0);
   const lastPunch = useRef(0);
+  const nextRangedShot = useRef(1.2 + Number(id.split("-")[1]) * 0.18);
+  const aimingUntil = useRef(0);
+  const telegraphTarget = useRef(new THREE.Vector3());
+  const shotVisibleUntil = useRef(0);
+  const shotTarget = useRef(new THREE.Vector3());
   const eliminated = useGameStore((state) => state.eliminated.includes(id));
   const damagePlayer = useGameStore((state) => state.damagePlayer);
   const eliminate = useGameStore((state) => state.eliminate);
   const screen = useGameStore((state) => state.screen);
   const drift = Number(id.split("-")[1]) % 2 === 0 ? 1 : -1;
 
-  useEffect(() => {
-    return () => texture.dispose();
-  }, [texture]);
+  useEffect(() => () => texture.dispose(), [texture]);
 
   useEffect(() => {
     const handler = (event: Event) => {
@@ -211,7 +309,7 @@ export function Dummy({
       if (detail.id !== id || eliminated) return;
       setHp((current) => Math.max(0, current - detail.damage));
       setHitFlash(true);
-      window.setTimeout(() => setHitFlash(false), 95);
+      window.setTimeout(() => setHitFlash(false), 125);
     };
 
     const grenadeHandler = (event: Event) => {
@@ -225,7 +323,7 @@ export function Dummy({
       const damage = Math.max(22, detail.damage * falloff);
       setHp((current) => Math.max(0, current - damage));
       setHitFlash(true);
-      window.setTimeout(() => setHitFlash(false), 110);
+      window.setTimeout(() => setHitFlash(false), 140);
     };
 
     window.addEventListener("boss-hit", handler as EventListener);
@@ -242,7 +340,14 @@ export function Dummy({
 
   useFrame((state, delta) => {
     const root = group.current;
-    if (!root || eliminated || screen !== "playing") return;
+    const warning = warningRef.current;
+    const shot = shotRef.current;
+
+    if (!root || eliminated || screen !== "playing") {
+      if (warning) warning.visible = false;
+      if (shot) shot.visible = false;
+      return;
+    }
 
     const player = new THREE.Vector3(...useGameStore.getState().playerPosition);
     const here = root.position;
@@ -250,37 +355,98 @@ export function Dummy({
     towardPlayer.y = 0;
     const distance = towardPlayer.length();
     const desired = distance > 0.001 ? towardPlayer.normalize() : new THREE.Vector3();
-    const speed = aggressive ? 2.2 : 2.7;
+    const sideways = new THREE.Vector3(-desired.z, 0, desired.x);
     const now = state.clock.elapsedTime;
+    const number = Number(id.split("-")[1]);
+    let desiredPose: Pose = "idle";
 
-    if (aggressive && distance < 13) {
-      here.addScaledVector(desired, speed * delta);
-      here.x += Math.sin(now * 2.4 + Number(id.split("-")[1])) * 0.32 * delta;
-
-      if (distance < 1.9 && now - lastPunch.current > 1.12) {
+    if (archetype === "melee") {
+      if (distance > 1.75) {
+        here.addScaledVector(desired, 2.65 * delta);
+        here.addScaledVector(
+          sideways,
+          Math.sin(now * 2 + number) * 0.24 * delta * drift,
+        );
+        desiredPose = "walk";
+      } else if (now - lastPunch.current > 1.05) {
         lastPunch.current = now;
         punchUntil.current = now + 0.34;
-        damagePlayer(9);
+        damagePlayer(10);
       }
-    } else if (distance < 15) {
-      here.addScaledVector(desired, -speed * delta);
-      const sideways = new THREE.Vector3(-desired.z, 0, desired.x);
-      here.addScaledVector(sideways, Math.sin(now * 1.3 + Number(id.split("-")[1])) * 0.62 * delta * drift);
+
+      if (now < punchUntil.current) desiredPose = "punch";
+    } else {
+      const currentlyAiming = aimingUntil.current > now;
+
+      if (currentlyAiming) {
+        desiredPose = "aim";
+        if (warning) {
+          const muzzle = here.clone().add(new THREE.Vector3(0, 2.25, 0));
+          setBeam(warning, muzzle, telegraphTarget.current, 0.018);
+          warning.visible = true;
+        }
+      } else {
+        if (warning) warning.visible = false;
+
+        if (aimingUntil.current > 0 && now >= aimingUntil.current) {
+          const muzzle = here.clone().add(new THREE.Vector3(0, 2.25, 0));
+          shotTarget.current.copy(telegraphTarget.current);
+          shotVisibleUntil.current = now + 0.095;
+
+          if (player.distanceTo(telegraphTarget.current) < 1.65) {
+            damagePlayer(rangedWeapon === "bow" ? 14 : 12);
+          }
+
+          aimingUntil.current = 0;
+          nextRangedShot.current = now + 2.25 + (number % 3) * 0.22;
+
+          if (shot) {
+            setBeam(shot, muzzle, shotTarget.current, 0.034);
+            shot.visible = true;
+          }
+        }
+
+        if (distance < 8.5) {
+          here.addScaledVector(desired, -3.15 * delta);
+          here.addScaledVector(sideways, 0.9 * delta * drift);
+          desiredPose = "walk";
+        } else if (distance > 18) {
+          here.addScaledVector(desired, 2.1 * delta);
+          desiredPose = "walk";
+        } else {
+          here.addScaledVector(
+            sideways,
+            Math.sin(now * 1.6 + number) * 1.05 * delta * drift,
+          );
+          desiredPose = "walk";
+
+          if (now >= nextRangedShot.current) {
+            telegraphTarget.current.copy(player);
+            telegraphTarget.current.y += 0.35;
+            aimingUntil.current = now + 0.72;
+            desiredPose = "aim";
+          }
+        }
+      }
+
+      if (shot) {
+        if (now < shotVisibleUntil.current) {
+          const muzzle = here.clone().add(new THREE.Vector3(0, 2.25, 0));
+          setBeam(shot, muzzle, shotTarget.current, 0.034);
+          shot.visible = true;
+        } else {
+          shot.visible = false;
+        }
+      }
     }
 
     here.y = 0;
     here.x = THREE.MathUtils.clamp(here.x, -ARENA_HALF_SIZE + 1.5, ARENA_HALF_SIZE - 1.5);
     here.z = THREE.MathUtils.clamp(here.z, -ARENA_HALF_SIZE + 1.5, ARENA_HALF_SIZE - 1.5);
+
     root.lookAt(player.x, 0, player.z);
     root.rotation.x = 0;
     root.rotation.z = 0;
-
-    const desiredPose: Pose =
-      now < punchUntil.current
-        ? "punch"
-        : distance < 15
-          ? "walk"
-          : "idle";
 
     if (poseRef.current !== desiredPose) {
       poseRef.current = desiredPose;
@@ -289,42 +455,71 @@ export function Dummy({
 
     const visible = root.children[0] as THREE.Mesh | undefined;
     if (visible) {
-      visible.position.y = 1.72 + Math.sin(now * 7 + Number(id.split("-")[1])) * (desiredPose === "walk" ? 0.045 : 0.012);
+      const moving = desiredPose === "walk";
+      visible.position.y =
+        1.72 + Math.sin(now * 7 + number) * (moving ? 0.045 : 0.012);
     }
   });
 
   if (eliminated) return null;
 
   return (
-    <group ref={group} position={spawn}>
-      <mesh position={[0, 1.72, 0]} userData={{ targetId: id, targetPart: "body" }}>
-        <planeGeometry args={[2.72, 3.4]} />
-        <meshBasicMaterial map={texture} transparent alphaTest={0.06} side={THREE.DoubleSide} />
-      </mesh>
-
-      <mesh position={[0, 1.42, 0.035]} userData={{ targetId: id, targetPart: "body" }}>
-        <planeGeometry args={[2.45, 2.25]} />
-        <meshBasicMaterial transparent opacity={0} depthWrite={false} side={THREE.DoubleSide} />
-      </mesh>
-
-      <mesh position={[0, 2.75, 0.05]} userData={{ targetId: id, targetPart: "head" }}>
-        <planeGeometry args={[1.16, 1.08]} />
-        <meshBasicMaterial transparent opacity={0} depthWrite={false} side={THREE.DoubleSide} />
-      </mesh>
-
-      <group position={[0, 3.55, 0.03]}>
-        <mesh>
-          <planeGeometry args={[1.62, 0.08]} />
-          <meshBasicMaterial color="#b7c6f5" />
+    <>
+      <group ref={group} position={spawn}>
+        <mesh position={[0, 1.72, 0]} userData={{ targetId: id, targetPart: "body" }}>
+          <planeGeometry args={[2.72, 3.4]} />
+          <meshBasicMaterial
+            map={texture}
+            transparent
+            alphaTest={0.06}
+            side={THREE.DoubleSide}
+          />
         </mesh>
-        <mesh
-          position={[-0.81 + (Math.max(hp, 0) / 100) * 0.81, 0, 0.01]}
-          scale={[Math.max(hp, 0) / 100, 1, 1]}
-        >
-          <planeGeometry args={[1.6, 0.055]} />
-          <meshBasicMaterial color={BLUE} />
+
+        <mesh position={[0, 1.42, 0.035]} userData={{ targetId: id, targetPart: "body" }}>
+          <planeGeometry args={[2.45, 2.25]} />
+          <meshBasicMaterial transparent opacity={0} depthWrite={false} side={THREE.DoubleSide} />
         </mesh>
+
+        <mesh position={[0, 2.75, 0.05]} userData={{ targetId: id, targetPart: "head" }}>
+          <planeGeometry args={[1.16, 1.08]} />
+          <meshBasicMaterial transparent opacity={0} depthWrite={false} side={THREE.DoubleSide} />
+        </mesh>
+
+        <group position={[0, 3.55, 0.03]}>
+          <mesh>
+            <planeGeometry args={[1.62, 0.08]} />
+            <meshBasicMaterial color="#b7c6f5" />
+          </mesh>
+          <mesh
+            position={[-0.81 + (Math.max(hp, 0) / 100) * 0.81, 0, 0.01]}
+            scale={[Math.max(hp, 0) / 100, 1, 1]}
+          >
+            <planeGeometry args={[1.6, 0.055]} />
+            <meshBasicMaterial color={hitFlash ? RED : BLUE} />
+          </mesh>
+        </group>
       </group>
-    </group>
+
+      <mesh ref={warningRef} visible={false}>
+        <cylinderGeometry args={[1, 1, 1, 6]} />
+        <meshBasicMaterial
+          color="#ff315e"
+          transparent
+          opacity={0.48}
+          depthWrite={false}
+        />
+      </mesh>
+
+      <mesh ref={shotRef} visible={false}>
+        <cylinderGeometry args={[1, 1, 1, 6]} />
+        <meshBasicMaterial
+          color={rangedWeapon === "bow" ? "#ff7ca7" : "#ff315e"}
+          transparent
+          opacity={0.9}
+          depthWrite={false}
+        />
+      </mesh>
+    </>
   );
 }
