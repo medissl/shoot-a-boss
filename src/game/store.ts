@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { GRENADE_COUNT, WEAPONS, type WeaponId } from "./config";
-import { getLevelDefinition, getTargetCount } from "./levels";
+import { getTargetCount } from "./levels";
 import {
   emptyUpgrades,
   getUpgradeStats,

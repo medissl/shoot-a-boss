@@ -1,6 +1,5 @@
 import { Edges } from "@react-three/drei";
 import { CuboidCollider, RigidBody } from "@react-three/rapier";
-import * as THREE from "three";
 import { ARENA_HALF_SIZE } from "../game/config";
 import { getLevelDefinition } from "../game/levels";
 import { useGameStore } from "../game/store";

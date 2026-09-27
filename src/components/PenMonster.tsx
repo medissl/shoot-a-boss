@@ -212,7 +212,6 @@ export function PenMonster({
     const motion = new THREE.Vector3();
 
     if (aware) {
-      const desiredDistance = 15;
       if (distance < 10) {
         motion.addScaledVector(
           direction,
