@@ -1,21 +1,12 @@
 import type { CSSProperties } from "react";
 import { useEffect, useRef, useState } from "react";
-import {
-  WEAPONS,
-  getLevelConfig,
-  getLevelTargetCount,
-  type WeaponId,
-} from "../game/config";
+import { WEAPONS, type WeaponId } from "../game/config";
+import { getLevelDefinition } from "../game/levels";
 import { useGameStore } from "../game/store";
 
-const WEAPON_ORDER: WeaponId[] = [
-  "sniper",
-  "rifle",
-  "shotgun",
-  "knife",
-];
+const WEAPON_ORDER: WeaponId[] = ["sniper", "rifle", "shotgun", "knife"];
 
-function shortWeaponName(id: WeaponId) {
+function shortWeaponLabel(id: WeaponId) {
   return WEAPONS[id].label
     .replace("PAPER ", "")
     .replace("REPORT ", "")
@@ -25,83 +16,63 @@ function shortWeaponName(id: WeaponId) {
 export function HUD() {
   const hp = useGameStore((state) => state.hp);
   const maxHp = useGameStore((state) => state.maxHp);
-  const level = useGameStore((state) => state.level);
   const weapon = useGameStore((state) => state.weapon);
   const ammo = useGameStore((state) => state.ammo);
   const grenades = useGameStore((state) => state.grenades);
   const eliminated = useGameStore((state) => state.eliminated.length);
+  const targetCount = useGameStore((state) => state.targetCount);
+  const currentLevel = useGameStore((state) => state.currentLevel);
   const scoped = useGameStore((state) => state.scoped);
   const boostActive = useGameStore((state) => state.speedBoostActive);
   const reloading = useGameStore((state) => state.reloading);
   const reloadingWeapon = useGameStore((state) => state.reloadingWeapon);
-  const reloadDurationMs = useGameStore(
-    (state) => state.reloadDurationMs,
-  );
+  const reloadDurationMs = useGameStore((state) => state.reloadDurationMs);
   const [pickupNotice, setPickupNotice] = useState("");
   const [emptyAlert, setEmptyAlert] = useState(false);
   const [damageFlashKey, setDamageFlashKey] = useState(0);
   const [killPulseKey, setKillPulseKey] = useState(0);
   const emptyTimer = useRef<number | null>(null);
+  const level = getLevelDefinition(currentLevel);
 
   useEffect(() => {
     const pickupHandler = (event: Event) => {
-      const kind = (
-        event as CustomEvent<{ kind: "grenade" | "speed" }>
-      ).detail.kind;
-      setPickupNotice(
-        kind === "grenade" ? "+ PAPER BOMBS" : "+ SPEED BOOST",
-      );
+      const kind = (event as CustomEvent<{ kind: "grenade" | "speed" }>).detail.kind;
+      setPickupNotice(kind === "grenade" ? "+ PAPER BOMBS" : "+ SPEED BOOST");
       window.setTimeout(() => setPickupNotice(""), 1450);
     };
 
     const emptyHandler = () => {
       setEmptyAlert(true);
       if (emptyTimer.current) window.clearTimeout(emptyTimer.current);
-      emptyTimer.current = window.setTimeout(
-        () => setEmptyAlert(false),
-        1450,
-      );
+      emptyTimer.current = window.setTimeout(() => setEmptyAlert(false), 1450);
     };
 
-    const damageHandler = () =>
-      setDamageFlashKey((current) => current + 1);
-    const killHandler = () =>
-      setKillPulseKey((current) => current + 1);
+    const damageHandler = () => setDamageFlashKey((current) => current + 1);
+    const killHandler = () => setKillPulseKey((current) => current + 1);
 
-    window.addEventListener(
-      "pickup-collected",
-      pickupHandler as EventListener,
-    );
+    window.addEventListener("pickup-collected", pickupHandler as EventListener);
     window.addEventListener("empty-mag", emptyHandler);
     window.addEventListener("player-damaged", damageHandler);
     window.addEventListener("boss-killed", killHandler);
 
     return () => {
       if (emptyTimer.current) window.clearTimeout(emptyTimer.current);
-      window.removeEventListener(
-        "pickup-collected",
-        pickupHandler as EventListener,
-      );
+      window.removeEventListener("pickup-collected", pickupHandler as EventListener);
       window.removeEventListener("empty-mag", emptyHandler);
       window.removeEventListener("player-damaged", damageHandler);
       window.removeEventListener("boss-killed", killHandler);
     };
   }, []);
 
-  const levelConfig = getLevelConfig(level);
-  const totalTargets = getLevelTargetCount(level);
   const reloadStyle = {
     "--reload-duration": `${reloadDurationMs}ms`,
   } as CSSProperties;
-  const hpPercent = Math.max(
-    0,
-    Math.min(100, (hp / Math.max(1, maxHp)) * 100),
-  );
 
   return (
     <div className="hud" aria-hidden="true">
-      <div className="hud-stage">
-        LEVEL {level} <b>{levelConfig.name}</b>
+      <div className="hud-level">
+        <span>LEVEL {currentLevel}/10</span>
+        <strong>{level.name}</strong>
       </div>
 
       {eliminated > 0 && (
@@ -116,20 +87,23 @@ export function HUD() {
 
       <div className="hud-targets">
         <span>targets left</span>
-        <strong>{Math.max(0, totalTargets - eliminated)}</strong>
+        <strong>{Math.max(0, targetCount - eliminated)}</strong>
       </div>
 
       <div className="hud-health">
         <span>HP</span>
         <div className="health-track">
-          <div style={{ width: `${hpPercent}%` }} />
+          <div style={{ width: `${Math.min(100, (hp / maxHp) * 100)}%` }} />
         </div>
         <strong>{Math.round(hp)}</strong>
       </div>
 
       <div className="hud-ammo-main">
         {weapon === "knife" ? (
-          <strong>∞</strong>
+          <>
+            <strong>∞</strong>
+            <span> / MELEE</span>
+          </>
         ) : (
           <>
             <strong>{ammo[weapon].mag}</strong>
@@ -143,22 +117,15 @@ export function HUD() {
           <span>paper bombs</span>
           <b>{Array.from({ length: grenades }, () => "○").join(" ") || "—"}</b>
         </div>
-
         {WEAPON_ORDER.map((id, index) => (
           <div
-            className={
-              id === weapon
-                ? "hud-weapon-row is-active"
-                : "hud-weapon-row"
-            }
+            className={id === weapon ? "hud-weapon-row is-active" : "hud-weapon-row"}
             key={id}
           >
             <span>{index + 1}</span>
-            <b>{shortWeaponName(id)}</b>
+            <b>{shortWeaponLabel(id)}</b>
             <small>
-              {id === "knife"
-                ? "∞"
-                : `${ammo[id].mag}/${ammo[id].reserve}`}
+              {id === "knife" ? "MELEE" : `${ammo[id].mag}/${ammo[id].reserve}`}
             </small>
           </div>
         ))}
@@ -185,7 +152,7 @@ export function HUD() {
       {reloading && reloadingWeapon && reloadingWeapon !== "knife" && (
         <div className="reload-progress" style={reloadStyle}>
           <div className="reload-progress__label">
-            reloading {shortWeaponName(reloadingWeapon).toLowerCase()}
+            reloading {shortWeaponLabel(reloadingWeapon).toLowerCase()}
           </div>
           <div className="reload-progress__track">
             <span />
@@ -196,15 +163,13 @@ export function HUD() {
       {boostActive && (
         <>
           <div className="speed-boost-vignette" />
-          <div className="boost-status">SPEED ×1.62</div>
+          <div className="boost-status">SPEED BOOST</div>
         </>
       )}
 
-      {pickupNotice && (
-        <div className="pickup-notice">{pickupNotice}</div>
-      )}
+      {pickupNotice && <div className="pickup-notice">{pickupNotice}</div>}
 
-      {emptyAlert && weapon !== "knife" && (
+      {emptyAlert && (
         <div className="empty-mag-message">
           MAGAZINE EMPTY
           <span>press R to reload</span>
@@ -212,10 +177,7 @@ export function HUD() {
       )}
 
       {damageFlashKey > 0 && (
-        <div
-          key={damageFlashKey}
-          className="player-damage-vignette"
-        />
+        <div key={damageFlashKey} className="player-damage-vignette" />
       )}
     </div>
   );

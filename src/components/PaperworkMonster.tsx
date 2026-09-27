@@ -3,6 +3,7 @@ import { useFrame } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { PAPER_MONSTER_MAX_HP } from "../game/config";
+import { getLevelDefinition } from "../game/levels";
 import {
   hasEnemyLineOfSight,
   moveWithAvoidance,
@@ -47,9 +48,11 @@ export function PaperworkMonster({
   const damagePlayer = useGameStore((state) => state.damagePlayer);
   const screen = useGameStore((state) => state.screen);
   const sideBias = Number(id.split("-")[1]) % 2 === 0 ? 1 : -1;
+  const currentLevel = useGameStore((state) => state.currentLevel);
+  const tuning = getLevelDefinition(currentLevel).enemy;
   const safeSpawn = useMemo(
-    () => safeEnemySpawn(spawn, MONSTER_RADIUS),
-    [spawn],
+    () => safeEnemySpawn(spawn, MONSTER_RADIUS, currentLevel),
+    [currentLevel, spawn],
   );
   const roamTarget = useRef(new THREE.Vector3(...safeSpawn));
   const lastSeenPosition = useRef(new THREE.Vector3(...safeSpawn));
@@ -132,11 +135,11 @@ export function PaperworkMonster({
     if (forwardSight.lengthSq() > 0.001) forwardSight.normalize();
 
     const seesPlayer =
-      playerDistance < 37 &&
-      (playerDistance < 8 ||
+      playerDistance < 37 * tuning.vision &&
+      (playerDistance < 8 * Math.min(1.2, tuning.vision) ||
         forwardSight.lengthSq() < 0.001 ||
         forwardSight.dot(playerDirection) > -0.5) &&
-      hasEnemyLineOfSight(here, player, 0.1);
+      hasEnemyLineOfSight(here, player, currentLevel, 0.1);
 
     const nowMs = performance.now();
     if (seesPlayer) {
@@ -156,7 +159,7 @@ export function PaperworkMonster({
 
       if (distance > 0.001) {
         direction.normalize();
-        motion.copy(direction).multiplyScalar(4.15 * delta);
+        motion.copy(direction).multiplyScalar(4.15 * tuning.speed * delta);
       }
 
       faceTarget = target;
@@ -167,7 +170,7 @@ export function PaperworkMonster({
         now >= nextAttackAt.current
       ) {
         nextAttackAt.current = now + 0.78;
-        damagePlayer(10);
+        damagePlayer(Math.round(10 * tuning.damage));
       }
     } else {
       if (
@@ -189,12 +192,18 @@ export function PaperworkMonster({
       const direction = roamTarget.current.clone().sub(here).setY(0);
       if (direction.length() > 0.7) {
         direction.normalize();
-        motion.copy(direction).multiplyScalar(1.8 * delta);
+        motion.copy(direction).multiplyScalar(1.8 * tuning.speed * delta);
       }
       faceTarget = roamTarget.current;
     }
 
-    moveWithAvoidance(here, motion, MONSTER_RADIUS, sideBias);
+    moveWithAvoidance(
+      here,
+      motion,
+      MONSTER_RADIUS,
+      sideBias,
+      currentLevel,
+    );
 
     group.lookAt(faceTarget.x, 1.15, faceTarget.z);
     group.rotation.x = 0;

@@ -1,26 +1,50 @@
 import { Canvas } from "@react-three/fiber";
 import { Physics } from "@react-three/rapier";
-import { Suspense } from "react";
-import { Arena } from "./Arena";
+import { Suspense, useEffect } from "react";
 import { CombatSystem } from "./CombatSystem";
 import { Dummy } from "./Dummy";
 import { HUD } from "./HUD";
+import { LevelArena } from "./LevelArena";
 import { MenuOverlay } from "./MenuOverlay";
 import { PaintSystem } from "./PaintSystem";
 import { PaperGrenadeSystem } from "./PaperGrenadeSystem";
 import { PaperworkMonster } from "./PaperworkMonster";
+import { PenMonster } from "./PenMonster";
 import { PickupSystem } from "./PickupSystem";
 import { PlayerController } from "./PlayerController";
-import { WeaponView } from "./WeaponView";
 import { SurfaceDamageSystem } from "./SurfaceDamageSystem";
+import { WeaponView } from "./WeaponView";
 import {
-  PAPER_MONSTER_SPAWNS,
-  TARGET_SPAWNS,
-} from "../game/config";
+  getEnemySpawnPool,
+  getLevelDefinition,
+} from "../game/levels";
+import { useGameStore } from "../game/store";
 
 export function GameCanvas() {
+  const currentLevel = useGameStore((state) => state.currentLevel);
+  const definition = getLevelDefinition(currentLevel);
+  const spawnPool = getEnemySpawnPool(currentLevel);
+  const bossSpawns = spawnPool.slice(0, definition.enemy.bosses);
+  const paperSpawns = spawnPool.slice(
+    definition.enemy.bosses,
+    definition.enemy.bosses + definition.enemy.paperwork,
+  );
+  const penSpawns = spawnPool.slice(
+    definition.enemy.bosses + definition.enemy.paperwork,
+    definition.enemy.bosses +
+      definition.enemy.paperwork +
+      definition.enemy.pens,
+  );
+
+  useEffect(() => {
+    document.documentElement.dataset.sabLevel = String(currentLevel);
+    return () => {
+      delete document.documentElement.dataset.sabLevel;
+    };
+  }, [currentLevel]);
+
   return (
-    <div className="game-shell">
+    <div className={`game-shell game-shell--${definition.theme}`}>
       <Canvas
         shadows
         camera={{ fov: 70, near: 0.05, far: 180, position: [0, 2, 12] }}
@@ -28,22 +52,32 @@ export function GameCanvas() {
       >
         <Suspense fallback={null}>
           <Physics gravity={[0, -15, 0]}>
-            <Arena />
+            <LevelArena />
             <PlayerController />
             <CombatSystem />
             <PaintSystem />
             <SurfaceDamageSystem />
             <PaperGrenadeSystem />
             <PickupSystem />
-            {PAPER_MONSTER_SPAWNS.map((spawn, index) => (
+
+            {paperSpawns.map((spawn, index) => (
               <PaperworkMonster
                 key={`paper-${index}`}
                 id={`paper-${index}`}
                 spawn={spawn}
               />
             ))}
-            {TARGET_SPAWNS.map((spawn, index) => {
-              const ranged = index % 3 === 1 || index === 8;
+
+            {penSpawns.map((spawn, index) => (
+              <PenMonster
+                key={`pen-${index}`}
+                id={`pen-${index}`}
+                spawn={spawn}
+              />
+            ))}
+
+            {bossSpawns.map((spawn, index) => {
+              const ranged = index % 3 === 1 || index % 5 === 4;
               return (
                 <Dummy
                   key={index}

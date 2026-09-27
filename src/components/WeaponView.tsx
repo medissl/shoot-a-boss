@@ -92,6 +92,34 @@ function KnifeHipArt() {
   );
 }
 
+function KnifeHipArt() {
+  return (
+    <g className="gun-drawing gun-drawing--knife">
+      <path
+        className="gun-fill gun-hatch"
+        d="M520 374 L344 234 L303 194 L322 255 L487 405 Z"
+      />
+      <path
+        className="gun-line gun-line--thin"
+        d="M342 238 L303 194 M355 257 L322 255"
+      />
+      <path
+        className="gun-fill"
+        d="M488 402 L535 366 L651 466 L607 508 Z"
+      />
+      <path
+        className="gun-line gun-line--thin"
+        d="M516 389 L625 481 M532 374 L642 466"
+      />
+      <path
+        className="gun-hand"
+        d="M590 451 Q628 435 674 469 L703 521 L663 558 L619 529 Z"
+      />
+      <circle className="gun-dot gun-dot--red" cx="303" cy="194" r="5" />
+    </g>
+  );
+}
+
 function HipWeaponArt({ weapon }: { weapon: WeaponId }) {
   return (
     <svg viewBox="0 0 900 620" role="presentation">

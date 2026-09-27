@@ -3,6 +3,7 @@ import { useFrame } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { BOSS_MAX_HP } from "../game/config";
+import { getLevelDefinition } from "../game/levels";
 import {
   hasEnemyLineOfSight,
   moveWithAvoidance,
@@ -367,9 +368,11 @@ export function Dummy({
   const eliminate = useGameStore((state) => state.eliminate);
   const screen = useGameStore((state) => state.screen);
   const drift = Number(id.split("-")[1]) % 2 === 0 ? 1 : -1;
+  const currentLevel = useGameStore((state) => state.currentLevel);
+  const tuning = getLevelDefinition(currentLevel).enemy;
   const safeSpawn = useMemo(
-    () => safeEnemySpawn(spawn, ENEMY_RADIUS),
-    [spawn],
+    () => safeEnemySpawn(spawn, ENEMY_RADIUS, currentLevel),
+    [currentLevel, spawn],
   );
   const roamTarget = useRef(new THREE.Vector3(...safeSpawn));
   const nextRoamAt = useRef(0);
@@ -520,14 +523,14 @@ export function Dummy({
     if (forwardSight.lengthSq() > 0.001) forwardSight.normalize();
 
     const inVisionCone =
-      playerDistance < 9.5 ||
+      playerDistance < 9.5 * Math.min(1.2, tuning.vision) ||
       forwardSight.lengthSq() < 0.001 ||
       forwardSight.dot(playerDirection) > -0.55;
 
     const seesPlayer =
-      playerDistance < 43 &&
+      playerDistance < 43 * tuning.vision &&
       inVisionCone &&
-      hasEnemyLineOfSight(here, player, 0.18);
+      hasEnemyLineOfSight(here, player, currentLevel, 0.18);
 
     const nowMs = performance.now();
     if (seesPlayer) {
@@ -584,7 +587,7 @@ export function Dummy({
 
       if (archetype === "melee") {
         if (targetDistance > 1.9) {
-          motion.addScaledVector(desired, 2.7 * delta);
+          motion.addScaledVector(desired, 2.7 * tuning.speed * delta);
           motion.addScaledVector(
             sideways,
             Math.sin(now * 2 + number) * 0.24 * delta * drift,
@@ -597,7 +600,7 @@ export function Dummy({
         ) {
           lastPunch.current = now;
           punchUntil.current = now + 0.36;
-          damagePlayer(10);
+          damagePlayer(Math.round(10 * tuning.damage));
         }
 
         if (now < punchUntil.current) desiredPose = "punch";
@@ -624,7 +627,9 @@ export function Dummy({
             shotVisibleUntil.current = now + 0.095;
 
             if (player.distanceTo(telegraphTarget.current) < 1.65) {
-              damagePlayer(rangedWeapon === "bow" ? 14 : 12);
+              damagePlayer(
+                Math.round((rangedWeapon === "bow" ? 14 : 12) * tuning.damage),
+              );
             }
 
             aimingUntil.current = 0;
@@ -639,11 +644,11 @@ export function Dummy({
           }
 
           if (targetDistance < 9 && seesPlayer) {
-            motion.addScaledVector(desired, -2.8 * delta);
-            motion.addScaledVector(sideways, 0.9 * delta * drift);
+            motion.addScaledVector(desired, -2.8 * tuning.speed * delta);
+            motion.addScaledVector(sideways, 0.9 * tuning.speed * delta * drift);
             desiredPose = "walk";
           } else if (targetDistance > 18 || !seesPlayer) {
-            motion.addScaledVector(desired, 1.9 * delta);
+            motion.addScaledVector(desired, 1.9 * tuning.speed * delta);
             desiredPose = "walk";
           } else {
             motion.addScaledVector(
@@ -673,7 +678,7 @@ export function Dummy({
       }
     }
 
-    moveWithAvoidance(here, motion, ENEMY_RADIUS, drift);
+    moveWithAvoidance(here, motion, ENEMY_RADIUS, drift, currentLevel);
 
     root.lookAt(faceTarget.x, 0, faceTarget.z);
     root.rotation.x = 0;

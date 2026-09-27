@@ -2,6 +2,7 @@ import { Edges } from "@react-three/drei";
 import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
+import { getUpgradeStats } from "../game/progression";
 import { useGameStore } from "../game/store";
 
 type GrenadeData = {
@@ -146,9 +147,14 @@ export function PaperGrenadeSystem() {
   }, [camera, spendGrenade]);
 
   function explode(id: number, position: [number, number, number]) {
+    const stats = getUpgradeStats(useGameStore.getState().upgrades);
     window.dispatchEvent(
       new CustomEvent("paper-grenade-explode", {
-        detail: { position, radius: 6.4, damage: 92 },
+        detail: {
+          position,
+          radius: 6.4 * stats.grenadePower,
+          damage: 92 * stats.grenadePower,
+        },
       }),
     );
     setGrenades((current) => current.filter((grenade) => grenade.id !== id));

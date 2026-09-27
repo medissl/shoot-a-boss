@@ -1,13 +1,14 @@
 import * as THREE from "three";
-import { ARENA_HALF_SIZE, getEnemyBlockers } from "./config";
+import { ARENA_HALF_SIZE } from "./config";
+import { getLevelBlockers } from "./levels";
 
 export function isEnemyPositionBlocked(
   x: number,
   z: number,
   radius: number,
-  level = 1,
+  level: number,
 ) {
-  return getEnemyBlockers(level).some((blocker) => {
+  return getLevelBlockers(level).some((blocker) => {
     const halfW = blocker.w / 2 + radius;
     const halfD = blocker.d / 2 + radius;
     return (
@@ -22,14 +23,14 @@ export function isEnemyPositionBlocked(
 export function safeEnemySpawn(
   spawn: [number, number, number],
   radius: number,
-  level = 1,
+  level: number,
 ): [number, number, number] {
   if (!isEnemyPositionBlocked(spawn[0], spawn[2], radius, level)) return spawn;
 
   for (let ring = 1; ring <= 9; ring += 1) {
-    const distance = ring * 2.2;
-    for (let step = 0; step < 14; step += 1) {
-      const angle = (step / 14) * Math.PI * 2;
+    const distance = ring * 2.25;
+    for (let step = 0; step < 16; step += 1) {
+      const angle = (step / 16) * Math.PI * 2;
       const x = THREE.MathUtils.clamp(
         spawn[0] + Math.cos(angle) * distance,
         -ARENA_HALF_SIZE + radius + 1,
@@ -63,10 +64,12 @@ function segmentIntersectsBox(
   let tMin = 0;
   let tMax = 1;
 
-  for (const [origin, delta, min, max] of [
+  const axes: Array<[number, number, number, number]> = [
     [start.x, dx, minX, maxX],
     [start.z, dz, minZ, maxZ],
-  ] as Array<[number, number, number, number]>) {
+  ];
+
+  for (const [origin, delta, min, max] of axes) {
     if (Math.abs(delta) < 0.00001) {
       if (origin < min || origin > max) return false;
       continue;
@@ -87,10 +90,10 @@ function segmentIntersectsBox(
 export function hasEnemyLineOfSight(
   start: THREE.Vector3,
   end: THREE.Vector3,
+  level: number,
   padding = 0.15,
-  level = 1,
 ) {
-  return !getEnemyBlockers(level).some((blocker) =>
+  return !getLevelBlockers(level).some((blocker) =>
     segmentIntersectsBox(start, end, blocker, padding),
   );
 }
@@ -99,8 +102,8 @@ export function moveWithAvoidance(
   position: THREE.Vector3,
   motion: THREE.Vector3,
   radius: number,
-  sideBias = 1,
-  level = 1,
+  sideBias: number,
+  level: number,
 ) {
   if (motion.lengthSq() <= 0.0000001) return;
 
@@ -128,8 +131,16 @@ export function moveWithAvoidance(
       .applyAxisAngle(new THREE.Vector3(0, 1, 0), angle)
       .normalize();
 
-    const nextX = THREE.MathUtils.clamp(position.x + direction.x * length, min, max);
-    const nextZ = THREE.MathUtils.clamp(position.z + direction.z * length, min, max);
+    const nextX = THREE.MathUtils.clamp(
+      position.x + direction.x * length,
+      min,
+      max,
+    );
+    const nextZ = THREE.MathUtils.clamp(
+      position.z + direction.z * length,
+      min,
+      max,
+    );
     const lookX = THREE.MathUtils.clamp(
       position.x + direction.x * (radius + 1.45),
       min,
