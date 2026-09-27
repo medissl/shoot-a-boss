@@ -175,6 +175,9 @@ export function Dummy({
   aggressive: boolean;
 }) {
   const group = useRef<THREE.Group>(null);
+  const [hp, setHp] = useState(100);
+  const [pose, setPose] = useState<Pose>("idle");
+  const [hitFlash, setHitFlash] = useState(false);
   const canvas = useMemo(() => {
     const element = document.createElement("canvas");
     element.width = 512;
@@ -189,10 +192,6 @@ export function Dummy({
     next.magFilter = THREE.LinearFilter;
     return next;
   }, [canvas, hitFlash, pose]);
-
-  const [hp, setHp] = useState(100);
-  const [pose, setPose] = useState<Pose>("idle");
-  const [hitFlash, setHitFlash] = useState(false);
   const poseRef = useRef<Pose>("idle");
   const punchUntil = useRef(0);
   const lastPunch = useRef(0);

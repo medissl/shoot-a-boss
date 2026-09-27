@@ -17,6 +17,7 @@ type GameStore = {
   scoped: boolean;
   playerPosition: [number, number, number];
   speedBoostUntil: number;
+  speedBoostActive: boolean;
   startGame: () => void;
   pause: () => void;
   resume: () => void;
@@ -55,6 +56,7 @@ function freshRun() {
     scoped: false,
     playerPosition: [0, 1.4, 12] as [number, number, number],
     speedBoostUntil: 0,
+    speedBoostActive: false,
   };
 }
 
@@ -136,8 +138,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
       grenades: Math.min(GRENADE_COUNT, state.grenades + amount),
     })),
 
-  grantSpeedBoost: (durationMs = 7000) =>
-    set({ speedBoostUntil: performance.now() + durationMs }),
+  grantSpeedBoost: (durationMs = 7000) => {
+    const speedBoostUntil = performance.now() + durationMs;
+    set({ speedBoostUntil, speedBoostActive: true });
+    window.setTimeout(() => {
+      if (get().speedBoostUntil <= performance.now()) {
+        set({ speedBoostActive: false });
+      }
+    }, durationMs + 60);
+  },
 
   damagePlayer: (amount) => {
     const next = Math.max(0, get().hp - amount);
