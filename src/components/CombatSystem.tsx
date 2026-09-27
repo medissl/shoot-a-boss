@@ -1,30 +1,72 @@
 import { useFrame, useThree } from "@react-three/fiber";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { WEAPONS, type WeaponId } from "../game/config";
 import { useGameStore } from "../game/store";
 
 type Trace = {
   id: number;
-  from: THREE.Vector3;
-  to: THREE.Vector3;
+  from: [number, number, number];
+  to: [number, number, number];
   hit: boolean;
 };
 
+type Impact = {
+  id: number;
+  position: [number, number, number];
+  sparks: [number, number, number][];
+};
+
 function TraceLine({ trace }: { trace: Trace }) {
-  const midpoint = trace.from.clone().add(trace.to).multiplyScalar(0.5);
-  const length = trace.from.distanceTo(trace.to);
-  const direction = trace.to.clone().sub(trace.from).normalize();
-  const quaternion = new THREE.Quaternion().setFromUnitVectors(
-    new THREE.Vector3(0, 1, 0),
-    direction,
+  const from = useMemo(() => new THREE.Vector3(...trace.from), [trace.from]);
+  const to = useMemo(() => new THREE.Vector3(...trace.to), [trace.to]);
+  const midpoint = useMemo(() => from.clone().add(to).multiplyScalar(0.5), [from, to]);
+  const length = from.distanceTo(to);
+  const quaternion = useMemo(
+    () =>
+      new THREE.Quaternion().setFromUnitVectors(
+        new THREE.Vector3(0, 1, 0),
+        to.clone().sub(from).normalize(),
+      ),
+    [from, to],
   );
 
   return (
     <group position={midpoint} quaternion={quaternion}>
       <mesh>
-        <cylinderGeometry args={[0.012, 0.018, length, 5]} />
-        <meshBasicMaterial color={trace.hit ? "#db7d19" : "#2548b8"} transparent opacity={0.9} />
+        <cylinderGeometry args={[0.006, 0.012, length, 5]} />
+        <meshBasicMaterial
+          color={trace.hit ? "#ff6ea8" : "#5978e8"}
+          transparent
+          opacity={trace.hit ? 0.9 : 0.58}
+          depthWrite={false}
+        />
+      </mesh>
+      <mesh position={[0, length / 2, 0]}>
+        <octahedronGeometry args={[trace.hit ? 0.055 : 0.035, 0]} />
+        <meshBasicMaterial color={trace.hit ? "#ff8fbd" : "#eef2ff"} depthWrite={false} />
+      </mesh>
+    </group>
+  );
+}
+
+function ImpactBurst({ impact }: { impact: Impact }) {
+  return (
+    <group position={impact.position}>
+      {impact.sparks.map((offset, index) => (
+        <mesh position={offset} key={index}>
+          <octahedronGeometry args={[index % 2 ? 0.055 : 0.08, 0]} />
+          <meshBasicMaterial
+            color={index % 3 === 0 ? "#ffffff" : "#ff5f9d"}
+            transparent
+            opacity={0.95}
+            depthWrite={false}
+          />
+        </mesh>
+      ))}
+      <mesh>
+        <ringGeometry args={[0.08, 0.13, 9]} />
+        <meshBasicMaterial color="#ff5f9d" side={THREE.DoubleSide} transparent opacity={0.8} depthWrite={false} />
       </mesh>
     </group>
   );
@@ -35,7 +77,9 @@ export function CombatSystem() {
   const lastShot = useRef(0);
   const autoFire = useRef<number | null>(null);
   const nextTraceId = useRef(1);
+  const nextImpactId = useRef(1);
   const [traces, setTraces] = useState<Trace[]>([]);
+  const [impacts, setImpacts] = useState<Impact[]>([]);
   const screen = useGameStore((state) => state.screen);
   const weapon = useGameStore((state) => state.weapon);
   const scoped = useGameStore((state) => state.scoped);
@@ -48,17 +92,48 @@ export function CombatSystem() {
   useFrame((state) => {
     const perspective = state.camera as THREE.PerspectiveCamera;
     const wanted = scoped ? WEAPONS[weapon].scopedFov : 70;
-    perspective.fov = THREE.MathUtils.lerp(perspective.fov, wanted, scoped ? 0.22 : 0.16);
+    const speed = weapon === "sniper" ? 0.12 : 0.2;
+    perspective.fov = THREE.MathUtils.lerp(perspective.fov, wanted, scoped ? speed : 0.16);
     perspective.updateProjectionMatrix();
   });
 
   useEffect(() => {
     function addTrace(from: THREE.Vector3, to: THREE.Vector3, hit: boolean) {
       const id = nextTraceId.current++;
-      setTraces((current) => [...current.slice(-22), { id, from, to, hit }]);
+      setTraces((current) => [
+        ...current.slice(-12),
+        {
+          id,
+          from: [from.x, from.y, from.z],
+          to: [to.x, to.y, to.z],
+          hit,
+        },
+      ]);
       window.setTimeout(() => {
         setTraces((current) => current.filter((trace) => trace.id !== id));
-      }, 115);
+      }, hit ? 82 : 58);
+    }
+
+    function addImpact(position: THREE.Vector3) {
+      const id = nextImpactId.current++;
+      const sparks: [number, number, number][] = Array.from({ length: 8 }, () => [
+        (Math.random() - 0.5) * 0.42,
+        (Math.random() - 0.5) * 0.42,
+        (Math.random() - 0.5) * 0.26,
+      ]);
+
+      setImpacts((current) => [
+        ...current.slice(-16),
+        {
+          id,
+          position: [position.x, position.y, position.z],
+          sparks,
+        },
+      ]);
+
+      window.setTimeout(() => {
+        setImpacts((current) => current.filter((impact) => impact.id !== id));
+      }, 105);
     }
 
     function fire(currentWeapon: WeaponId) {
@@ -80,7 +155,7 @@ export function CombatSystem() {
         raycaster.setFromCamera(new THREE.Vector2(spreadX, spreadY), camera);
 
         const origin = raycaster.ray.origin.clone().add(
-          raycaster.ray.direction.clone().multiplyScalar(0.7),
+          raycaster.ray.direction.clone().multiplyScalar(0.9),
         );
         const intersections = raycaster.intersectObjects(scene.children, true);
         const first = intersections[0];
@@ -95,15 +170,15 @@ export function CombatSystem() {
 
         if (!first || !targetId) continue;
 
+        addImpact(first.point);
+
         const targetPart = first.object.userData.targetPart;
         const headMultiplier = targetPart === "head" ? 1.6 : 1;
         let damage = config.damage * headMultiplier;
 
         if (currentWeapon === "shotgun") {
-          const closeRange = 5;
-          const falloffDistance = Math.max(0, first.distance - closeRange);
-          const multiplier = THREE.MathUtils.clamp(1 - falloffDistance / 25, 0.24, 1);
-          damage *= multiplier;
+          const falloffDistance = Math.max(0, first.distance - 5);
+          damage *= THREE.MathUtils.clamp(1 - falloffDistance / 24, 0.22, 1);
         }
 
         hits.set(targetId, (hits.get(targetId) ?? 0) + damage);
@@ -143,11 +218,10 @@ export function CombatSystem() {
 
       if (currentWeapon === "rifle" && autoFire.current === null) {
         autoFire.current = window.setInterval(() => {
-          if (useGameStore.getState().screen !== "playing") {
-            stopAutoFire();
-            return;
-          }
-          if (useGameStore.getState().weapon !== "rifle") {
+          if (
+            useGameStore.getState().screen !== "playing" ||
+            useGameStore.getState().weapon !== "rifle"
+          ) {
             stopAutoFire();
             return;
           }
@@ -200,6 +274,9 @@ export function CombatSystem() {
     <>
       {traces.map((trace) => (
         <TraceLine key={trace.id} trace={trace} />
+      ))}
+      {impacts.map((impact) => (
+        <ImpactBurst key={impact.id} impact={impact} />
       ))}
     </>
   );
