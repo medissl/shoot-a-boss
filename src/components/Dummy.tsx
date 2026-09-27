@@ -592,26 +592,22 @@ export function Dummy({
             <meshBasicMaterial color={hitFlash ? RED : BLUE} />
           </mesh>
         </group>
-      </group>
 
-      {damagePops.map((pop, index) => (
-        <Html
-          key={pop.id}
-          position={[
-            group.current?.position.x ?? spawn[0],
-            (group.current?.position.y ?? spawn[1]) + 3.35 + index * 0.15,
-            group.current?.position.z ?? spawn[2],
-          ]}
-          center
-          zIndexRange={[40, 0]}
-          style={{ pointerEvents: "none" }}
-        >
-          <div className={`boss-damage-pop boss-damage-pop--${pop.part}`}>
-            {pop.part === "head" && <span>HEADSHOT</span>}
-            <strong>{pop.amount}</strong>
-          </div>
-        </Html>
-      ))}
+        {damagePops.map((pop, index) => (
+          <Html
+            key={pop.id}
+            position={[0, 3.35 + index * 0.15, 0]}
+            center
+            zIndexRange={[40, 0]}
+            style={{ pointerEvents: "none" }}
+          >
+            <div className={`boss-damage-pop boss-damage-pop--${pop.part}`}>
+              {pop.part === "head" && <span>HEADSHOT</span>}
+              <strong>{pop.amount}</strong>
+            </div>
+          </Html>
+        ))}
+      </group>
 
       <mesh
         ref={warningRef}
