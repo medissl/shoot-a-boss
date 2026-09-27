@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from "react";
-import { useGameStore, type GameScreen, type MovementMode } from "../game/store";
+import { useGameStore, type GameScreen } from "../game/store";
 import type { WeaponId } from "../game/config";
 
 const A = {
