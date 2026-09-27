@@ -680,19 +680,14 @@ button {
   position: fixed;
   z-index: 7;
   pointer-events: none;
-  transform-origin: 100% 100%;
-  will-change: transform, right, bottom;
+  will-change: transform;
 }
 
 .weapon-view.is-hip {
-  right: 6vw;
-  bottom: -1.5vh;
-  width: min(69vw, 1040px);
-  transform:
-    perspective(1200px)
-    rotateX(4deg)
-    rotateY(-15deg)
-    rotateZ(-1deg);
+  right: -1.5vw;
+  bottom: -17vh;
+  width: 69vw;
+  transform: none;
 }
 
 .weapon-view.is-scoped {
@@ -705,14 +700,11 @@ button {
 .weapon-view__motion,
 .weapon-view__perspective,
 .weapon-view__kick {
-  transform-origin: 82% 90%;
+  transform-origin: 78% 88%;
   will-change: transform;
 }
 
-.weapon-view.is-hip .weapon-view__perspective {
-  transform: perspective(1080px) rotateX(1deg) rotateY(-7deg);
-}
-
+.weapon-view.is-hip .weapon-view__perspective,
 .weapon-view.is-scoped .weapon-view__perspective {
   transform: none;
 }
@@ -727,18 +719,20 @@ button {
 .weapon-view.movement-slide.is-hip .weapon-view__motion { animation: weapon-slide .46s ease-in-out infinite; }
 .weapon-view.is-scoped .weapon-view__motion { animation: weapon-breathe-scoped 3s ease-in-out infinite; }
 
-.weapon-view__kick { transition: transform .1s ease-out; }
+.weapon-view__kick {
+  transition: transform .1s ease-out;
+}
 
 .weapon-view.is-hip.is-kicking .weapon-view__kick {
-  transform: translate(18px, 18px) rotate(1deg);
+  transform: translate3d(12px, 15px, 0) rotate(.35deg);
 }
 
 .weapon-view--shotgun.is-hip.is-kicking .weapon-view__kick {
-  transform: translate(29px, 26px) rotate(1.9deg);
+  transform: translate3d(19px, 22px, 0) rotate(.55deg);
 }
 
 .weapon-view--sniper.is-hip.is-kicking .weapon-view__kick {
-  transform: translate(24px, 21px) rotate(1.45deg);
+  transform: translate3d(17px, 20px, 0) rotate(.45deg);
 }
 
 .weapon-view.is-scoped.is-kicking .weapon-view__kick {
@@ -817,14 +811,9 @@ button {
   stroke-width: 6;
 }
 
-.ads-drawing--sniper {
-  opacity: .62;
-}
-
+.ads-drawing--sniper { opacity: .62; }
 .ads-drawing--rifle,
-.ads-drawing--shotgun {
-  opacity: .78;
-}
+.ads-drawing--shotgun { opacity: .78; }
 
 .muzzle-spark {
   opacity: 0;
@@ -838,7 +827,7 @@ button {
 
 @keyframes weapon-breathe {
   0%,100% { transform: translate3d(0,0,0) rotate(0deg); }
-  50% { transform: translate3d(-2px,-4px,0) rotate(.18deg); }
+  50% { transform: translate3d(-2px,-4px,0) rotate(.12deg); }
 }
 
 @keyframes weapon-breathe-scoped {
@@ -847,32 +836,32 @@ button {
 }
 
 @keyframes weapon-walk {
-  0%,100% { transform: translate3d(-6px,2px,0) rotate(-.5deg); }
-  25% { transform: translate3d(0,-9px,0) rotate(.1deg); }
-  50% { transform: translate3d(6px,3px,0) rotate(.5deg); }
-  75% { transform: translate3d(0,-7px,0) rotate(.05deg); }
+  0%,100% { transform: translate3d(-5px,3px,0) rotate(-.32deg); }
+  25% { transform: translate3d(0,-7px,0) rotate(.08deg); }
+  50% { transform: translate3d(5px,3px,0) rotate(.32deg); }
+  75% { transform: translate3d(0,-6px,0) rotate(.04deg); }
 }
 
 @keyframes weapon-run {
-  0%,100% { transform: translate3d(-11px,10px,0) rotate(-1.15deg); }
-  25% { transform: translate3d(0,-16px,0) rotate(.2deg); }
-  50% { transform: translate3d(12px,11px,0) rotate(1.15deg); }
-  75% { transform: translate3d(0,-14px,0) rotate(.15deg); }
+  0%,100% { transform: translate3d(-9px,9px,0) rotate(-.72deg); }
+  25% { transform: translate3d(0,-12px,0) rotate(.14deg); }
+  50% { transform: translate3d(10px,10px,0) rotate(.72deg); }
+  75% { transform: translate3d(0,-11px,0) rotate(.1deg); }
 }
 
 @keyframes weapon-crouch {
-  0%,100% { transform: translate3d(0,16px,0) rotate(-.3deg); }
-  50% { transform: translate3d(2px,11px,0) rotate(.1deg); }
+  0%,100% { transform: translate3d(0,14px,0) rotate(-.2deg); }
+  50% { transform: translate3d(2px,10px,0) rotate(.08deg); }
 }
 
 @keyframes weapon-slide {
-  0%,100% { transform: translate3d(18px,32px,0) rotate(2.1deg); }
-  50% { transform: translate3d(7px,23px,0) rotate(1.1deg); }
+  0%,100% { transform: translate3d(15px,28px,0) rotate(1.25deg); }
+  50% { transform: translate3d(6px,21px,0) rotate(.65deg); }
 }
 
 @keyframes weapon-reload-dip {
-  from { transform: translate3d(20px,32px,0) rotate(2deg); }
-  to { transform: translate3d(34px,50px,0) rotate(4deg); }
+  from { transform: translate3d(18px,30px,0) rotate(1.2deg); }
+  to { transform: translate3d(30px,48px,0) rotate(2.5deg); }
 }
 
 .game-shell.is-empty-shake {
@@ -1520,9 +1509,9 @@ button {
   }
 
   .weapon-view.is-hip {
-    right: -2vw;
-    bottom: -5vh;
-    width: 92vw;
+    right: -12vw;
+    bottom: -11vh;
+    width: 94vw;
     height: auto;
   }
 

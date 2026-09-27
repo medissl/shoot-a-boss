@@ -64,8 +64,14 @@ export function AudioManager() {
   const sfxVolume = useGameStore((state) => state.sfxVolume);
 
   const unlocked = useRef(false);
-  const bgm = useRef<{ path: string; audio: HTMLAudioElement } | null>(null);
+
+  // One persistent music player only. Keeping a single HTMLAudioElement means
+  // IntroMenuBGM and ShootingBGM can never overlap, even during rapid state changes.
+  const bgmAudio = useRef<HTMLAudioElement | null>(null);
+  const bgmPath = useRef<string | null>(null);
   const bgmFrame = useRef<number | null>(null);
+  const bgmTransition = useRef(0);
+
   const stepLoop = useRef<{ path: string; audio: HTMLAudioElement } | null>(null);
   const rifleBurstTimer = useRef<number | null>(null);
   const rifleHoldTimer = useRef<number | null>(null);
@@ -97,78 +103,105 @@ export function AudioManager() {
     [sfxLevel],
   );
 
-  const fadeCurrentBgmIn = useCallback(() => {
-    const current = bgm.current?.audio;
-    if (!current) return;
+  const ensureBgmAudio = useCallback(() => {
+    if (!bgmAudio.current) {
+      const audio = new Audio();
+      audio.loop = true;
+      audio.preload = "auto";
+      audio.volume = 0;
+      bgmAudio.current = audio;
+    }
+    return bgmAudio.current;
+  }, []);
 
-    if (bgmFrame.current !== null) cancelAnimationFrame(bgmFrame.current);
-    const started = performance.now();
-    const target = bgmLevel();
-    current.volume = Math.min(current.volume, target);
+  const cancelBgmFrame = useCallback(() => {
+    if (bgmFrame.current !== null) {
+      cancelAnimationFrame(bgmFrame.current);
+      bgmFrame.current = null;
+    }
+  }, []);
 
-    const step = (now: number) => {
-      const t = Math.min(1, (now - started) / 650);
-      current.volume = target * t;
-      if (t < 1) bgmFrame.current = requestAnimationFrame(step);
-      else bgmFrame.current = null;
-    };
+  const rampVolume = useCallback(
+    (
+      audio: HTMLAudioElement,
+      from: number,
+      to: number,
+      duration: number,
+      token: number,
+      done?: () => void,
+    ) => {
+      cancelBgmFrame();
+      const started = performance.now();
 
-    bgmFrame.current = requestAnimationFrame(step);
-  }, [bgmLevel]);
+      const step = (now: number) => {
+        if (token !== bgmTransition.current) return;
 
-  const switchBgm = useCallback(
+        const t = Math.min(1, (now - started) / duration);
+        audio.volume = from + (to - from) * t;
+
+        if (t < 1) {
+          bgmFrame.current = requestAnimationFrame(step);
+        } else {
+          bgmFrame.current = null;
+          done?.();
+        }
+      };
+
+      bgmFrame.current = requestAnimationFrame(step);
+    },
+    [cancelBgmFrame],
+  );
+
+  const requestBgm = useCallback(
     (nextPath: string) => {
-      if (bgm.current?.path === nextPath) {
-        const current = bgm.current.audio;
-        current.volume = bgmLevel();
-        if (current.paused) {
-          void current.play().then(fadeCurrentBgmIn).catch(() => undefined);
+      const audio = ensureBgmAudio();
+      const token = ++bgmTransition.current;
+      const target = bgmLevel();
+
+      if (bgmPath.current === nextPath) {
+        cancelBgmFrame();
+
+        const startCurrent = () => {
+          if (token !== bgmTransition.current) return;
+          rampVolume(audio, audio.volume, target, 320, token);
+        };
+
+        if (audio.paused) {
+          void audio.play().then(startCurrent).catch(() => undefined);
+        } else {
+          startCurrent();
         }
         return;
       }
 
-      if (bgmFrame.current !== null) {
-        cancelAnimationFrame(bgmFrame.current);
-        bgmFrame.current = null;
-      }
+      const switchTrack = () => {
+        if (token !== bgmTransition.current) return;
 
-      const old = bgm.current?.audio ?? null;
-      const next = new Audio(nextPath);
-      next.loop = true;
-      next.preload = "auto";
-      next.volume = 0;
-      bgm.current = { path: nextPath, audio: next };
+        audio.pause();
+        audio.currentTime = 0;
+        audio.src = nextPath;
+        audio.load();
+        bgmPath.current = nextPath;
+        audio.volume = 0;
 
-      const startFade = () => {
-        const duration = 850;
-        const started = performance.now();
-        const oldStart = old?.volume ?? 0;
-        const target = bgmLevel();
-
-        const step = (now: number) => {
-          const t = Math.min(1, (now - started) / duration);
-          next.volume = target * t;
-          if (old) old.volume = oldStart * (1 - t);
-
-          if (t < 1) {
-            bgmFrame.current = requestAnimationFrame(step);
-          } else {
-            bgmFrame.current = null;
-            if (old) {
-              old.pause();
-              old.currentTime = 0;
-            }
-          }
+        const startNew = () => {
+          if (token !== bgmTransition.current) return;
+          rampVolume(audio, 0, target, 520, token);
         };
 
-        bgmFrame.current = requestAnimationFrame(step);
+        // We still attempt playback during the opening comic. Browsers that
+        // block autoplay leave the track loaded; first user input retries it.
+        void audio.play().then(startNew).catch(() => undefined);
       };
 
-      // Best-effort autoplay for the opening comic. Browsers that allow it start
-      // immediately; browsers that block audible autoplay retry on first input.
-      void next.play().then(startFade).catch(() => undefined);
+      if (!bgmPath.current || audio.paused || audio.volume <= 0.001) {
+        switchTrack();
+        return;
+      }
+
+      rampVolume(audio, audio.volume, 0, 300, token, switchTrack);
     },
-    [bgmLevel, fadeCurrentBgmIn],
+    [bgmLevel, cancelBgmFrame, ensureBgmAudio, rampVolume],
   );
 
   const stopRifleBurst = useCallback(() => {
@@ -197,7 +230,7 @@ export function AudioManager() {
 
       const audio = new Audio(A.rifleBurst);
       audio.preload = "auto";
-      audio.volume = sfxLevel(0.22);
+      audio.volume = sfxLevel(0.2);
       rifleBursts.current.add(audio);
 
       const scheduleNext = () => {
@@ -205,9 +238,11 @@ export function AudioManager() {
         const durationMs = Number.isFinite(audio.duration)
           ? audio.duration * 1000
           : 300;
+
+        // Small overlap hides the encoded silence at the clip boundary.
         rifleBurstTimer.current = window.setTimeout(
           spawnBurst,
-          Math.max(130, durationMs - 55),
+          Math.max(110, durationMs - 90),
         );
       };
 
@@ -229,24 +264,16 @@ export function AudioManager() {
       unlocked.current = true;
 
       const state = useGameStore.getState();
-      const wanted = bgmFor(state.screen);
-
-      if (!bgm.current || bgm.current.path !== wanted) {
-        switchBgm(wanted);
-      } else {
-        const current = bgm.current.audio;
-        current.volume = 0;
-        void current.play().then(fadeCurrentBgmIn).catch(() => undefined);
-      }
+      requestBgm(bgmFor(state.screen));
 
       if (state.screen === "playing") {
         playOne(cocking[state.weapon], 0.3);
       }
     };
 
-    // Attempt the menu/comic BGM immediately. If autoplay is blocked the first
-    // pointer/key event above resumes the exact same track.
-    switchBgm(bgmFor(useGameStore.getState().screen));
+    // Load/attempt the comic/menu track immediately. If autoplay is blocked,
+    // the first pointer/key input restarts this exact one-player state machine.
+    requestBgm(bgmFor(useGameStore.getState().screen));
 
     window.addEventListener("pointerdown", unlock, { once: true });
     window.addEventListener("keydown", unlock, { once: true });
@@ -255,14 +282,16 @@ export function AudioManager() {
       window.removeEventListener("pointerdown", unlock);
       window.removeEventListener("keydown", unlock);
     };
-  }, [fadeCurrentBgmIn, playOne, switchBgm]);
+  }, [playOne, requestBgm]);
 
   useEffect(() => {
-    switchBgm(bgmFor(screen));
-  }, [screen, switchBgm]);
+    requestBgm(bgmFor(screen));
+  }, [requestBgm, screen]);
 
   useEffect(() => {
-    if (bgm.current) bgm.current.audio.volume = bgmLevel();
+    const audio = bgmAudio.current;
+    if (!audio || audio.paused) return;
+    audio.volume = bgmLevel();
   }, [bgmLevel, bgmVolume]);
 
   useEffect(() => {
@@ -281,11 +310,9 @@ export function AudioManager() {
             : null;
 
     if (stepLoop.current?.path === wanted) {
-      if (stepLoop.current) {
-        stepLoop.current.audio.volume = sfxLevel(
-          movementMode === "run" ? 0.24 : 0.2,
-        );
-      }
+      stepLoop.current.audio.volume = sfxLevel(
+        movementMode === "run" ? 0.24 : 0.2,
+      );
       return;
     }
 
@@ -343,7 +370,10 @@ export function AudioManager() {
 
     const pickup = (event: Event) => {
       const kind = (event as CustomEvent<{ kind: "grenade" | "speed" }>).detail.kind;
-      playOne(kind === "speed" ? A.speed : A.pickup, kind === "speed" ? 0.38 : 0.32);
+      playOne(
+        kind === "speed" ? A.speed : A.pickup,
+        kind === "speed" ? 0.38 : 0.32,
+      );
     };
 
     const killed = (event: Event) => {
@@ -383,13 +413,17 @@ export function AudioManager() {
 
   useEffect(
     () => () => {
-      if (bgmFrame.current !== null) cancelAnimationFrame(bgmFrame.current);
-      bgm.current?.audio.pause();
+      cancelBgmFrame();
+      bgmTransition.current += 1;
+      if (bgmAudio.current) {
+        bgmAudio.current.pause();
+        bgmAudio.current.src = "";
+      }
       stepLoop.current?.audio.pause();
       stopRifleBurst();
       oneShots.current.forEach((audio) => audio.pause());
     },
-    [stopRifleBurst],
+    [cancelBgmFrame, stopRifleBurst],
   );
 
   return null;
