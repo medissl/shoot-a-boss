@@ -1,16 +1,13 @@
 import { create } from "zustand";
+import { GRENADE_COUNT, WEAPONS, type WeaponId } from "./config";
+import { getLevelDefinition, getTargetCount } from "./levels";
 import {
-  GRENADE_COUNT,
-  MAX_LEVEL,
-  UPGRADE_CARDS,
-  WEAPONS,
-  blankUpgrades,
-  getLevelTargetCount,
+  emptyUpgrades,
   getUpgradeStats,
-  type UpgradeCounts,
+  rollUpgradeChoices,
   type UpgradeId,
-  type WeaponId,
-} from "./config";
+  type UpgradeLevels,
+} from "./progression";
 
 type AmmoState = Record<WeaponId, { mag: number; reserve: number }>;
 
@@ -20,13 +17,13 @@ export type GameScreen =
   | "menu"
   | "playing"
   | "paused"
-  | "reward"
+  | "upgrade"
   | "won"
   | "lost";
 
 export type MovementMode = "idle" | "walk" | "run" | "crouch" | "slide";
 
-const BASE_RELOAD_MS: Record<Exclude<WeaponId, "knife">, number> = {
+const BASE_RELOAD_MS: Partial<Record<WeaponId, number>> = {
   sniper: 1750,
   rifle: 1500,
   shotgun: 2000,
@@ -35,18 +32,19 @@ const BASE_RELOAD_MS: Record<Exclude<WeaponId, "knife">, number> = {
 type GameStore = {
   screen: GameScreen;
   runId: number;
-  level: number;
-  maxUnlockedLevel: number;
+  currentLevel: number;
+  unlockedLevel: number;
+  targetCount: number;
   hp: number;
   maxHp: number;
   weapon: WeaponId;
   ammo: AmmoState;
   grenades: number;
-  grenadeCapacity: number;
   eliminated: string[];
-  upgrades: UpgradeCounts;
-  rewardChoices: UpgradeId[];
-  rewardRerolled: boolean;
+  upgrades: UpgradeLevels;
+  upgradeChoices: UpgradeId[];
+  upgradeRerollsLeft: number;
+  selectedUpgrade: UpgradeId | null;
   sensitivity: number;
   bgmVolume: number;
   sfxVolume: number;
@@ -60,15 +58,16 @@ type GameStore = {
   reloadStartedAt: number;
   reloadDurationMs: number;
   reloadToken: number;
-  startGame: (level?: number) => void;
+  startGame: () => void;
+  startLevel: (level: number) => void;
+  nextLevel: () => void;
+  chooseUpgrade: (id: UpgradeId) => void;
+  rerollUpgrades: () => void;
   pause: () => void;
   resume: () => void;
   restart: () => void;
-  nextLevel: () => void;
   goToMenu: () => void;
   readComic: () => void;
-  chooseUpgrade: (id: UpgradeId) => void;
-  rerollRewards: () => void;
   setWeapon: (weapon: WeaponId) => void;
   cycleWeapon: (direction: 1 | -1) => void;
   spendRound: (weapon: WeaponId) => boolean;
@@ -95,57 +94,58 @@ function readStoredVolume(key: string, fallback: number) {
 
 function readUnlockedLevel() {
   if (typeof window === "undefined") return 1;
-  const raw = Number(window.localStorage.getItem("shoot-a-boss:unlocked-level"));
-  return Number.isFinite(raw)
-    ? Math.min(MAX_LEVEL, Math.max(1, Math.floor(raw)))
-    : 1;
+  const parsed = Number(window.localStorage.getItem("shoot-a-boss:unlocked-level"));
+  return Number.isFinite(parsed) ? Math.min(10, Math.max(1, parsed)) : 1;
 }
 
-function storeUnlockedLevel(level: number) {
+function writeUnlockedLevel(level: number) {
   if (typeof window !== "undefined") {
     window.localStorage.setItem(
       "shoot-a-boss:unlocked-level",
-      String(Math.min(MAX_LEVEL, Math.max(1, level))),
+      String(Math.min(10, Math.max(1, level))),
     );
   }
 }
 
-function magazineCapacity(weapon: WeaponId, upgrades: UpgradeCounts) {
-  if (weapon === "knife") return 1;
-  const stats = getUpgradeStats(upgrades);
+function magazineSize(weapon: WeaponId, upgrades: UpgradeLevels) {
+  if (weapon === "knife") return 0;
   return Math.max(
     1,
-    Math.ceil(WEAPONS[weapon].magazine * stats.magazine),
+    Math.round(WEAPONS[weapon].magazine * getUpgradeStats(upgrades).magazine),
   );
 }
 
-function freshAmmo(upgrades: UpgradeCounts): AmmoState {
+function freshAmmo(upgrades: UpgradeLevels): AmmoState {
   return {
     sniper: {
-      mag: magazineCapacity("sniper", upgrades),
+      mag: magazineSize("sniper", upgrades),
       reserve: WEAPONS.sniper.reserve,
     },
     rifle: {
-      mag: magazineCapacity("rifle", upgrades),
+      mag: magazineSize("rifle", upgrades),
       reserve: WEAPONS.rifle.reserve,
     },
     shotgun: {
-      mag: magazineCapacity("shotgun", upgrades),
+      mag: magazineSize("shotgun", upgrades),
       reserve: WEAPONS.shotgun.reserve,
     },
-    knife: { mag: 1, reserve: 0 },
+    knife: { mag: 0, reserve: 0 },
   };
 }
 
-function freshRun(upgrades: UpgradeCounts) {
+const weaponOrder: WeaponId[] = ["sniper", "rifle", "shotgun", "knife"];
+
+function freshRun(level: number, upgrades: UpgradeLevels) {
   const stats = getUpgradeStats(upgrades);
+
   return {
+    currentLevel: level,
+    targetCount: getTargetCount(level),
     hp: stats.maxHp,
     maxHp: stats.maxHp,
     weapon: "rifle" as WeaponId,
     ammo: freshAmmo(upgrades),
-    grenades: stats.grenadeCapacity,
-    grenadeCapacity: stats.grenadeCapacity,
+    grenades: stats.grenadeCapacity || GRENADE_COUNT,
     eliminated: [] as string[],
     scoped: false,
     playerPosition: [0, 1.4, 12] as [number, number, number],
@@ -157,21 +157,8 @@ function freshRun(upgrades: UpgradeCounts) {
     reloadStartedAt: 0,
     reloadDurationMs: 0,
     reloadToken: 0,
-    rewardChoices: [] as UpgradeId[],
-    rewardRerolled: false,
   };
 }
-
-function pickRewardChoices(): UpgradeId[] {
-  const pool = UPGRADE_CARDS.map((card) => card.id);
-  for (let index = pool.length - 1; index > 0; index -= 1) {
-    const swapWith = Math.floor(Math.random() * (index + 1));
-    [pool[index], pool[swapWith]] = [pool[swapWith], pool[index]];
-  }
-  return pool.slice(0, 3);
-}
-
-const weaponOrder: WeaponId[] = ["sniper", "rifle", "shotgun", "knife"];
 
 function cancelReload(
   set: (state: Partial<GameStore>) => void,
@@ -186,40 +173,110 @@ function cancelReload(
   });
 }
 
+function announceRifle() {
+  window.dispatchEvent(
+    new CustomEvent("weapon-selected", {
+      detail: { weapon: "rifle" as WeaponId },
+    }),
+  );
+}
+
 export const useGameStore = create<GameStore>((set, get) => {
-  const initialUpgrades = blankUpgrades();
+  const initialUpgrades = emptyUpgrades();
 
   return {
     screen: "story",
     runId: 0,
-    level: 1,
-    maxUnlockedLevel: readUnlockedLevel(),
+    unlockedLevel: readUnlockedLevel(),
     upgrades: initialUpgrades,
-    ...freshRun(initialUpgrades),
+    upgradeChoices: [],
+    upgradeRerollsLeft: 1,
+    selectedUpgrade: null,
+    ...freshRun(1, initialUpgrades),
     sensitivity: 0.85,
     bgmVolume: readStoredVolume("shoot-a-boss:bgm-volume", 0.34),
     sfxVolume: readStoredVolume("shoot-a-boss:sfx-volume", 0.42),
 
-    startGame: (requestedLevel = 1) => {
-      const level = Math.min(
-        get().maxUnlockedLevel,
-        Math.max(1, Math.floor(requestedLevel)),
-      );
-      const upgrades = blankUpgrades();
-
+    startGame: () => {
+      const upgrades = emptyUpgrades();
       set((state) => ({
         screen: "playing",
         runId: state.runId + 1,
-        level,
         upgrades,
-        ...freshRun(upgrades),
+        upgradeChoices: [],
+        upgradeRerollsLeft: 1,
+        selectedUpgrade: null,
+        ...freshRun(1, upgrades),
       }));
+      announceRifle();
+    },
 
-      window.dispatchEvent(
-        new CustomEvent("weapon-selected", {
-          detail: { weapon: "rifle" as WeaponId },
-        }),
-      );
+    startLevel: (level) => {
+      const safeLevel = Math.min(10, Math.max(1, level));
+      const upgrades = emptyUpgrades();
+      set((state) => ({
+        screen: "playing",
+        runId: state.runId + 1,
+        upgrades,
+        upgradeChoices: [],
+        upgradeRerollsLeft: 1,
+        selectedUpgrade: null,
+        ...freshRun(safeLevel, upgrades),
+      }));
+      announceRifle();
+    },
+
+    nextLevel: () => {
+      const state = get();
+      if (state.currentLevel >= 10) {
+        set({ screen: "won" });
+        return;
+      }
+
+      const next = state.currentLevel + 1;
+      set((current) => ({
+        screen: "playing",
+        runId: current.runId + 1,
+        upgradeChoices: [],
+        upgradeRerollsLeft: 1,
+        selectedUpgrade: null,
+        ...freshRun(next, state.upgrades),
+      }));
+      announceRifle();
+    },
+
+    chooseUpgrade: (id) => {
+      const state = get();
+      if (state.screen !== "upgrade" || state.selectedUpgrade) return;
+
+      set({
+        upgrades: {
+          ...state.upgrades,
+          [id]: state.upgrades[id] + 1,
+        },
+        selectedUpgrade: id,
+      });
+    },
+
+    rerollUpgrades: () => {
+      const state = get();
+      if (
+        state.screen !== "upgrade" ||
+        state.selectedUpgrade ||
+        state.upgradeRerollsLeft <= 0
+      ) {
+        return;
+      }
+
+      const rerollIndex = 2 - state.upgradeRerollsLeft;
+      set({
+        upgradeChoices: rollUpgradeChoices(
+          state.currentLevel,
+          rerollIndex + 1,
+          state.upgrades,
+        ),
+        upgradeRerollsLeft: state.upgradeRerollsLeft - 1,
+      });
     },
 
     pause: () => {
@@ -234,43 +291,13 @@ export const useGameStore = create<GameStore>((set, get) => {
     },
 
     restart: () => {
-      const upgrades = get().upgrades;
-      set((state) => ({
+      const state = get();
+      set((current) => ({
         screen: "playing",
-        runId: state.runId + 1,
-        ...freshRun(upgrades),
-        upgrades,
+        runId: current.runId + 1,
+        ...freshRun(state.currentLevel, state.upgrades),
       }));
-
-      window.dispatchEvent(
-        new CustomEvent("weapon-selected", {
-          detail: { weapon: "rifle" as WeaponId },
-        }),
-      );
-    },
-
-    nextLevel: () => {
-      const current = get().level;
-      if (current >= MAX_LEVEL) {
-        get().goToMenu();
-        return;
-      }
-
-      const level = current + 1;
-      const upgrades = get().upgrades;
-      set((state) => ({
-        screen: "playing",
-        level,
-        runId: state.runId + 1,
-        ...freshRun(upgrades),
-        upgrades,
-      }));
-
-      window.dispatchEvent(
-        new CustomEvent("weapon-selected", {
-          detail: { weapon: "rifle" as WeaponId },
-        }),
-      );
+      announceRifle();
     },
 
     goToMenu: () => {
@@ -289,39 +316,6 @@ export const useGameStore = create<GameStore>((set, get) => {
       set({ screen: "comic", scoped: false, movementMode: "idle" });
     },
 
-    chooseUpgrade: (id) => {
-      if (get().screen !== "reward") return;
-
-      const upgrades = {
-        ...get().upgrades,
-        [id]: get().upgrades[id] + 1,
-      };
-      const stats = getUpgradeStats(upgrades);
-      const patch: Partial<GameStore> = {
-        upgrades,
-        maxHp: stats.maxHp,
-        grenadeCapacity: stats.grenadeCapacity,
-        screen: "won",
-      };
-
-      if (id === "maxHp") {
-        patch.hp = Math.min(stats.maxHp, get().hp + 25);
-      }
-      if (id === "grenades") {
-        patch.grenades = Math.min(stats.grenadeCapacity, get().grenades + 1);
-      }
-
-      set(patch);
-    },
-
-    rerollRewards: () => {
-      if (get().screen !== "reward" || get().rewardRerolled) return;
-      set({
-        rewardChoices: pickRewardChoices(),
-        rewardRerolled: true,
-      });
-    },
-
     setWeapon: (weapon) => {
       cancelReload(set, get);
       set({ weapon, scoped: false });
@@ -335,7 +329,6 @@ export const useGameStore = create<GameStore>((set, get) => {
       const next =
         (current + direction + weaponOrder.length) % weaponOrder.length;
       const weapon = weaponOrder[next];
-
       cancelReload(set, get);
       set({ weapon, scoped: false });
       window.dispatchEvent(
@@ -371,14 +364,15 @@ export const useGameStore = create<GameStore>((set, get) => {
 
       const weapon = state.weapon;
       const current = state.ammo[weapon];
-      const capacity = magazineCapacity(weapon, state.upgrades);
+      const capacity = magazineSize(weapon, state.upgrades);
       const needed = capacity - current.mag;
       const moved = Math.min(needed, current.reserve);
       if (moved <= 0) return;
 
-      const stats = getUpgradeStats(state.upgrades);
-      const duration = Math.round(
-        BASE_RELOAD_MS[weapon as Exclude<WeaponId, "knife">] * stats.reload,
+      const baseDuration = BASE_RELOAD_MS[weapon] ?? 1500;
+      const duration = Math.max(
+        550,
+        Math.round(baseDuration * getUpgradeStats(state.upgrades).reloadTime),
       );
       const token = state.reloadToken + 1;
 
@@ -392,21 +386,18 @@ export const useGameStore = create<GameStore>((set, get) => {
       });
 
       window.setTimeout(() => {
-        const latestState = get();
+        const live = get();
         if (
-          latestState.reloadToken !== token ||
-          !latestState.reloading ||
-          latestState.reloadingWeapon !== weapon ||
-          latestState.screen !== "playing"
+          live.reloadToken !== token ||
+          !live.reloading ||
+          live.reloadingWeapon !== weapon ||
+          live.screen !== "playing"
         ) {
           return;
         }
 
-        const latest = latestState.ammo[weapon];
-        const latestCapacity = magazineCapacity(
-          weapon,
-          latestState.upgrades,
-        );
+        const latest = live.ammo[weapon];
+        const latestCapacity = magazineSize(weapon, live.upgrades);
         const latestNeeded = latestCapacity - latest.mag;
         const latestMoved = Math.min(latestNeeded, latest.reserve);
 
@@ -435,7 +426,7 @@ export const useGameStore = create<GameStore>((set, get) => {
     refillGrenades: (amount = 1) =>
       set((state) => ({
         grenades: Math.min(
-          state.grenadeCapacity,
+          getUpgradeStats(state.upgrades).grenadeCapacity,
           state.grenades + amount,
         ),
       })),
@@ -443,7 +434,6 @@ export const useGameStore = create<GameStore>((set, get) => {
     grantSpeedBoost: (durationMs = 12000) => {
       const speedBoostUntil = performance.now() + durationMs;
       set({ speedBoostUntil, speedBoostActive: true });
-
       window.setTimeout(() => {
         if (get().speedBoostUntil <= performance.now()) {
           set({ speedBoostActive: false });
@@ -452,7 +442,8 @@ export const useGameStore = create<GameStore>((set, get) => {
     },
 
     damagePlayer: (amount) => {
-      const next = Math.max(0, get().hp - amount);
+      const state = get();
+      const next = Math.max(0, state.hp - amount);
       window.dispatchEvent(
         new CustomEvent("player-damaged", { detail: { amount } }),
       );
@@ -471,10 +462,7 @@ export const useGameStore = create<GameStore>((set, get) => {
       const eliminated = [...state.eliminated, id];
       const killCount = eliminated.length;
       const stats = getUpgradeStats(state.upgrades);
-      const healedHp =
-        stats.killHeal > 0
-          ? Math.min(state.maxHp, state.hp + stats.killHeal)
-          : state.hp;
+      const nextHp = Math.min(state.maxHp, state.hp + stats.killHeal);
 
       window.dispatchEvent(
         new CustomEvent("boss-killed", {
@@ -482,32 +470,47 @@ export const useGameStore = create<GameStore>((set, get) => {
         }),
       );
 
-      const cleared = killCount >= getLevelTargetCount(state.level);
-
-      if (cleared) {
-        const nextUnlocked = Math.min(
-          MAX_LEVEL,
-          Math.max(state.maxUnlockedLevel, state.level + 1),
+      if (killCount >= state.targetCount) {
+        const unlockedLevel = Math.min(
+          10,
+          Math.max(state.unlockedLevel, state.currentLevel + 1),
         );
-        storeUnlockedLevel(nextUnlocked);
+        writeUnlockedLevel(unlockedLevel);
+
+        if (state.currentLevel >= 10) {
+          set({
+            eliminated,
+            hp: nextHp,
+            unlockedLevel,
+            screen: "won",
+            scoped: false,
+            movementMode: "idle",
+          });
+          return;
+        }
 
         set({
           eliminated,
-          hp: healedHp,
-          maxUnlockedLevel: nextUnlocked,
-          screen: "reward",
+          hp: nextHp,
+          unlockedLevel,
+          screen: "upgrade",
           scoped: false,
           movementMode: "idle",
-          rewardChoices: pickRewardChoices(),
-          rewardRerolled: false,
+          upgradeChoices: rollUpgradeChoices(
+            state.currentLevel,
+            0,
+            state.upgrades,
+          ),
+          upgradeRerollsLeft: 1,
+          selectedUpgrade: null,
         });
-      } else {
-        set({ eliminated, hp: healedHp });
+        return;
       }
+
+      set({ eliminated, hp: nextHp });
     },
 
     setSensitivity: (sensitivity) => set({ sensitivity }),
-
     setBgmVolume: (bgmVolume) => {
       const value = Math.min(1, Math.max(0, bgmVolume));
       if (typeof window !== "undefined") {
@@ -518,7 +521,6 @@ export const useGameStore = create<GameStore>((set, get) => {
       }
       set({ bgmVolume: value });
     },
-
     setSfxVolume: (sfxVolume) => {
       const value = Math.min(1, Math.max(0, sfxVolume));
       if (typeof window !== "undefined") {
@@ -529,15 +531,12 @@ export const useGameStore = create<GameStore>((set, get) => {
       }
       set({ sfxVolume: value });
     },
-
     setScoped: (scoped) => {
       if (get().reloading && scoped) return;
       if (get().weapon === "knife" && scoped) return;
       set({ scoped });
     },
-
     setPlayerPosition: (playerPosition) => set({ playerPosition }),
-
     setMovementMode: (movementMode) => {
       if (get().movementMode !== movementMode) set({ movementMode });
     },
