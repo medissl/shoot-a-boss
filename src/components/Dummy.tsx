@@ -182,12 +182,13 @@ export function Dummy({
     return element;
   }, []);
   const texture = useMemo(() => {
+    drawBoss(canvas, pose, hitFlash);
     const next = new THREE.CanvasTexture(canvas);
     next.colorSpace = THREE.SRGBColorSpace;
     next.minFilter = THREE.LinearFilter;
     next.magFilter = THREE.LinearFilter;
     return next;
-  }, [canvas]);
+  }, [canvas, hitFlash, pose]);
 
   const [hp, setHp] = useState(100);
   const [pose, setPose] = useState<Pose>("idle");
@@ -200,11 +201,6 @@ export function Dummy({
   const eliminate = useGameStore((state) => state.eliminate);
   const screen = useGameStore((state) => state.screen);
   const drift = Number(id.split("-")[1]) % 2 === 0 ? 1 : -1;
-
-  useEffect(() => {
-    drawBoss(canvas, pose, hitFlash);
-    texture.needsUpdate = true;
-  }, [canvas, hitFlash, pose, texture]);
 
   useEffect(() => {
     return () => texture.dispose();

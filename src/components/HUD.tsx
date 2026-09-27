@@ -13,6 +13,7 @@ export function HUD() {
   const scoped = useGameStore((state) => state.scoped);
   const speedBoostUntil = useGameStore((state) => state.speedBoostUntil);
   const [pickupNotice, setPickupNotice] = useState("");
+  const [boostActive, setBoostActive] = useState(false);
 
   useEffect(() => {
     const handler = (event: Event) => {
@@ -24,7 +25,17 @@ export function HUD() {
     return () => window.removeEventListener("pickup-collected", handler as EventListener);
   }, []);
 
-  const boostActive = speedBoostUntil > performance.now();
+  useEffect(() => {
+    if (speedBoostUntil <= 0) {
+      setBoostActive(false);
+      return;
+    }
+
+    setBoostActive(true);
+    const remaining = Math.max(0, speedBoostUntil - performance.now());
+    const timer = window.setTimeout(() => setBoostActive(false), remaining);
+    return () => window.clearTimeout(timer);
+  }, [speedBoostUntil]);
 
   return (
     <div className="hud" aria-hidden="true">
