@@ -25,11 +25,18 @@ function DoodleBox({
   color?: string;
   shade?: boolean;
 }) {
+  const destructibleId = `surface:${position.join(":")}:${scale.join(":")}`;
+
   return (
     <RigidBody type="fixed" colliders={false} position={position}>
       <CuboidCollider args={[scale[0] / 2, scale[1] / 2, scale[2] / 2]} />
       <group>
-        <mesh scale={scale} castShadow receiveShadow>
+        <mesh
+          scale={scale}
+          castShadow
+          receiveShadow
+          userData={{ destructibleId }}
+        >
           <boxGeometry />
           <meshStandardMaterial color={color} roughness={0.96} />
           <Edges color={BLUE} threshold={10} />
@@ -235,6 +242,17 @@ function EnterableHouse() {
       <FilingCabinet position={[4.8, 0.1, -4.2]} />
       <FilingCabinet position={[-5.5, 0.1, 4.1]} />
       <PaperStack position={[2.1, 0.22, -2.4]} />
+      <PaperStack position={[-5.2, 0.22, -4.0]} />
+      <GiantCoffee position={[5.1, 0.05, 3.7]} />
+      <mesh position={[-0.2, 2.8, -6.46]}>
+        <planeGeometry args={[3.5, 1.55]} />
+        <meshBasicMaterial color={PALE_BLUE} />
+        <Edges color={BLUE} threshold={4} />
+      </mesh>
+      <mesh position={[-0.2, 2.8, -6.43]}>
+        <planeGeometry args={[2.85, 0.95]} />
+        <meshBasicMaterial color={PAPER} />
+      </mesh>
 
       <mesh position={[0, 4.72, 0]}>
         <boxGeometry args={[0.85, 0.12, 0.85]} />
@@ -277,12 +295,20 @@ function OfficeTower() {
         <DoodleBox position={[0, 9.0, -8.55]} scale={[12.2, 1.3, 0.45]} color={PAPER} />
         <DoodleBox position={[-5.7, 9.0, 8.55]} scale={[6.1, 1.3, 0.45]} color={PAPER} />
         <DoodleBox position={[5.7, 9.0, 8.55]} scale={[6.1, 1.3, 0.45]} color={PAPER} />
-        <DoodleBox position={[-8.55, 9.0, 0]} scale={[0.45, 1.3, 17.0]} color={PAPER} />
+        <DoodleBox position={[-8.55, 9.0, -5.8]} scale={[0.45, 1.3, 5.3]} color={PAPER} />
+        <DoodleBox position={[-8.55, 9.0, 5.8]} scale={[0.45, 1.3, 5.3]} color={PAPER} />
         <DoodleBox position={[8.55, 9.0, -5.9]} scale={[0.45, 1.3, 5.0]} color={PAPER} />
         <DoodleBox position={[8.55, 9.0, 5.9]} scale={[0.45, 1.3, 5.0]} color={PAPER} />
 
         <DoodleBox position={[0, 9.45, -5.7]} scale={[6.7, 2.0, 3.7]} color={PAPER} />
         <DoodleWindow position={[0, 9.45, -3.82]} scale={[3.0, 0.9]} />
+
+        <DoodleBox position={[-5.8, 9.38, 0]} scale={[4.2, 1.9, 4.4]} color={PAPER} />
+        <mesh position={[-7.93, 9.18, 0]} rotation={[0, -Math.PI / 2, 0]}>
+          <planeGeometry args={[1.7, 1.45]} />
+          <meshBasicMaterial color={DARK_BLUE} />
+          <Edges color={BLUE} threshold={4} />
+        </mesh>
       </group>
 
       <RigidBody type="fixed" colliders={false}>
@@ -306,11 +332,7 @@ function OfficeTower() {
         })}
       </RigidBody>
 
-      <DoodleBox position={[25.9, 8.48, -34]} scale={[2.3, 0.32, 5.1]} color={PAPER} />
-      <mesh position={[20.8, 5.0, -31.55]} rotation={[0, 0, -0.62]}>
-        <boxGeometry args={[12.4, 0.09, 0.09]} />
-        <meshBasicMaterial color={ORANGE} />
-      </mesh>
+      <DoodleBox position={[27.15, 8.5, -34]} scale={[4.9, 0.32, 5.1]} color={PAPER} />
 
       <group position={[44.35, 0, -34]}>
         <mesh position={[0, 4.8, -0.76]}>
@@ -500,14 +522,19 @@ export function Arena() {
       <PaperStack position={[-45, 0.08, 45]} />
 
       {[
-        [-48, -20], [-35, 24], [-18, 45], [6, 48], [29, 44],
-        [48, 26], [47, -12], [14, -47], [-21, -46], [-49, 7],
-        [1, 31], [-12, 20],
-      ].map(([x, z], index) => (
+        [-33, 24, 0.9],
+        [31, 40, 0.84],
+        [-47, -18, 0.58],
+        [46, -12, 0.56],
+        [-19, 45, 0.62],
+        [7, 47, 0.56],
+        [3, 31, 0.5],
+        [-12, 20, 0.52],
+      ].map(([x, z, scale], index) => (
         <GreenTree
           key={index}
           position={[x, 0, z]}
-          scale={index % 3 === 0 ? 1.12 : 0.88}
+          scale={scale}
         />
       ))}
     </>

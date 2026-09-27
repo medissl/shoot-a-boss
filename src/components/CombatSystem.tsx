@@ -254,8 +254,11 @@ export function CombatSystem() {
         const propId = first
           ? inheritedUserData(first.object, "propId")
           : undefined;
+        const destructibleId = first
+          ? inheritedUserData(first.object, "destructibleId")
+          : undefined;
 
-        addTrace(origin, end, Boolean(targetId || propId));
+        addTrace(origin, end, Boolean(targetId || propId || destructibleId));
 
         if (!first) continue;
 
@@ -276,6 +279,24 @@ export function CombatSystem() {
                     : currentWeapon === "shotgun"
                       ? 2.35
                       : 1.15,
+              },
+            }),
+          );
+          continue;
+        }
+
+        if (destructibleId && !targetId && !propId) {
+          addImpact(first.point);
+          window.dispatchEvent(
+            new CustomEvent("surface-hit", {
+              detail: {
+                id: destructibleId,
+                point: [first.point.x, first.point.y, first.point.z],
+                direction: [
+                  raycaster.ray.direction.x,
+                  raycaster.ray.direction.y,
+                  raycaster.ray.direction.z,
+                ],
               },
             }),
           );

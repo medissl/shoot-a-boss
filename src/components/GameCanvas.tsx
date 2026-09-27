@@ -12,6 +12,7 @@ import { PaperworkMonster } from "./PaperworkMonster";
 import { PickupSystem } from "./PickupSystem";
 import { PlayerController } from "./PlayerController";
 import { WeaponView } from "./WeaponView";
+import { SurfaceDamageSystem } from "./SurfaceDamageSystem";
 import {
   PAPER_MONSTER_SPAWNS,
   TARGET_SPAWNS,
@@ -31,6 +32,7 @@ export function GameCanvas() {
             <PlayerController />
             <CombatSystem />
             <PaintSystem />
+            <SurfaceDamageSystem />
             <PaperGrenadeSystem />
             <PickupSystem />
             {PAPER_MONSTER_SPAWNS.map((spawn, index) => (

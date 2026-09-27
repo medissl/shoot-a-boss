@@ -1,5 +1,5 @@
-export const BOSS_COUNT = 10;
-export const PAPER_MONSTER_COUNT = 4;
+export const BOSS_COUNT = 8;
+export const PAPER_MONSTER_COUNT = 2;
 export const TARGET_COUNT = BOSS_COUNT + PAPER_MONSTER_COUNT;
 export const GRENADE_COUNT = 3;
 export const BOSS_MAX_HP = 240;
@@ -102,27 +102,31 @@ export const ENEMY_BLOCKERS = [
   ...ARENA_OBSTACLES.map(({ x, z, w, d }) => ({ x, z, w, d })),
   { x: -39, z: -34, w: 18, d: 16 },
   { x: 35, z: -34, w: 18, d: 18 },
-  { x: -6, z: 43, w: 4.2, d: 4.2 },
+  { x: -6, z: 43, w: 4.6, d: 4.6 },
+  { x: -33, z: 24, w: 1.7, d: 1.7 },
+  { x: 31, z: 40, w: 1.7, d: 1.7 },
+  { x: -47, z: -18, w: 1.1, d: 1.1 },
+  { x: 46, z: -12, w: 1.1, d: 1.1 },
+  { x: -19, z: 45, w: 1.2, d: 1.2 },
+  { x: 7, z: 47, w: 1.1, d: 1.1 },
+  { x: 3, z: 31, w: 1.0, d: 1.0 },
+  { x: -12, z: 20, w: 1.0, d: 1.0 },
 ];
 
 export const TARGET_SPAWNS: [number, number, number][] = [
-  [-47, 0, -44],
-  [-18, 0, -45],
-  [7, 0, -42],
-  [47, 0, -43],
-  [-46, 0, 5],
-  [46, 0, 10],
-  [-42, 0, 44],
-  [-11, 0, 47],
-  [20, 0, 45],
-  [46, 0, 42],
+  [-46, 0, -42],
+  [-17, 0, -44],
+  [8, 0, -39],
+  [46, 0, -42],
+  [-46, 0, 7],
+  [46, 0, 13],
+  [-39, 0, 40],
+  [22, 0, 43],
 ];
 
 export const PAPER_MONSTER_SPAWNS: [number, number, number][] = [
-  [-34, 0, 17],
-  [20, 0, 3],
-  [38, 0, 30],
-  [-3, 0, -20],
+  [-20, 0, 22],
+  [34, 0, 24],
 ];
 
 export const PICKUP_SPAWNS: [number, number, number][] = [
@@ -158,10 +162,10 @@ export const LADDER_ZONES: LadderZone[] = [
     d: 3.3,
     minY: 0.45,
     maxY: 9.35,
-    snapX: 45.05,
+    snapX: 45.72,
     snapZ: -34,
-    exitX: 42.35,
-    exitY: 9.12,
+    exitX: 42.0,
+    exitY: 9.48,
     exitZ: -34,
   },
   {
@@ -170,11 +174,11 @@ export const LADDER_ZONES: LadderZone[] = [
     w: 2.8,
     d: 3.0,
     minY: 0.45,
-    maxY: 6.9,
-    snapX: -3.05,
+    maxY: 7.35,
+    snapX: -2.95,
     snapZ: 43,
-    exitX: -4.9,
-    exitY: 6.75,
+    exitX: -4.85,
+    exitY: 7.35,
     exitZ: 43,
   },
 ];
@@ -185,10 +189,18 @@ export const REACTIVE_PLANTS = [
   { id: "weed-c", kind: "weed", position: [36, 0.65, 17] },
   { id: "weed-d", kind: "weed", position: [-37, 0.65, -8] },
   { id: "weed-e", kind: "weed", position: [8, 0.65, -35] },
+  { id: "weed-f", kind: "weed", position: [31, 0.65, -23] },
+  { id: "weed-g", kind: "weed", position: [-31, 0.65, 16] },
+  { id: "weed-h", kind: "weed", position: [3, 0.65, 24] },
   { id: "flower-a", kind: "flower", position: [-25, 0.75, 36] },
   { id: "flower-b", kind: "flower", position: [28, 0.75, 39] },
   { id: "flower-c", kind: "flower", position: [41, 0.75, -20] },
+  { id: "flower-d", kind: "flower", position: [-14, 0.75, -33] },
+  { id: "flower-e", kind: "flower", position: [16, 0.75, 34] },
+  { id: "flower-f", kind: "flower", position: [-42, 0.75, 31] },
   { id: "sapling-a", kind: "sapling", position: [-45, 1.15, 23] },
   { id: "sapling-b", kind: "sapling", position: [44, 1.15, 23] },
   { id: "sapling-c", kind: "sapling", position: [3, 1.15, 37] },
+  { id: "sapling-d", kind: "sapling", position: [-28, 1.15, -39] },
+  { id: "sapling-e", kind: "sapling", position: [23, 1.15, -44] },
 ] as const;

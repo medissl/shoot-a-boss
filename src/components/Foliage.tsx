@@ -4,6 +4,7 @@ import {
   RigidBody,
   type RapierRigidBody,
 } from "@react-three/rapier";
+import { useFrame } from "@react-three/fiber";
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { REACTIVE_PLANTS } from "../game/config";
@@ -110,6 +111,9 @@ function ReactivePlant({
   position: readonly [number, number, number];
 }) {
   const body = useRef<RapierRigidBody>(null);
+  const drawing = useRef<THREE.Group>(null);
+  const hitAt = useRef(0);
+  const removed = useRef(false);
 
   useEffect(() => {
     const handler = (event: Event) => {
@@ -120,8 +124,9 @@ function ReactivePlant({
           force: number;
         }>
       ).detail;
-      if (detail.id !== id || !body.current) return;
+      if (detail.id !== id || !body.current || removed.current) return;
 
+      if (hitAt.current === 0) hitAt.current = performance.now();
       const direction = new THREE.Vector3(...detail.direction).normalize();
       body.current.applyImpulse(
         {
@@ -146,6 +151,31 @@ function ReactivePlant({
       window.removeEventListener("prop-shot", handler as EventListener);
   }, [id]);
 
+  useFrame(() => {
+    if (!drawing.current || hitAt.current === 0 || removed.current) return;
+    const elapsed = (performance.now() - hitAt.current) / 1000;
+
+    if (elapsed > 4) {
+      const opacity = THREE.MathUtils.clamp(1 - (elapsed - 4), 0, 1);
+      drawing.current.traverse((child) => {
+        if (!(child instanceof THREE.Mesh)) return;
+        const materials = Array.isArray(child.material)
+          ? child.material
+          : [child.material];
+        materials.forEach((material) => {
+          material.transparent = true;
+          material.opacity = opacity;
+        });
+      });
+    }
+
+    if (elapsed >= 5) {
+      removed.current = true;
+      drawing.current.visible = false;
+      body.current?.setTranslation({ x: 0, y: -80, z: 0 }, true);
+    }
+  });
+
   const scale = kind === "sapling" ? 1 : kind === "flower" ? 0.8 : 0.72;
 
   return (
@@ -169,7 +199,7 @@ function ReactivePlant({
               : [0.28, 0.56, 0.18]
         }
       />
-      <group scale={scale}>
+      <group ref={drawing} scale={scale}>
         <PlantDrawing id={id} kind={kind} />
       </group>
     </RigidBody>
