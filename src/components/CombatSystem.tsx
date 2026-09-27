@@ -94,10 +94,19 @@ function ImpactBurst({ impact }: { impact: Impact }) {
   );
 }
 
+function ignoresProjectile(object: THREE.Object3D) {
+  let current: THREE.Object3D | null = object;
+  while (current) {
+    if (current.userData.ignoreProjectile) return true;
+    current = current.parent;
+  }
+  return false;
+}
+
 function firstProjectileIntersection(
   intersections: THREE.Intersection<THREE.Object3D>[],
 ) {
-  return intersections.find(({ object }) => !object.userData.ignoreProjectile);
+  return intersections.find(({ object }) => !ignoresProjectile(object));
 }
 
 export function CombatSystem() {

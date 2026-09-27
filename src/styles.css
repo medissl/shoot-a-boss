@@ -685,14 +685,14 @@ button {
 }
 
 .weapon-view.is-hip {
-  right: 7.5vw;
-  bottom: -19vh;
-  width: min(72vw, 1080px);
+  right: 6vw;
+  bottom: -1.5vh;
+  width: min(69vw, 1040px);
   transform:
-    perspective(1150px)
-    rotateX(6deg)
-    rotateY(-12deg)
-    rotateZ(-4deg);
+    perspective(1200px)
+    rotateX(4deg)
+    rotateY(-15deg)
+    rotateZ(-1deg);
 }
 
 .weapon-view.is-scoped {
@@ -710,7 +710,7 @@ button {
 }
 
 .weapon-view.is-hip .weapon-view__perspective {
-  transform: perspective(1050px) rotateX(2deg) rotateY(-8deg);
+  transform: perspective(1080px) rotateX(1deg) rotateY(-7deg);
 }
 
 .weapon-view.is-scoped .weapon-view__perspective {
@@ -743,6 +743,10 @@ button {
 
 .weapon-view.is-scoped.is-kicking .weapon-view__kick {
   transform: translateY(7px) scale(.992);
+}
+
+.weapon-view.is-reloading.is-hip .weapon-view__motion {
+  animation: weapon-reload-dip .7s ease-in-out infinite alternate;
 }
 
 .weapon-view.is-hip svg {
@@ -866,6 +870,11 @@ button {
   50% { transform: translate3d(7px,23px,0) rotate(1.1deg); }
 }
 
+@keyframes weapon-reload-dip {
+  from { transform: translate3d(20px,32px,0) rotate(2deg); }
+  to { transform: translate3d(34px,50px,0) rotate(4deg); }
+}
+
 .game-shell.is-empty-shake {
   animation: empty-screen-shake .29s cubic-bezier(.3,.8,.2,1);
 }
@@ -924,6 +933,111 @@ button {
   0% { opacity: 0; transform: translateX(-50%) scale(.7) rotate(-3deg); }
   12%,65% { opacity: 1; transform: translateX(-50%) scale(1) rotate(-1deg); }
   100% { opacity: 0; transform: translateX(-50%) translateY(-14px) scale(.96) rotate(1deg); }
+}
+
+.reload-progress {
+  position: fixed;
+  z-index: 24;
+  left: 50%;
+  bottom: 7.5vh;
+  width: min(330px, 36vw);
+  transform: translateX(-50%) rotate(-.3deg);
+  text-align: center;
+  color: var(--ink);
+}
+
+.reload-progress__label {
+  margin-bottom: 7px;
+  font-size: 12px;
+  font-weight: 1000;
+  letter-spacing: .055em;
+  text-transform: uppercase;
+}
+
+.reload-progress__track {
+  height: 11px;
+  overflow: hidden;
+  border: 3px solid var(--ink);
+  border-radius: 999px 8px 999px 10px;
+  background: rgba(251,250,244,.9);
+  box-shadow: 3px 3px 0 rgba(37,72,184,.1);
+}
+
+.reload-progress__track span {
+  display: block;
+  width: 0;
+  height: 100%;
+  background:
+    repeating-linear-gradient(
+      -55deg,
+      rgba(37,72,184,.9) 0 5px,
+      rgba(37,72,184,.55) 5px 9px
+    );
+  animation: reload-fill var(--reload-duration) linear forwards;
+}
+
+@keyframes reload-fill {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
+.player-damage-vignette {
+  position: fixed;
+  inset: 0;
+  z-index: 29;
+  pointer-events: none;
+  box-shadow:
+    inset 0 0 0 3px rgba(239,71,111,.22),
+    inset 0 0 145px 28px rgba(239,71,111,.48);
+  animation: player-damage-flash .56s ease-out both;
+}
+
+@keyframes player-damage-flash {
+  0% { opacity: 0; }
+  12% { opacity: 1; }
+  42% { opacity: .78; }
+  100% { opacity: 0; }
+}
+
+.boss-damage-pop {
+  min-width: 68px;
+  display: grid;
+  justify-items: center;
+  gap: 1px;
+  filter: drop-shadow(2px 2px 0 rgba(255,255,255,.9));
+  animation: boss-damage-rise .76s cubic-bezier(.17,.77,.2,1) both;
+  font-family: "Comic Sans MS", "Bradley Hand", ui-rounded, sans-serif;
+  font-weight: 1000;
+  white-space: nowrap;
+}
+
+.boss-damage-pop strong {
+  font-size: 27px;
+  line-height: .9;
+  color: var(--ink);
+}
+
+.boss-damage-pop span {
+  font-size: 10px;
+  letter-spacing: .08em;
+  color: #e02f62;
+}
+
+.boss-damage-pop--head strong {
+  color: #e02f62;
+  font-size: 31px;
+}
+
+.boss-damage-pop--leg strong,
+.boss-damage-pop--body strong {
+  color: #3158c5;
+}
+
+@keyframes boss-damage-rise {
+  0% { opacity: 0; transform: translateY(10px) scale(.78) rotate(-3deg); }
+  14% { opacity: 1; transform: translateY(0) scale(1.08) rotate(-1deg); }
+  72% { opacity: 1; transform: translateY(-18px) scale(1) rotate(.5deg); }
+  100% { opacity: 0; transform: translateY(-34px) scale(.94) rotate(1deg); }
 }
 
 .boost-status,
@@ -1136,9 +1250,9 @@ button {
   }
 
   .weapon-view.is-hip {
-    width: 96vw;
-    right: -3vw;
-    bottom: -11vh;
+    width: 88vw;
+    right: 2vw;
+    bottom: -1vh;
   }
 
   .weapon-view.is-scoped {

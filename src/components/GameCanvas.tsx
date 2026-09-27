@@ -1,6 +1,6 @@
 import { Canvas } from "@react-three/fiber";
 import { Physics } from "@react-three/rapier";
-import { Suspense, useEffect, useRef, useState } from "react";
+import { Suspense } from "react";
 import { Arena } from "./Arena";
 import { CombatSystem } from "./CombatSystem";
 import { Dummy } from "./Dummy";
@@ -13,26 +13,8 @@ import { WeaponView } from "./WeaponView";
 import { TARGET_SPAWNS } from "../game/config";
 
 export function GameCanvas() {
-  const [emptyShake, setEmptyShake] = useState(false);
-  const shakeTimer = useRef<number | null>(null);
-
-  useEffect(() => {
-    const handler = () => {
-      setEmptyShake(false);
-      window.requestAnimationFrame(() => setEmptyShake(true));
-      if (shakeTimer.current) window.clearTimeout(shakeTimer.current);
-      shakeTimer.current = window.setTimeout(() => setEmptyShake(false), 290);
-    };
-
-    window.addEventListener("empty-mag", handler);
-    return () => {
-      if (shakeTimer.current) window.clearTimeout(shakeTimer.current);
-      window.removeEventListener("empty-mag", handler);
-    };
-  }, []);
-
   return (
-    <div className={`game-shell ${emptyShake ? "is-empty-shake" : ""}`}>
+    <div className="game-shell">
       <Canvas
         shadows
         camera={{ fov: 70, near: 0.05, far: 180, position: [0, 2, 12] }}

@@ -11,7 +11,7 @@ function HipWeaponArt({ weapon }: { weapon: "sniper" | "rifle" | "shotgun" }) {
       </defs>
 
       {weapon === "rifle" && (
-        <g className="gun-drawing gun-drawing--rifle">
+        <g className="gun-drawing gun-drawing--rifle" transform="translate(0 108) scale(1 .72)">
           <path className="gun-barrel" d="M237 128 L347 225" />
           <circle className="gun-dot gun-dot--red" cx="237" cy="128" r="5" />
           <path className="gun-fill gun-hatch" d="M337 211 L382 201 L641 438 L600 481 L365 257 Z" />
@@ -26,7 +26,7 @@ function HipWeaponArt({ weapon }: { weapon: "sniper" | "rifle" | "shotgun" }) {
       )}
 
       {weapon === "shotgun" && (
-        <g className="gun-drawing gun-drawing--shotgun">
+        <g className="gun-drawing gun-drawing--shotgun" transform="translate(0 108) scale(1 .72)">
           <path className="gun-barrel" d="M230 121 L350 228" />
           <path className="gun-barrel gun-barrel--thin" d="M245 135 L361 239" />
           <circle className="gun-dot gun-dot--red" cx="230" cy="121" r="6" />
@@ -41,7 +41,7 @@ function HipWeaponArt({ weapon }: { weapon: "sniper" | "rifle" | "shotgun" }) {
       )}
 
       {weapon === "sniper" && (
-        <g className="gun-drawing gun-drawing--sniper">
+        <g className="gun-drawing gun-drawing--sniper" transform="translate(0 108) scale(1 .72)">
           <path className="gun-barrel" d="M224 114 L357 232" />
           <path className="gun-barrel gun-barrel--thin" d="M238 127 L367 242" />
           <circle className="gun-dot" cx="224" cy="114" r="5" />
@@ -62,7 +62,7 @@ function HipWeaponArt({ weapon }: { weapon: "sniper" | "rifle" | "shotgun" }) {
         </g>
       )}
 
-      <g className="muzzle-spark">
+      <g className="muzzle-spark" transform="translate(0 108) scale(1 .72)">
         <path d="M230 122 l-26 -21 M230 122 l-5 -31 M230 122 l22 -23 M230 122 l31 5" />
       </g>
     </svg>
@@ -82,20 +82,20 @@ function ScopedWeaponArt({ weapon }: { weapon: "sniper" | "rifle" | "shotgun" })
 
       {weapon === "rifle" && (
         <g className="ads-drawing ads-drawing--rifle">
-          <path className="ads-fill" d="M410 514 L590 514 L650 600 H350 Z" />
-          <path className="ads-fill ads-optic-frame" d="M442 338 L558 338 L573 447 L427 447 Z" />
-          <rect className="ads-lens" x="465" y="365" width="70" height="55" rx="8" />
-          <circle className="ads-dot" cx="500" cy="392" r="4" />
-          <path className="ads-line ads-line--thin" d="M448 474 H552" />
+          <path className="ads-fill" d="M405 456 L595 456 L670 600 H330 Z" />
+          <path className="ads-fill ads-optic-frame" d="M438 230 L562 230 L578 368 L422 368 Z" />
+          <rect className="ads-lens" x="462" y="268" width="76" height="64" rx="9" />
+          <circle className="ads-dot" cx="500" cy="300" r="5" />
+          <path className="ads-line ads-line--thin" d="M447 400 H553" />
         </g>
       )}
 
       {weapon === "shotgun" && (
         <g className="ads-drawing ads-drawing--shotgun">
-          <path className="ads-fill" d="M424 500 L576 500 L632 600 H368 Z" />
-          <path className="ads-line" d="M500 500 V356" />
-          <path className="ads-line ads-line--thin" d="M473 382 H527" />
-          <circle className="ads-dot ads-dot--red" cx="500" cy="352" r="6" />
+          <path className="ads-fill" d="M418 452 L582 452 L650 600 H350 Z" />
+          <path className="ads-line" d="M500 452 V306" />
+          <path className="ads-line ads-line--thin" d="M470 330 H530" />
+          <circle className="ads-dot ads-dot--red" cx="500" cy="300" r="7" />
         </g>
       )}
     </svg>
@@ -106,6 +106,7 @@ export function WeaponView() {
   const weapon = useGameStore((state) => state.weapon);
   const scoped = useGameStore((state) => state.scoped);
   const movementMode = useGameStore((state) => state.movementMode);
+  const reloading = useGameStore((state) => state.reloading);
   const [kick, setKick] = useState(false);
   const kickTimer = useRef<number | null>(null);
 
@@ -125,7 +126,7 @@ export function WeaponView() {
 
   return (
     <div
-      className={`weapon-view weapon-view--${weapon} movement-${movementMode} ${scoped ? "is-scoped" : "is-hip"} ${kick ? "is-kicking" : ""}`}
+      className={`weapon-view weapon-view--${weapon} movement-${movementMode} ${scoped ? "is-scoped" : "is-hip"} ${kick ? "is-kicking" : ""} ${reloading ? "is-reloading" : ""}`}
       aria-hidden="true"
     >
       <div className="weapon-view__motion">

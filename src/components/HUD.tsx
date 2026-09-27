@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { useEffect, useRef, useState } from "react";
 import { TARGET_COUNT, WEAPONS, type WeaponId } from "../game/config";
 import { useGameStore } from "../game/store";
@@ -12,8 +13,12 @@ export function HUD() {
   const eliminated = useGameStore((state) => state.eliminated.length);
   const scoped = useGameStore((state) => state.scoped);
   const boostActive = useGameStore((state) => state.speedBoostActive);
+  const reloading = useGameStore((state) => state.reloading);
+  const reloadingWeapon = useGameStore((state) => state.reloadingWeapon);
+  const reloadDurationMs = useGameStore((state) => state.reloadDurationMs);
   const [pickupNotice, setPickupNotice] = useState("");
   const [emptyAlert, setEmptyAlert] = useState(false);
+  const [damageFlashKey, setDamageFlashKey] = useState(0);
   const emptyTimer = useRef<number | null>(null);
 
   useEffect(() => {
@@ -29,15 +34,25 @@ export function HUD() {
       emptyTimer.current = window.setTimeout(() => setEmptyAlert(false), 1450);
     };
 
+    const damageHandler = () => {
+      setDamageFlashKey((current) => current + 1);
+    };
+
     window.addEventListener("pickup-collected", pickupHandler as EventListener);
     window.addEventListener("empty-mag", emptyHandler);
+    window.addEventListener("player-damaged", damageHandler);
 
     return () => {
       if (emptyTimer.current) window.clearTimeout(emptyTimer.current);
       window.removeEventListener("pickup-collected", pickupHandler as EventListener);
       window.removeEventListener("empty-mag", emptyHandler);
+      window.removeEventListener("player-damaged", damageHandler);
     };
   }, []);
+
+  const reloadStyle = {
+    "--reload-duration": `${reloadDurationMs}ms`,
+  } as CSSProperties;
 
   return (
     <div className="hud" aria-hidden="true">
@@ -73,19 +88,32 @@ export function HUD() {
         ))}
       </div>
 
-      <div className="doodle-crosshair">
-        <span className="crosshair-line crosshair-line--top" />
-        <span className="crosshair-line crosshair-line--right" />
-        <span className="crosshair-line crosshair-line--bottom" />
-        <span className="crosshair-line crosshair-line--left" />
-        <i />
-      </div>
+      {!scoped && (
+        <div className="doodle-crosshair">
+          <span className="crosshair-line crosshair-line--top" />
+          <span className="crosshair-line crosshair-line--right" />
+          <span className="crosshair-line crosshair-line--bottom" />
+          <span className="crosshair-line crosshair-line--left" />
+          <i />
+        </div>
+      )}
 
-      {scoped && (
-        <div className={`scope-overlay scope-overlay--${weapon}`}>
+      {scoped && weapon === "sniper" && (
+        <div className="scope-overlay scope-overlay--sniper">
           <div className="scope-ring" />
           <span className="scope-axis scope-axis--x" />
           <span className="scope-axis scope-axis--y" />
+        </div>
+      )}
+
+      {reloading && reloadingWeapon && (
+        <div className="reload-progress" style={reloadStyle}>
+          <div className="reload-progress__label">
+            reloading {WEAPONS[reloadingWeapon].label.replace("PAPER ", "").replace("REPORT ", "").replace("STAPLE ", "").toLowerCase()}
+          </div>
+          <div className="reload-progress__track">
+            <span />
+          </div>
         </div>
       )}
 
@@ -93,13 +121,14 @@ export function HUD() {
       {pickupNotice && <div className="pickup-notice">{pickupNotice}</div>}
 
       {emptyAlert && (
-        <>
-          <div className="empty-mag-vignette" />
-          <div className="empty-mag-message">
-            MAGAZINE EMPTY
-            <span>press R to reload</span>
-          </div>
-        </>
+        <div className="empty-mag-message">
+          MAGAZINE EMPTY
+          <span>press R to reload</span>
+        </div>
+      )}
+
+      {damageFlashKey > 0 && (
+        <div key={damageFlashKey} className="player-damage-vignette" />
       )}
     </div>
   );
