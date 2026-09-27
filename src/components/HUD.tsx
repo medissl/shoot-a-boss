@@ -19,6 +19,7 @@ export function HUD() {
   const [pickupNotice, setPickupNotice] = useState("");
   const [emptyAlert, setEmptyAlert] = useState(false);
   const [damageFlashKey, setDamageFlashKey] = useState(0);
+  const [killPulseKey, setKillPulseKey] = useState(0);
   const emptyTimer = useRef<number | null>(null);
 
   useEffect(() => {
@@ -38,15 +39,21 @@ export function HUD() {
       setDamageFlashKey((current) => current + 1);
     };
 
+    const killHandler = () => {
+      setKillPulseKey((current) => current + 1);
+    };
+
     window.addEventListener("pickup-collected", pickupHandler as EventListener);
     window.addEventListener("empty-mag", emptyHandler);
     window.addEventListener("player-damaged", damageHandler);
+    window.addEventListener("boss-killed", killHandler);
 
     return () => {
       if (emptyTimer.current) window.clearTimeout(emptyTimer.current);
       window.removeEventListener("pickup-collected", pickupHandler as EventListener);
       window.removeEventListener("empty-mag", emptyHandler);
       window.removeEventListener("player-damaged", damageHandler);
+      window.removeEventListener("boss-killed", killHandler);
     };
   }, []);
 
@@ -56,6 +63,16 @@ export function HUD() {
 
   return (
     <div className="hud" aria-hidden="true">
+      {eliminated > 0 && (
+        <div
+          key={`${eliminated}-${killPulseKey}`}
+          className={`kill-combo ${eliminated > 5 ? "is-overdrive" : ""}`}
+        >
+          <span>{eliminated > 5 ? "INK RAMPAGE" : "KILL COMBO"}</span>
+          <strong>×{eliminated}</strong>
+        </div>
+      )}
+
       <div className="hud-targets">
         <span>targets left</span>
         <strong>{TARGET_COUNT - eliminated}</strong>
@@ -117,7 +134,12 @@ export function HUD() {
         </div>
       )}
 
-      {boostActive && <div className="boost-status">SPEED ×1.48</div>}
+      {boostActive && (
+        <>
+          <div className="speed-boost-vignette" />
+          <div className="boost-status">SPEED ×1.62</div>
+        </>
+      )}
       {pickupNotice && <div className="pickup-notice">{pickupNotice}</div>}
 
       {emptyAlert && (

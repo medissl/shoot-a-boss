@@ -38,7 +38,7 @@ function Pickup({
     const player = new THREE.Vector3(...useGameStore.getState().playerPosition);
     if (root.position.distanceTo(player) < 1.25) {
       if (kind === "grenade") refillGrenades(2);
-      else grantSpeedBoost(7500);
+      else grantSpeedBoost(12000);
 
       window.dispatchEvent(
         new CustomEvent("pickup-collected", {

@@ -21,6 +21,8 @@ export function PlayerController() {
   const slideUntil = useRef(0);
   const slideDirection = useRef(new THREE.Vector3());
   const lastCrouchAt = useRef(-Infinity);
+  const wasGrounded = useRef(true);
+  const wentAirborne = useRef(false);
   const { camera } = useThree();
   const screen = useGameStore((state) => state.screen);
   const sensitivity = useGameStore((state) => state.sensitivity);
@@ -99,10 +101,18 @@ export function PlayerController() {
     const crouching = Boolean(keys.current.KeyC) && !sliding;
     const sprinting = Boolean(keys.current.ShiftLeft || keys.current.ShiftRight) && !crouching && !sliding;
     const speedMultiplier =
-      now < useGameStore.getState().speedBoostUntil ? 1.48 : 1;
+      now < useGameStore.getState().speedBoostUntil ? 1.62 : 1;
 
     const position = rigid.translation();
     const nearGround = position.y <= 1.52;
+
+    if (!nearGround) wentAirborne.current = true;
+    if (nearGround && !wasGrounded.current && wentAirborne.current) {
+      window.dispatchEvent(new Event("player-landed"));
+      wentAirborne.current = false;
+    }
+    wasGrounded.current = nearGround;
+
     const wantsJump = jumpQueued.current && nearGround;
     if (jumpQueued.current) jumpQueued.current = false;
 

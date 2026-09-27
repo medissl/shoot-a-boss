@@ -123,6 +123,8 @@ export function PaperGrenadeSystem() {
       if (useGameStore.getState().screen !== "playing") return;
       if (!spendGrenade()) return;
 
+      window.dispatchEvent(new Event("grenade-cocked"));
+
       const direction = new THREE.Vector3();
       camera.getWorldDirection(direction);
       const origin = camera.position.clone().add(direction.clone().multiplyScalar(0.75));

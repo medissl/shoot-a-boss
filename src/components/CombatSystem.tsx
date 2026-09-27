@@ -300,6 +300,7 @@ export function CombatSystem() {
         window.clearInterval(autoFire.current);
         autoFire.current = null;
       }
+      window.dispatchEvent(new Event("rifle-trigger-up"));
     }
 
     const mouseDown = (event: MouseEvent) => {
@@ -319,6 +320,9 @@ export function CombatSystem() {
       if (event.button !== 0 || state.reloading) return;
 
       const currentWeapon = state.weapon;
+      if (currentWeapon === "rifle" && state.ammo.rifle.mag > 0) {
+        window.dispatchEvent(new Event("rifle-trigger-down"));
+      }
       fire(currentWeapon);
 
       if (currentWeapon === "rifle" && autoFire.current === null) {
@@ -327,7 +331,8 @@ export function CombatSystem() {
           if (
             liveState.screen !== "playing" ||
             liveState.weapon !== "rifle" ||
-            liveState.reloading
+            liveState.reloading ||
+            liveState.ammo.rifle.mag <= 0
           ) {
             stopAutoFire();
             return;
