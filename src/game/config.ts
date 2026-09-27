@@ -177,7 +177,7 @@ export const LADDER_ZONES: LadderZone[] = [
     maxY: 7.35,
     snapX: 5.05,
     snapZ: 44,
-    exitX: 3.05,
+    exitX: 2.35,
     exitY: 7.35,
     exitZ: 44,
   },
