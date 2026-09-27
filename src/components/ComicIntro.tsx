@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useGameStore } from "../game/store";
 
 type StoryScene =
@@ -23,8 +23,9 @@ function panelNumber(scene: StoryScene) {
   return 6;
 }
 
-export function ComicIntro() {
+export function ComicIntro({ mode }: { mode: "launch" | "reader" }) {
   const startGame = useGameStore((state) => state.startGame);
+  const goToMenu = useGameStore((state) => state.goToMenu);
   const [sceneIndex, setSceneIndex] = useState(0);
   const [exiting, setExiting] = useState(false);
   const finishing = useRef(false);
@@ -35,12 +36,15 @@ export function ComicIntro() {
     [scene],
   );
 
-  function finish() {
+  const finish = useCallback(() => {
     if (finishing.current) return;
     finishing.current = true;
     setExiting(true);
-    window.setTimeout(() => startGame(), 720);
-  }
+    window.setTimeout(() => {
+      if (mode === "reader") goToMenu();
+      else startGame();
+    }, 720);
+  }, [goToMenu, mode, startGame]);
 
   function advance() {
     if (finishing.current) return;
@@ -61,7 +65,7 @@ export function ComicIntro() {
     }, scene.duration);
 
     return () => window.clearTimeout(timer);
-  }, [scene.duration, sceneIndex]);
+  }, [finish, scene.duration, sceneIndex]);
 
   return (
     <main
@@ -120,10 +124,12 @@ export function ComicIntro() {
             ? "time keeps crawling..."
             : scene.kind === "shock"
               ? "something is wrong."
-              : "click anywhere to continue"}
+              : mode === "reader"
+                ? "click anywhere to continue reading"
+                : "click anywhere to continue"}
         </span>
         <button type="button" onClick={finish}>
-          SKIP → DREAM
+          {mode === "reader" ? "BACK TO MENU" : "SKIP → DREAM"}
         </button>
       </footer>
 

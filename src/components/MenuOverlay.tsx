@@ -1,10 +1,11 @@
-import { RotateCcw } from "lucide-react";
+import { Home, RotateCcw } from "lucide-react";
 import { useGameStore } from "../game/store";
 
 export function MenuOverlay() {
   const screen = useGameStore((state) => state.screen);
   const resume = useGameStore((state) => state.resume);
   const restart = useGameStore((state) => state.restart);
+  const goToMenu = useGameStore((state) => state.goToMenu);
   const sensitivity = useGameStore((state) => state.sensitivity);
   const setSensitivity = useGameStore((state) => state.setSensitivity);
 
@@ -33,6 +34,12 @@ export function MenuOverlay() {
           <button type="button" onClick={restart}>
             <RotateCcw size={15} /> RESTART
           </button>
+
+          {screen !== "paused" && (
+            <button type="button" onClick={goToMenu}>
+              <Home size={15} /> MAIN MENU
+            </button>
+          )}
 
           <label className="sensitivity-control">
             <span>SENSITIVITY</span>

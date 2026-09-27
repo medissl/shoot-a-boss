@@ -2,13 +2,20 @@ import { create } from "zustand";
 import { GRENADE_COUNT, TARGET_COUNT, WEAPONS, type WeaponId } from "./config";
 
 type AmmoState = Record<WeaponId, { mag: number; reserve: number }>;
-type GameScreen = "story" | "playing" | "paused" | "won" | "lost";
+export type GameScreen =
+  | "story"
+  | "comic"
+  | "menu"
+  | "playing"
+  | "paused"
+  | "won"
+  | "lost";
 export type MovementMode = "idle" | "walk" | "run" | "crouch" | "slide";
 
 const RELOAD_MS: Record<WeaponId, number> = {
-  sniper: 2050,
-  rifle: 1650,
-  shotgun: 2200,
+  sniper: 1750,
+  rifle: 1500,
+  shotgun: 2000,
 };
 
 type GameStore = {
@@ -34,6 +41,8 @@ type GameStore = {
   pause: () => void;
   resume: () => void;
   restart: () => void;
+  goToMenu: () => void;
+  readComic: () => void;
   setWeapon: (weapon: WeaponId) => void;
   cycleWeapon: (direction: 1 | -1) => void;
   spendRound: (weapon: WeaponId) => boolean;
@@ -105,7 +114,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   pause: () => {
     if (get().screen === "playing") {
       cancelReload(set, get);
-      set({ screen: "paused", scoped: false });
+      set({ screen: "paused", scoped: false, movementMode: "idle" });
     }
   },
 
@@ -119,6 +128,22 @@ export const useGameStore = create<GameStore>((set, get) => ({
       runId: state.runId + 1,
       ...freshRun(),
     })),
+
+  goToMenu: () => {
+    cancelReload(set, get);
+    set({
+      screen: "menu",
+      scoped: false,
+      movementMode: "idle",
+      speedBoostActive: false,
+      speedBoostUntil: 0,
+    });
+  },
+
+  readComic: () => {
+    cancelReload(set, get);
+    set({ screen: "comic", scoped: false, movementMode: "idle" });
+  },
 
   setWeapon: (weapon) => {
     cancelReload(set, get);
@@ -209,7 +234,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       grenades: Math.min(GRENADE_COUNT, state.grenades + amount),
     })),
 
-  grantSpeedBoost: (durationMs = 7000) => {
+  grantSpeedBoost: (durationMs = 12000) => {
     const speedBoostUntil = performance.now() + durationMs;
     set({ speedBoostUntil, speedBoostActive: true });
     window.setTimeout(() => {
@@ -230,10 +255,18 @@ export const useGameStore = create<GameStore>((set, get) => ({
   eliminate: (id) => {
     if (get().eliminated.includes(id)) return;
     const eliminated = [...get().eliminated, id];
+    const killCount = eliminated.length;
+
+    window.dispatchEvent(
+      new CustomEvent("boss-killed", {
+        detail: { count: killCount, id },
+      }),
+    );
+
     set({
       eliminated,
-      ...(eliminated.length >= TARGET_COUNT
-        ? { screen: "won" as const, scoped: false }
+      ...(killCount >= TARGET_COUNT
+        ? { screen: "won" as const, scoped: false, movementMode: "idle" as const }
         : {}),
     });
   },
