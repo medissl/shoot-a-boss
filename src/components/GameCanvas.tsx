@@ -7,8 +7,8 @@ import { Dummy } from "./Dummy";
 import { HUD } from "./HUD";
 import { MenuOverlay } from "./MenuOverlay";
 import { PaperGrenadeSystem } from "./PaperGrenadeSystem";
-import { PlayerController } from "./PlayerController";
 import { PickupSystem } from "./PickupSystem";
+import { PlayerController } from "./PlayerController";
 import { WeaponView } from "./WeaponView";
 import { TARGET_SPAWNS } from "../game/config";
 
@@ -42,7 +42,8 @@ export function GameCanvas() {
       <HUD />
       <WeaponView />
       <MenuOverlay />
-      <div className="click-hint">Click arena to capture mouse · ESC pauses</div>
+      <div className="click-hint">click to lock mouse · ESC pause</div>
+      <div className="game-fade-in" />
     </div>
   );
 }
