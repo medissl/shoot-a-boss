@@ -1,12 +1,13 @@
 import * as THREE from "three";
-import { ARENA_HALF_SIZE, ENEMY_BLOCKERS } from "./config";
+import { ARENA_HALF_SIZE, getEnemyBlockers } from "./config";
 
 export function isEnemyPositionBlocked(
   x: number,
   z: number,
   radius: number,
+  level = 1,
 ) {
-  return ENEMY_BLOCKERS.some((blocker) => {
+  return getEnemyBlockers(level).some((blocker) => {
     const halfW = blocker.w / 2 + radius;
     const halfD = blocker.d / 2 + radius;
     return (
@@ -21,13 +22,14 @@ export function isEnemyPositionBlocked(
 export function safeEnemySpawn(
   spawn: [number, number, number],
   radius: number,
+  level = 1,
 ): [number, number, number] {
-  if (!isEnemyPositionBlocked(spawn[0], spawn[2], radius)) return spawn;
+  if (!isEnemyPositionBlocked(spawn[0], spawn[2], radius, level)) return spawn;
 
-  for (let ring = 1; ring <= 8; ring += 1) {
+  for (let ring = 1; ring <= 9; ring += 1) {
     const distance = ring * 2.2;
-    for (let step = 0; step < 12; step += 1) {
-      const angle = (step / 12) * Math.PI * 2;
+    for (let step = 0; step < 14; step += 1) {
+      const angle = (step / 14) * Math.PI * 2;
       const x = THREE.MathUtils.clamp(
         spawn[0] + Math.cos(angle) * distance,
         -ARENA_HALF_SIZE + radius + 1,
@@ -38,7 +40,7 @@ export function safeEnemySpawn(
         -ARENA_HALF_SIZE + radius + 1,
         ARENA_HALF_SIZE - radius - 1,
       );
-      if (!isEnemyPositionBlocked(x, z, radius)) return [x, 0, z];
+      if (!isEnemyPositionBlocked(x, z, radius, level)) return [x, 0, z];
     }
   }
 
@@ -61,12 +63,10 @@ function segmentIntersectsBox(
   let tMin = 0;
   let tMax = 1;
 
-  const axes: Array<[number, number, number, number]> = [
+  for (const [origin, delta, min, max] of [
     [start.x, dx, minX, maxX],
     [start.z, dz, minZ, maxZ],
-  ];
-
-  for (const [origin, delta, min, max] of axes) {
+  ] as Array<[number, number, number, number]>) {
     if (Math.abs(delta) < 0.00001) {
       if (origin < min || origin > max) return false;
       continue;
@@ -88,8 +88,9 @@ export function hasEnemyLineOfSight(
   start: THREE.Vector3,
   end: THREE.Vector3,
   padding = 0.15,
+  level = 1,
 ) {
-  return !ENEMY_BLOCKERS.some((blocker) =>
+  return !getEnemyBlockers(level).some((blocker) =>
     segmentIntersectsBox(start, end, blocker, padding),
   );
 }
@@ -99,6 +100,7 @@ export function moveWithAvoidance(
   motion: THREE.Vector3,
   radius: number,
   sideBias = 1,
+  level = 1,
 ) {
   if (motion.lengthSq() <= 0.0000001) return;
 
@@ -126,16 +128,8 @@ export function moveWithAvoidance(
       .applyAxisAngle(new THREE.Vector3(0, 1, 0), angle)
       .normalize();
 
-    const nextX = THREE.MathUtils.clamp(
-      position.x + direction.x * length,
-      min,
-      max,
-    );
-    const nextZ = THREE.MathUtils.clamp(
-      position.z + direction.z * length,
-      min,
-      max,
-    );
+    const nextX = THREE.MathUtils.clamp(position.x + direction.x * length, min, max);
+    const nextZ = THREE.MathUtils.clamp(position.z + direction.z * length, min, max);
     const lookX = THREE.MathUtils.clamp(
       position.x + direction.x * (radius + 1.45),
       min,
@@ -148,11 +142,12 @@ export function moveWithAvoidance(
     );
 
     if (
-      !isEnemyPositionBlocked(nextX, nextZ, radius) &&
+      !isEnemyPositionBlocked(nextX, nextZ, radius, level) &&
       !isEnemyPositionBlocked(
         lookX,
         lookZ,
         Math.max(0.2, radius * 0.72),
+        level,
       )
     ) {
       position.x = nextX;
