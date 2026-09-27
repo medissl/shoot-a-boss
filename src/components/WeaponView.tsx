@@ -21,7 +21,6 @@ function HipWeaponArt({ weapon }: { weapon: "sniper" | "rifle" | "shotgun" }) {
           <rect className="gun-fill gun-optic" x="335" y="176" width="105" height="60" rx="8" transform="rotate(42 388 206)" />
           <rect className="gun-line-only" x="356" y="184" width="53" height="32" rx="4" transform="rotate(42 383 200)" />
           <path className="gun-hand" d="M491 370 Q458 397 462 459 L507 491 L545 451 L532 393 Z" />
-          <path className="gun-hand" d="M642 468 Q610 498 621 555 L674 594 L710 553 L692 500 Z" />
         </g>
       )}
 
@@ -36,7 +35,6 @@ function HipWeaponArt({ weapon }: { weapon: "sniper" | "rifle" | "shotgun" }) {
           <path className="gun-fill" d="M492 355 L579 432 L543 471 L458 390 Z" />
           <path className="gun-fill gun-hatch" d="M578 430 L819 577 L782 616 L548 477 Z" />
           <path className="gun-hand" d="M483 384 Q454 410 457 464 L501 497 L538 458 L527 408 Z" />
-          <path className="gun-hand" d="M645 481 Q613 508 624 560 L674 598 L709 558 L692 507 Z" />
         </g>
       )}
 
@@ -58,7 +56,6 @@ function HipWeaponArt({ weapon }: { weapon: "sniper" | "rifle" | "shotgun" }) {
           </g>
           <path className="gun-line gun-line--thin" d="M503 371 L543 338 L566 343" />
           <path className="gun-hand" d="M485 389 Q454 414 458 470 L504 501 L541 462 L530 411 Z" />
-          <path className="gun-hand" d="M643 484 Q613 510 624 562 L674 599 L710 560 L694 510 Z" />
         </g>
       )}
 

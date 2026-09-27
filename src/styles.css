@@ -197,6 +197,18 @@ button {
   animation: clock-wobble 1.15s ease-in-out infinite;
 }
 
+.story-clock__twelve {
+  position: absolute;
+  left: 50%;
+  top: 13px;
+  transform: translateX(-50%);
+  z-index: 2;
+  padding: 0 4px;
+  background: rgba(251,250,244,.9);
+  color: var(--ink);
+  font: 1000 20px/1 "Comic Sans MS", "Bradley Hand", ui-rounded, sans-serif;
+}
+
 .story-clock i {
   --angle: calc(var(--tick) * 30deg);
   position: absolute;
@@ -208,6 +220,10 @@ button {
   background: var(--ink);
   transform-origin: 2px calc(50% - 8px);
   transform: rotate(var(--angle));
+}
+
+.story-clock i:first-of-type {
+  visibility: hidden;
 }
 
 .story-clock__hand {
@@ -684,9 +700,9 @@ button {
 }
 
 .weapon-view.is-hip {
-  right: -1.5vw;
-  bottom: -17vh;
-  width: 69vw;
+  right: 10vw;
+  bottom: -2.5vh;
+  width: 54vw;
   transform: none;
 }
 
@@ -1509,9 +1525,9 @@ button {
   }
 
   .weapon-view.is-hip {
-    right: -12vw;
-    bottom: -11vh;
-    width: 94vw;
+    right: 1vw;
+    bottom: -2vh;
+    width: 79vw;
     height: auto;
   }
 
