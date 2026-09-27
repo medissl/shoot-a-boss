@@ -17,6 +17,19 @@ type Impact = {
   sparks: [number, number, number][];
 };
 
+type HitPart = "head" | "body" | "leg";
+
+type HitSummary = {
+  damage: number;
+  part: HitPart;
+};
+
+const PART_PRIORITY: Record<HitPart, number> = {
+  leg: 0,
+  body: 1,
+  head: 2,
+};
+
 function TraceLine({ trace }: { trace: Trace }) {
   const from = useMemo(() => new THREE.Vector3(...trace.from), [trace.from]);
   const to = useMemo(() => new THREE.Vector3(...trace.to), [trace.to]);
@@ -81,6 +94,12 @@ function ImpactBurst({ impact }: { impact: Impact }) {
   );
 }
 
+function firstProjectileIntersection(
+  intersections: THREE.Intersection<THREE.Object3D>[],
+) {
+  return intersections.find(({ object }) => !object.userData.ignoreProjectile);
+}
+
 export function CombatSystem() {
   const { camera, scene } = useThree();
   const lastShot = useRef(0);
@@ -94,6 +113,7 @@ export function CombatSystem() {
   const screen = useGameStore((state) => state.screen);
   const weapon = useGameStore((state) => state.weapon);
   const scoped = useGameStore((state) => state.scoped);
+  const reloading = useGameStore((state) => state.reloading);
   const setScoped = useGameStore((state) => state.setScoped);
   const spendRound = useGameStore((state) => state.spendRound);
   const reload = useGameStore((state) => state.reload);
@@ -164,9 +184,12 @@ export function CombatSystem() {
     }
 
     function fire(currentWeapon: WeaponId) {
+      const state = useGameStore.getState();
+      if (state.reloading) return;
+
       const config = WEAPONS[currentWeapon];
       const now = performance.now();
-      const currentAmmo = useGameStore.getState().ammo[currentWeapon];
+      const currentAmmo = state.ammo[currentWeapon];
 
       if (currentAmmo.mag <= 0) {
         emptyMagazine(currentWeapon);
@@ -175,7 +198,7 @@ export function CombatSystem() {
 
       if (now - lastShot.current < config.cooldownMs) return;
 
-      const aimed = useGameStore.getState().scoped;
+      const aimed = state.scoped;
       if (aimed && now < aimReadyAt.current) return;
 
       if (!spendRound(currentWeapon)) {
@@ -186,7 +209,7 @@ export function CombatSystem() {
       lastShot.current = now;
 
       const spread = aimed ? config.aimedSpread : config.hipSpread;
-      const hits = new Map<string, number>();
+      const hits = new Map<string, HitSummary>();
 
       for (let pellet = 0; pellet < config.pellets; pellet += 1) {
         const raycaster = new THREE.Raycaster();
@@ -199,7 +222,7 @@ export function CombatSystem() {
           raycaster.ray.direction.clone().multiplyScalar(0.9),
         );
         const intersections = raycaster.intersectObjects(scene.children, true);
-        const first = intersections[0];
+        const first = firstProjectileIntersection(intersections);
         const end = first
           ? first.point.clone()
           : raycaster.ray.origin
@@ -213,7 +236,9 @@ export function CombatSystem() {
 
         addImpact(first.point);
 
-        const targetPart = first.object.userData.targetPart as string | undefined;
+        const rawPart = first.object.userData.targetPart as HitPart | undefined;
+        const targetPart: HitPart =
+          rawPart === "head" || rawPart === "leg" ? rawPart : "body";
         const partMultiplier =
           targetPart === "head" ? 1.5 : targetPart === "leg" ? 0.3 : 1;
 
@@ -230,12 +255,29 @@ export function CombatSystem() {
           damage *= falloff;
         }
 
-        hits.set(targetId, (hits.get(targetId) ?? 0) + damage);
+        const previous = hits.get(targetId);
+        if (!previous) {
+          hits.set(targetId, { damage, part: targetPart });
+        } else {
+          hits.set(targetId, {
+            damage: previous.damage + damage,
+            part:
+              PART_PRIORITY[targetPart] > PART_PRIORITY[previous.part]
+                ? targetPart
+                : previous.part,
+          });
+        }
       }
 
-      hits.forEach((damage, id) => {
+      hits.forEach((summary, id) => {
         window.dispatchEvent(
-          new CustomEvent("boss-hit", { detail: { id, damage } }),
+          new CustomEvent("boss-hit", {
+            detail: {
+              id,
+              damage: summary.damage,
+              part: summary.part,
+            },
+          }),
         );
       });
 
@@ -252,27 +294,31 @@ export function CombatSystem() {
     }
 
     const mouseDown = (event: MouseEvent) => {
-      if (useGameStore.getState().screen !== "playing") return;
+      const state = useGameStore.getState();
+      if (state.screen !== "playing") return;
 
       if (event.button === 2) {
         event.preventDefault();
-        const currentWeapon = useGameStore.getState().weapon;
+        if (state.reloading) return;
+        const currentWeapon = state.weapon;
         setScoped(true);
         aimReadyAt.current =
           performance.now() + WEAPONS[currentWeapon].aimDelayMs;
         return;
       }
 
-      if (event.button !== 0) return;
+      if (event.button !== 0 || state.reloading) return;
 
-      const currentWeapon = useGameStore.getState().weapon;
+      const currentWeapon = state.weapon;
       fire(currentWeapon);
 
       if (currentWeapon === "rifle" && autoFire.current === null) {
         autoFire.current = window.setInterval(() => {
+          const liveState = useGameStore.getState();
           if (
-            useGameStore.getState().screen !== "playing" ||
-            useGameStore.getState().weapon !== "rifle"
+            liveState.screen !== "playing" ||
+            liveState.weapon !== "rifle" ||
+            liveState.reloading
           ) {
             stopAutoFire();
             return;
@@ -322,11 +368,11 @@ export function CombatSystem() {
   }, [camera, cycleWeapon, reload, scene, setScoped, setWeapon, spendRound]);
 
   useEffect(() => {
-    if (screen !== "playing") {
+    if (screen !== "playing" || reloading) {
       setScoped(false);
       aimReadyAt.current = 0;
     }
-  }, [screen, setScoped]);
+  }, [reloading, screen, setScoped]);
 
   return (
     <>
