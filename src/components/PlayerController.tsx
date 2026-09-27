@@ -26,6 +26,7 @@ export function PlayerController() {
   const sensitivity = useGameStore((state) => state.sensitivity);
   const pause = useGameStore((state) => state.pause);
   const setPlayerPosition = useGameStore((state) => state.setPlayerPosition);
+  const setMovementMode = useGameStore((state) => state.setMovementMode);
 
   useEffect(() => {
     function movementVector() {
@@ -139,9 +140,21 @@ export function PlayerController() {
       true,
     );
 
+    const moving = input.lengthSq() > 0.001;
+    const movementMode = sliding
+      ? "slide"
+      : crouching
+        ? "crouch"
+        : sprinting && moving
+          ? "run"
+          : moving
+            ? "walk"
+            : "idle";
+
     const cameraHeight = sliding ? 0.2 : crouching ? 0.3 : 0.52;
     camera.position.set(position.x, position.y + cameraHeight, position.z);
     setPlayerPosition([position.x, position.y, position.z]);
+    setMovementMode(movementMode);
   });
 
   return (

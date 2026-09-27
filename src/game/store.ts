@@ -2,8 +2,8 @@ import { create } from "zustand";
 import { GRENADE_COUNT, TARGET_COUNT, WEAPONS, type WeaponId } from "./config";
 
 type AmmoState = Record<WeaponId, { mag: number; reserve: number }>;
-
 type GameScreen = "story" | "playing" | "paused" | "won" | "lost";
+export type MovementMode = "idle" | "walk" | "run" | "crouch" | "slide";
 
 type GameStore = {
   screen: GameScreen;
@@ -18,6 +18,7 @@ type GameStore = {
   playerPosition: [number, number, number];
   speedBoostUntil: number;
   speedBoostActive: boolean;
+  movementMode: MovementMode;
   startGame: () => void;
   pause: () => void;
   resume: () => void;
@@ -34,6 +35,7 @@ type GameStore = {
   setSensitivity: (value: number) => void;
   setScoped: (value: boolean) => void;
   setPlayerPosition: (value: [number, number, number]) => void;
+  setMovementMode: (value: MovementMode) => void;
 };
 
 function freshAmmo(): AmmoState {
@@ -57,6 +59,7 @@ function freshRun() {
     playerPosition: [0, 1.4, 12] as [number, number, number],
     speedBoostUntil: 0,
     speedBoostActive: false,
+    movementMode: "idle" as MovementMode,
   };
 }
 
@@ -167,4 +170,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   setSensitivity: (sensitivity) => set({ sensitivity }),
   setScoped: (scoped) => set({ scoped }),
   setPlayerPosition: (playerPosition) => set({ playerPosition }),
+  setMovementMode: (movementMode) => {
+    if (get().movementMode !== movementMode) set({ movementMode });
+  },
 }));
