@@ -109,6 +109,16 @@ function firstProjectileIntersection(
   return intersections.find(({ object }) => !ignoresProjectile(object));
 }
 
+function inheritedUserData(object: THREE.Object3D, key: string) {
+  let current: THREE.Object3D | null = object;
+  while (current) {
+    const value = current.userData[key] as string | undefined;
+    if (value) return value;
+    current = current.parent;
+  }
+  return undefined;
+}
+
 export function CombatSystem() {
   const { camera, scene } = useThree();
   const lastShot = useRef(0);
@@ -238,10 +248,41 @@ export function CombatSystem() {
               .clone()
               .add(raycaster.ray.direction.clone().multiplyScalar(config.maxRange));
 
-        const targetId = first?.object.userData.targetId as string | undefined;
-        addTrace(origin, end, Boolean(targetId));
+        const targetId = first
+          ? inheritedUserData(first.object, "targetId")
+          : undefined;
+        const propId = first
+          ? inheritedUserData(first.object, "propId")
+          : undefined;
 
-        if (!first || !targetId) continue;
+        addTrace(origin, end, Boolean(targetId || propId));
+
+        if (!first) continue;
+
+        if (propId && !targetId) {
+          addImpact(first.point);
+          window.dispatchEvent(
+            new CustomEvent("prop-shot", {
+              detail: {
+                id: propId,
+                direction: [
+                  raycaster.ray.direction.x,
+                  raycaster.ray.direction.y,
+                  raycaster.ray.direction.z,
+                ],
+                force:
+                  currentWeapon === "sniper"
+                    ? 3.4
+                    : currentWeapon === "shotgun"
+                      ? 2.35
+                      : 1.15,
+              },
+            }),
+          );
+          continue;
+        }
+
+        if (!targetId) continue;
 
         addImpact(first.point);
 

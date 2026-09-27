@@ -8,10 +8,14 @@ import { HUD } from "./HUD";
 import { MenuOverlay } from "./MenuOverlay";
 import { PaintSystem } from "./PaintSystem";
 import { PaperGrenadeSystem } from "./PaperGrenadeSystem";
+import { PaperworkMonster } from "./PaperworkMonster";
 import { PickupSystem } from "./PickupSystem";
 import { PlayerController } from "./PlayerController";
 import { WeaponView } from "./WeaponView";
-import { TARGET_SPAWNS } from "../game/config";
+import {
+  PAPER_MONSTER_SPAWNS,
+  TARGET_SPAWNS,
+} from "../game/config";
 
 export function GameCanvas() {
   return (
@@ -29,6 +33,13 @@ export function GameCanvas() {
             <PaintSystem />
             <PaperGrenadeSystem />
             <PickupSystem />
+            {PAPER_MONSTER_SPAWNS.map((spawn, index) => (
+              <PaperworkMonster
+                key={`paper-${index}`}
+                id={`paper-${index}`}
+                spawn={spawn}
+              />
+            ))}
             {TARGET_SPAWNS.map((spawn, index) => {
               const ranged = index % 3 === 1 || index === 8;
               return (

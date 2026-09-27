@@ -700,9 +700,10 @@ button {
 }
 
 .weapon-view.is-hip {
-  right: 10vw;
-  bottom: -2.5vh;
-  width: 54vw;
+  right: calc(50vw - 55.6vh);
+  bottom: 8.7vh;
+  width: auto;
+  height: 52vh;
   transform: none;
 }
 
@@ -761,7 +762,8 @@ button {
 
 .weapon-view.is-hip svg {
   display: block;
-  width: 100%;
+  width: auto;
+  height: 100%;
   overflow: visible;
   filter: drop-shadow(5px 6px 0 rgba(37,72,184,.08));
 }
@@ -1525,10 +1527,10 @@ button {
   }
 
   .weapon-view.is-hip {
-    right: 1vw;
-    bottom: -2vh;
-    width: 79vw;
-    height: auto;
+    right: calc(50vw - 48vh);
+    bottom: 15vh;
+    width: auto;
+    height: 44vh;
   }
 
   .weapon-view.is-scoped {

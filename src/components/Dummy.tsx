@@ -2,11 +2,8 @@ import { Html } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
-import {
-  ARENA_HALF_SIZE,
-  BOSS_MAX_HP,
-  ENEMY_BLOCKERS,
-} from "../game/config";
+import { BOSS_MAX_HP } from "../game/config";
+import { moveWithAvoidance } from "../game/navigation";
 import { useGameStore } from "../game/store";
 
 type GrenadeDetail = {
@@ -310,32 +307,6 @@ function setBeam(
   );
 }
 
-function blocked(x: number, z: number) {
-  return ENEMY_BLOCKERS.some((blocker) => {
-    const halfW = blocker.w / 2 + ENEMY_RADIUS;
-    const halfD = blocker.d / 2 + ENEMY_RADIUS;
-    return (
-      x > blocker.x - halfW &&
-      x < blocker.x + halfW &&
-      z > blocker.z - halfD &&
-      z < blocker.z + halfD
-    );
-  });
-}
-
-function moveEnemy(position: THREE.Vector3, motion: THREE.Vector3) {
-  const min = -ARENA_HALF_SIZE + ENEMY_RADIUS + 0.7;
-  const max = ARENA_HALF_SIZE - ENEMY_RADIUS - 0.7;
-
-  const wantedX = THREE.MathUtils.clamp(position.x + motion.x, min, max);
-  if (!blocked(wantedX, position.z)) position.x = wantedX;
-
-  const wantedZ = THREE.MathUtils.clamp(position.z + motion.z, min, max);
-  if (!blocked(position.x, wantedZ)) position.z = wantedZ;
-
-  position.y = 0;
-}
-
 export function Dummy({
   id,
   spawn,
@@ -614,7 +585,7 @@ export function Dummy({
       }
     }
 
-    moveEnemy(here, motion);
+    moveWithAvoidance(here, motion, ENEMY_RADIUS, drift);
 
     root.lookAt(player.x, 0, player.z);
     root.rotation.x = 0;
