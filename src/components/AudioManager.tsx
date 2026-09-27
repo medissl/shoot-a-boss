@@ -51,8 +51,6 @@ function bgmFor(screen: GameScreen) {
 
 export function AudioManager() {
   const screen = useGameStore((state) => state.screen);
-  const weapon = useGameStore((state) => state.weapon);
-  const runId = useGameStore((state) => state.runId);
   const movementMode = useGameStore((state) => state.movementMode);
   const reloading = useGameStore((state) => state.reloading);
   const reloadingWeapon = useGameStore((state) => state.reloadingWeapon);
@@ -133,7 +131,11 @@ export function AudioManager() {
     const unlock = () => {
       if (unlocked.current) return;
       unlocked.current = true;
-      switchBgm(bgmFor(useGameStore.getState().screen));
+      const state = useGameStore.getState();
+      switchBgm(bgmFor(state.screen));
+      if (state.screen === "playing") {
+        playOne(cocking[state.weapon], 0.58);
+      }
     };
 
     window.addEventListener("pointerdown", unlock, { once: true });
@@ -143,16 +145,11 @@ export function AudioManager() {
       window.removeEventListener("pointerdown", unlock);
       window.removeEventListener("keydown", unlock);
     };
-  }, [switchBgm]);
+  }, [playOne, switchBgm]);
 
   useEffect(() => {
     switchBgm(bgmFor(screen));
   }, [screen, switchBgm]);
-
-  useEffect(() => {
-    if (screen !== "playing") return;
-    playOne(cocking[weapon], 0.58);
-  }, [playOne, runId, screen, weapon]);
 
   useEffect(() => {
     if (!reloading || !reloadingWeapon) return;
@@ -193,6 +190,13 @@ export function AudioManager() {
   }, [movementMode, playOne, screen]);
 
   useEffect(() => {
+    const weaponSelected = (event: Event) => {
+      const selected = (event as CustomEvent<{ weapon: WeaponId }>).detail.weapon;
+      if (useGameStore.getState().screen === "playing") {
+        playOne(cocking[selected], 0.58);
+      }
+    };
+
     const weaponFire = (event: Event) => {
       const fired = (event as CustomEvent<{ weapon: WeaponId }>).detail.weapon;
       if (fired === "sniper") playOne(A.sniperShoot, 0.82);
@@ -230,6 +234,7 @@ export function AudioManager() {
       playOne(A.kills[Math.min(count, 5) - 1], 0.78);
     };
 
+    window.addEventListener("weapon-selected", weaponSelected as EventListener);
     window.addEventListener("weapon-fired", weaponFire as EventListener);
     window.addEventListener("rifle-trigger-down", rifleDown);
     window.addEventListener("rifle-trigger-up", rifleUp);
@@ -242,6 +247,7 @@ export function AudioManager() {
 
     return () => {
       stopRifleLoop();
+      window.removeEventListener("weapon-selected", weaponSelected as EventListener);
       window.removeEventListener("weapon-fired", weaponFire as EventListener);
       window.removeEventListener("rifle-trigger-down", rifleDown);
       window.removeEventListener("rifle-trigger-up", rifleUp);

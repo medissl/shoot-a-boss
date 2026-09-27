@@ -104,12 +104,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
   ...freshRun(),
   sensitivity: 0.85,
 
-  startGame: () =>
+  startGame: () => {
     set((state) => ({
       screen: "playing",
       runId: state.runId + 1,
       ...freshRun(),
-    })),
+    }));
+    window.dispatchEvent(
+      new CustomEvent("weapon-selected", { detail: { weapon: "rifle" as WeaponId } }),
+    );
+  },
 
   pause: () => {
     if (get().screen === "playing") {
@@ -122,12 +126,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (get().screen === "paused") set({ screen: "playing" });
   },
 
-  restart: () =>
+  restart: () => {
     set((state) => ({
       screen: "playing",
       runId: state.runId + 1,
       ...freshRun(),
-    })),
+    }));
+    window.dispatchEvent(
+      new CustomEvent("weapon-selected", { detail: { weapon: "rifle" as WeaponId } }),
+    );
+  },
 
   goToMenu: () => {
     cancelReload(set, get);
@@ -148,13 +156,20 @@ export const useGameStore = create<GameStore>((set, get) => ({
   setWeapon: (weapon) => {
     cancelReload(set, get);
     set({ weapon, scoped: false });
+    window.dispatchEvent(
+      new CustomEvent("weapon-selected", { detail: { weapon } }),
+    );
   },
 
   cycleWeapon: (direction) => {
     const current = weaponOrder.indexOf(get().weapon);
     const next = (current + direction + weaponOrder.length) % weaponOrder.length;
+    const weapon = weaponOrder[next];
     cancelReload(set, get);
-    set({ weapon: weaponOrder[next], scoped: false });
+    set({ weapon, scoped: false });
+    window.dispatchEvent(
+      new CustomEvent("weapon-selected", { detail: { weapon } }),
+    );
   },
 
   spendRound: (weapon) => {
