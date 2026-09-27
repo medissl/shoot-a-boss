@@ -520,18 +520,18 @@ export function Dummy({
     if (forwardSight.lengthSq() > 0.001) forwardSight.normalize();
 
     const inVisionCone =
-      playerDistance < 4.6 ||
+      playerDistance < 8 ||
       forwardSight.lengthSq() < 0.001 ||
-      forwardSight.dot(playerDirection) > 0.08;
+      forwardSight.dot(playerDirection) > -0.22;
 
     const seesPlayer =
-      playerDistance < 18.5 &&
+      playerDistance < 34 &&
       inVisionCone &&
       hasEnemyLineOfSight(here, player, 0.18);
 
     const nowMs = performance.now();
     if (seesPlayer) {
-      awarenessUntil.current = nowMs + 3200;
+      awarenessUntil.current = nowMs + 4600;
       lastSeenPosition.current.copy(player);
     }
 
