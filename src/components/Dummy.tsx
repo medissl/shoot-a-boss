@@ -1,7 +1,11 @@
 import { useFrame } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
-import { ARENA_HALF_SIZE } from "../game/config";
+import {
+  ARENA_HALF_SIZE,
+  BOSS_MAX_HP,
+  ENEMY_BLOCKERS,
+} from "../game/config";
 import { useGameStore } from "../game/store";
 
 type GrenadeDetail = {
@@ -19,6 +23,7 @@ const PAPER = "#fbfaf4";
 const SHADE = "#dbe3ff";
 const RED = "#ef476f";
 const PINK = "#ff91b8";
+const ENEMY_RADIUS = 1.05;
 
 function drawBoss(
   canvas: HTMLCanvasElement,
@@ -32,7 +37,7 @@ function drawBoss(
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.save();
-  ctx.translate(canvas.width / 2, 34);
+  ctx.translate(canvas.width / 2, 28);
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
   ctx.strokeStyle = BLUE;
@@ -41,77 +46,101 @@ function drawBoss(
   const skin = hit ? "#ff9bad" : "#f7d8bb";
   const shirt = hit ? "#ff6f8d" : PAPER;
 
-  // head
+  // Big round head.
   ctx.fillStyle = skin;
   ctx.beginPath();
-  ctx.ellipse(0, 114, 80, 71, -0.03, 0, Math.PI * 2);
+  ctx.ellipse(0, 112, 86, 73, -0.03, 0, Math.PI * 2);
   ctx.fill();
   ctx.stroke();
 
   ctx.beginPath();
-  ctx.arc(-80, 118, 16, Math.PI * 0.45, Math.PI * 1.55);
-  ctx.arc(80, 118, 16, -Math.PI * 0.55, Math.PI * 0.55);
+  ctx.arc(-86, 117, 17, Math.PI * 0.45, Math.PI * 1.55);
+  ctx.arc(86, 117, 17, -Math.PI * 0.55, Math.PI * 0.55);
   ctx.stroke();
 
-  // angry face
+  // Angry eyebrows + eyes.
   ctx.beginPath();
-  ctx.moveTo(-48, 85);
-  ctx.lineTo(-13, 98);
-  ctx.moveTo(13, 98);
-  ctx.lineTo(48, 85);
+  ctx.moveTo(-52, 84);
+  ctx.lineTo(-15, 97);
+  ctx.moveTo(15, 97);
+  ctx.lineTo(52, 84);
   ctx.stroke();
 
   ctx.fillStyle = hit ? "#7a1730" : BLUE;
   ctx.beginPath();
-  ctx.arc(-29, 112, 7, 0, Math.PI * 2);
-  ctx.arc(29, 112, 7, 0, Math.PI * 2);
+  ctx.arc(-31, 111, 7, 0, Math.PI * 2);
+  ctx.arc(31, 111, 7, 0, Math.PI * 2);
   ctx.fill();
 
+  // Nose.
   ctx.beginPath();
-  ctx.moveTo(-35, 149);
-  ctx.quadraticCurveTo(0, 126, 35, 149);
+  ctx.moveTo(0, 113);
+  ctx.lineTo(-6, 130);
+  ctx.lineTo(6, 130);
   ctx.stroke();
 
-  // body
+  // Big boss mustache.
+  ctx.fillStyle = hit ? "#7a1730" : BLUE;
+  ctx.beginPath();
+  ctx.moveTo(0, 136);
+  ctx.bezierCurveTo(-12, 122, -35, 124, -51, 139);
+  ctx.bezierCurveTo(-33, 135, -19, 153, 0, 145);
+  ctx.bezierCurveTo(19, 153, 33, 135, 51, 139);
+  ctx.bezierCurveTo(35, 124, 12, 122, 0, 136);
+  ctx.closePath();
+  ctx.fill();
+
+  // Grumpy mouth below mustache.
+  ctx.strokeStyle = BLUE;
+  ctx.beginPath();
+  ctx.moveTo(-26, 159);
+  ctx.quadraticCurveTo(0, 145, 26, 159);
+  ctx.stroke();
+
+  // Wider / fatter torso.
   ctx.fillStyle = shirt;
   ctx.beginPath();
-  ctx.moveTo(-92, 194);
-  ctx.quadraticCurveTo(-137, 278, -112, 393);
-  ctx.quadraticCurveTo(0, 447, 112, 393);
-  ctx.quadraticCurveTo(137, 278, 92, 194);
+  ctx.moveTo(-116, 194);
+  ctx.quadraticCurveTo(-174, 270, -151, 397);
+  ctx.quadraticCurveTo(-86, 447, 0, 452);
+  ctx.quadraticCurveTo(86, 447, 151, 397);
+  ctx.quadraticCurveTo(174, 270, 116, 194);
+  ctx.quadraticCurveTo(58, 174, 0, 187);
+  ctx.quadraticCurveTo(-58, 174, -116, 194);
   ctx.closePath();
   ctx.fill();
   ctx.stroke();
 
-  // blue hatch/cel shade
+  // Blue hatch / cel shade.
   ctx.save();
   ctx.beginPath();
-  ctx.moveTo(-92, 194);
-  ctx.quadraticCurveTo(-137, 278, -112, 393);
-  ctx.quadraticCurveTo(0, 447, 112, 393);
-  ctx.quadraticCurveTo(137, 278, 92, 194);
+  ctx.moveTo(-116, 194);
+  ctx.quadraticCurveTo(-174, 270, -151, 397);
+  ctx.quadraticCurveTo(-86, 447, 0, 452);
+  ctx.quadraticCurveTo(86, 447, 151, 397);
+  ctx.quadraticCurveTo(174, 270, 116, 194);
   ctx.closePath();
   ctx.clip();
-  ctx.globalAlpha = hit ? 0.17 : 0.26;
+  ctx.globalAlpha = hit ? 0.17 : 0.25;
   ctx.strokeStyle = hit ? "#861f39" : BLUE;
   ctx.lineWidth = 4;
-  for (let i = -155; i < 115; i += 20) {
+  for (let i = -190; i < 145; i += 21) {
     ctx.beginPath();
-    ctx.moveTo(i, 315);
-    ctx.lineTo(i + 100, 430);
+    ctx.moveTo(i, 308);
+    ctx.lineTo(i + 118, 445);
     ctx.stroke();
   }
   ctx.restore();
 
-  // tie
+  // Tie.
   ctx.fillStyle = hit ? "#7a1730" : SHADE;
   ctx.beginPath();
-  ctx.moveTo(0, 202);
-  ctx.lineTo(-20, 235);
-  ctx.lineTo(-6, 330);
-  ctx.lineTo(0, 347);
-  ctx.lineTo(7, 330);
-  ctx.lineTo(20, 235);
+  ctx.moveTo(0, 198);
+  ctx.lineTo(-22, 234);
+  ctx.lineTo(-7, 332);
+  ctx.lineTo(0, 350);
+  ctx.lineTo(8, 332);
+  ctx.lineTo(22, 234);
   ctx.closePath();
   ctx.fill();
   ctx.stroke();
@@ -121,23 +150,23 @@ function drawBoss(
   const aiming = pose === "aim";
 
   const leftHand: [number, number] = punching
-    ? [-154, 211]
+    ? [-177, 216]
     : aiming
-      ? [-134, 245]
-      : [-145, 315 + (walking ? 15 : 0)];
+      ? [-153, 249]
+      : [-167, 320 + (walking ? 13 : 0)];
 
   const rightHand: [number, number] = punching
-    ? [178, 193]
+    ? [194, 196]
     : aiming
-      ? [158, 220]
-      : [145, 315 - (walking ? 15 : 0)];
+      ? [177, 222]
+      : [167, 320 - (walking ? 13 : 0)];
 
   ctx.strokeStyle = BLUE;
-  ctx.lineWidth = 18;
+  ctx.lineWidth = 19;
   ctx.beginPath();
-  ctx.moveTo(-84, 229);
+  ctx.moveTo(-108, 231);
   ctx.lineTo(leftHand[0], leftHand[1]);
-  ctx.moveTo(84, 229);
+  ctx.moveTo(108, 231);
   ctx.lineTo(rightHand[0], rightHand[1]);
   ctx.stroke();
 
@@ -145,12 +174,11 @@ function drawBoss(
   ctx.lineWidth = 8;
   for (const [x, y] of [leftHand, rightHand]) {
     ctx.beginPath();
-    ctx.arc(x, y, 20, 0, Math.PI * 2);
+    ctx.arc(x, y, 21, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
   }
 
-  // ranged prop
   if (archetype === "ranged") {
     ctx.strokeStyle = hit ? "#7a1730" : BLUE;
     ctx.fillStyle = PAPER;
@@ -185,35 +213,35 @@ function drawBoss(
     }
   }
 
-  // legs
-  const step = walking ? 24 : 0;
+  // Shorter legs under the larger torso.
+  const step = walking ? 20 : 0;
   ctx.strokeStyle = BLUE;
-  ctx.lineWidth = 22;
+  ctx.lineWidth = 23;
   ctx.beginPath();
-  ctx.moveTo(-44, 405);
-  ctx.lineTo(-55 - step, 536);
-  ctx.moveTo(44, 405);
-  ctx.lineTo(55 + step, 536);
+  ctx.moveTo(-52, 424);
+  ctx.lineTo(-61 - step, 545);
+  ctx.moveTo(52, 424);
+  ctx.lineTo(61 + step, 545);
   ctx.stroke();
 
   ctx.lineWidth = 9;
   ctx.beginPath();
-  ctx.moveTo(-91 - step, 539);
-  ctx.lineTo(-34 - step, 539);
-  ctx.moveTo(34 + step, 539);
-  ctx.lineTo(91 + step, 539);
+  ctx.moveTo(-99 - step, 548);
+  ctx.lineTo(-40 - step, 548);
+  ctx.moveTo(40 + step, 548);
+  ctx.lineTo(99 + step, 548);
   ctx.stroke();
 
   if (punching) {
     ctx.strokeStyle = RED;
     ctx.lineWidth = 8;
     ctx.beginPath();
-    ctx.moveTo(192, 163);
-    ctx.lineTo(239, 141);
-    ctx.moveTo(195, 190);
-    ctx.lineTo(250, 190);
-    ctx.moveTo(187, 217);
-    ctx.lineTo(234, 242);
+    ctx.moveTo(205, 164);
+    ctx.lineTo(252, 142);
+    ctx.moveTo(207, 192);
+    ctx.lineTo(263, 192);
+    ctx.moveTo(198, 219);
+    ctx.lineTo(246, 245);
     ctx.stroke();
   }
 
@@ -221,14 +249,14 @@ function drawBoss(
     ctx.strokeStyle = PINK;
     ctx.lineWidth = 8;
     ctx.beginPath();
-    ctx.moveTo(-116, 64);
-    ctx.lineTo(-145, 39);
-    ctx.moveTo(112, 67);
-    ctx.lineTo(143, 40);
-    ctx.moveTo(-134, 170);
-    ctx.lineTo(-170, 181);
-    ctx.moveTo(132, 167);
-    ctx.lineTo(170, 180);
+    ctx.moveTo(-128, 62);
+    ctx.lineTo(-158, 36);
+    ctx.moveTo(125, 65);
+    ctx.lineTo(157, 38);
+    ctx.moveTo(-151, 173);
+    ctx.lineTo(-189, 184);
+    ctx.moveTo(149, 171);
+    ctx.lineTo(188, 185);
     ctx.stroke();
   }
 
@@ -253,6 +281,32 @@ function setBeam(
   );
 }
 
+function blocked(x: number, z: number) {
+  return ENEMY_BLOCKERS.some((blocker) => {
+    const halfW = blocker.w / 2 + ENEMY_RADIUS;
+    const halfD = blocker.d / 2 + ENEMY_RADIUS;
+    return (
+      x > blocker.x - halfW &&
+      x < blocker.x + halfW &&
+      z > blocker.z - halfD &&
+      z < blocker.z + halfD
+    );
+  });
+}
+
+function moveEnemy(position: THREE.Vector3, motion: THREE.Vector3) {
+  const min = -ARENA_HALF_SIZE + ENEMY_RADIUS + 0.7;
+  const max = ARENA_HALF_SIZE - ENEMY_RADIUS - 0.7;
+
+  const wantedX = THREE.MathUtils.clamp(position.x + motion.x, min, max);
+  if (!blocked(wantedX, position.z)) position.x = wantedX;
+
+  const wantedZ = THREE.MathUtils.clamp(position.z + motion.z, min, max);
+  if (!blocked(position.x, wantedZ)) position.z = wantedZ;
+
+  position.y = 0;
+}
+
 export function Dummy({
   id,
   spawn,
@@ -267,14 +321,14 @@ export function Dummy({
   const group = useRef<THREE.Group>(null);
   const warningRef = useRef<THREE.Mesh>(null);
   const shotRef = useRef<THREE.Mesh>(null);
-  const [hp, setHp] = useState(100);
+  const [hp, setHp] = useState(BOSS_MAX_HP);
   const [pose, setPose] = useState<Pose>("idle");
   const [hitFlash, setHitFlash] = useState(false);
 
   const canvas = useMemo(() => {
     const element = document.createElement("canvas");
-    element.width = 512;
-    element.height = 640;
+    element.width = 560;
+    element.height = 660;
     return element;
   }, []);
 
@@ -309,7 +363,7 @@ export function Dummy({
       if (detail.id !== id || eliminated) return;
       setHp((current) => Math.max(0, current - detail.damage));
       setHitFlash(true);
-      window.setTimeout(() => setHitFlash(false), 125);
+      window.setTimeout(() => setHitFlash(false), 135);
     };
 
     const grenadeHandler = (event: Event) => {
@@ -323,7 +377,7 @@ export function Dummy({
       const damage = Math.max(22, detail.damage * falloff);
       setHp((current) => Math.max(0, current - damage));
       setHitFlash(true);
-      window.setTimeout(() => setHitFlash(false), 140);
+      window.setTimeout(() => setHitFlash(false), 145);
     };
 
     window.addEventListener("boss-hit", handler as EventListener);
@@ -356,21 +410,22 @@ export function Dummy({
     const distance = towardPlayer.length();
     const desired = distance > 0.001 ? towardPlayer.normalize() : new THREE.Vector3();
     const sideways = new THREE.Vector3(-desired.z, 0, desired.x);
+    const motion = new THREE.Vector3();
     const now = state.clock.elapsedTime;
     const number = Number(id.split("-")[1]);
     let desiredPose: Pose = "idle";
 
     if (archetype === "melee") {
-      if (distance > 1.75) {
-        here.addScaledVector(desired, 2.65 * delta);
-        here.addScaledVector(
+      if (distance > 1.9) {
+        motion.addScaledVector(desired, 2.7 * delta);
+        motion.addScaledVector(
           sideways,
           Math.sin(now * 2 + number) * 0.24 * delta * drift,
         );
         desiredPose = "walk";
-      } else if (now - lastPunch.current > 1.05) {
+      } else if (now - lastPunch.current > 1.08) {
         lastPunch.current = now;
-        punchUntil.current = now + 0.34;
+        punchUntil.current = now + 0.36;
         damagePlayer(10);
       }
 
@@ -398,7 +453,7 @@ export function Dummy({
           }
 
           aimingUntil.current = 0;
-          nextRangedShot.current = now + 2.25 + (number % 3) * 0.22;
+          nextRangedShot.current = now + 2.35 + (number % 3) * 0.22;
 
           if (shot) {
             setBeam(shot, muzzle, shotTarget.current, 0.034);
@@ -406,15 +461,15 @@ export function Dummy({
           }
         }
 
-        if (distance < 8.5) {
-          here.addScaledVector(desired, -3.15 * delta);
-          here.addScaledVector(sideways, 0.9 * delta * drift);
+        if (distance < 9) {
+          motion.addScaledVector(desired, -3.1 * delta);
+          motion.addScaledVector(sideways, 0.95 * delta * drift);
           desiredPose = "walk";
-        } else if (distance > 18) {
-          here.addScaledVector(desired, 2.1 * delta);
+        } else if (distance > 20) {
+          motion.addScaledVector(desired, 2.05 * delta);
           desiredPose = "walk";
         } else {
-          here.addScaledVector(
+          motion.addScaledVector(
             sideways,
             Math.sin(now * 1.6 + number) * 1.05 * delta * drift,
           );
@@ -423,7 +478,7 @@ export function Dummy({
           if (now >= nextRangedShot.current) {
             telegraphTarget.current.copy(player);
             telegraphTarget.current.y += 0.35;
-            aimingUntil.current = now + 0.72;
+            aimingUntil.current = now + 0.78;
             desiredPose = "aim";
           }
         }
@@ -440,9 +495,7 @@ export function Dummy({
       }
     }
 
-    here.y = 0;
-    here.x = THREE.MathUtils.clamp(here.x, -ARENA_HALF_SIZE + 1.5, ARENA_HALF_SIZE - 1.5);
-    here.z = THREE.MathUtils.clamp(here.z, -ARENA_HALF_SIZE + 1.5, ARENA_HALF_SIZE - 1.5);
+    moveEnemy(here, motion);
 
     root.lookAt(player.x, 0, player.z);
     root.rotation.x = 0;
@@ -457,17 +510,19 @@ export function Dummy({
     if (visible) {
       const moving = desiredPose === "walk";
       visible.position.y =
-        1.72 + Math.sin(now * 7 + number) * (moving ? 0.045 : 0.012);
+        1.8 + Math.sin(now * 5.2 + number) * (moving ? 0.035 : 0.01);
     }
   });
 
   if (eliminated) return null;
 
+  const hpRatio = Math.max(hp, 0) / BOSS_MAX_HP;
+
   return (
     <>
       <group ref={group} position={spawn}>
-        <mesh position={[0, 1.72, 0]} userData={{ targetId: id, targetPart: "body" }}>
-          <planeGeometry args={[2.72, 3.4]} />
+        <mesh position={[0, 1.8, 0]}>
+          <planeGeometry args={[3.35, 3.65]} />
           <meshBasicMaterial
             map={texture}
             transparent
@@ -476,26 +531,31 @@ export function Dummy({
           />
         </mesh>
 
-        <mesh position={[0, 1.42, 0.035]} userData={{ targetId: id, targetPart: "body" }}>
-          <planeGeometry args={[2.45, 2.25]} />
+        <mesh position={[0, 3.0, 0.08]} userData={{ targetId: id, targetPart: "head" }}>
+          <planeGeometry args={[1.25, 1.08]} />
           <meshBasicMaterial transparent opacity={0} depthWrite={false} side={THREE.DoubleSide} />
         </mesh>
 
-        <mesh position={[0, 2.75, 0.05]} userData={{ targetId: id, targetPart: "head" }}>
-          <planeGeometry args={[1.16, 1.08]} />
+        <mesh position={[0, 1.82, 0.07]} userData={{ targetId: id, targetPart: "body" }}>
+          <planeGeometry args={[2.85, 1.95]} />
           <meshBasicMaterial transparent opacity={0} depthWrite={false} side={THREE.DoubleSide} />
         </mesh>
 
-        <group position={[0, 3.55, 0.03]}>
+        <mesh position={[0, 0.62, 0.09]} userData={{ targetId: id, targetPart: "leg" }}>
+          <planeGeometry args={[2.05, 0.95]} />
+          <meshBasicMaterial transparent opacity={0} depthWrite={false} side={THREE.DoubleSide} />
+        </mesh>
+
+        <group position={[0, 3.82, 0.04]}>
           <mesh>
-            <planeGeometry args={[1.62, 0.08]} />
+            <planeGeometry args={[1.82, 0.085]} />
             <meshBasicMaterial color="#b7c6f5" />
           </mesh>
           <mesh
-            position={[-0.81 + (Math.max(hp, 0) / 100) * 0.81, 0, 0.01]}
-            scale={[Math.max(hp, 0) / 100, 1, 1]}
+            position={[-0.91 + hpRatio * 0.91, 0, 0.01]}
+            scale={[hpRatio, 1, 1]}
           >
-            <planeGeometry args={[1.6, 0.055]} />
+            <planeGeometry args={[1.8, 0.06]} />
             <meshBasicMaterial color={hitFlash ? RED : BLUE} />
           </mesh>
         </group>
