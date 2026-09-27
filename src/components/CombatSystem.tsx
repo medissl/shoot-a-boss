@@ -40,8 +40,8 @@ export function CombatSystem() {
         raycaster.setFromCamera(new THREE.Vector2(spreadX, spreadY), camera);
 
         const intersections = raycaster.intersectObjects(scene.children, true);
-        const hit = intersections.find((item) => item.object.userData.targetId);
-        if (!hit) continue;
+        const hit = intersections[0];
+        if (!hit?.object.userData.targetId) continue;
 
         const id = String(hit.object.userData.targetId);
         const multiplier = hit.object.userData.targetPart === "head" ? 1.5 : 1;

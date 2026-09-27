@@ -25,7 +25,6 @@ export function Dummy({
   const [lastPunch, setLastPunch] = useState(0);
   const [hitFlash, setHitFlash] = useState(false);
   const eliminated = useGameStore((state) => state.eliminated.includes(id));
-  const playerPosition = useGameStore((state) => state.playerPosition);
   const damagePlayer = useGameStore((state) => state.damagePlayer);
   const eliminate = useGameStore((state) => state.eliminate);
   const screen = useGameStore((state) => state.screen);
@@ -70,7 +69,7 @@ export function Dummy({
     const root = group.current;
     if (!root || eliminated || screen !== "playing") return;
 
-    const player = new THREE.Vector3(...playerPosition);
+    const player = new THREE.Vector3(...useGameStore.getState().playerPosition);
     const here = root.position;
     const towardPlayer = player.clone().sub(here);
     towardPlayer.y = 0;
