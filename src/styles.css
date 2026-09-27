@@ -121,7 +121,7 @@ button {
   display: grid;
   place-items: center;
   transform-origin: center;
-  animation: comic-panel-enter .52s cubic-bezier(.2,.8,.2,1) both;
+  animation: comic-panel-enter .82s cubic-bezier(.2,.8,.2,1) both;
 }
 
 .story-panel-card img {
@@ -656,107 +656,111 @@ button {
 }
 
 .scope-overlay--rifle .scope-ring {
-  width: min(48vh, 48vw);
+  width: min(31vh, 31vw);
   border-width: 2px;
-  box-shadow: 0 0 0 9999px rgba(251,250,244,.1);
-}
-
-.scope-overlay--rifle .scope-axis--x {
-  width: min(48vh, 48vw);
-}
-
-.scope-overlay--rifle .scope-axis--y {
-  height: min(48vh, 48vw);
-}
-
-.scope-overlay--shotgun {
-  opacity: .28;
-}
-
-.scope-overlay--shotgun .scope-ring {
-  width: 170px;
-  border-style: dashed;
+  opacity: .34;
   box-shadow: none;
 }
 
-.scope-overlay--shotgun .scope-axis--x {
-  width: 170px;
+.scope-overlay--rifle .scope-axis--x {
+  width: min(31vh, 31vw);
+  opacity: .28;
 }
 
-.scope-overlay--shotgun .scope-axis--y {
-  height: 170px;
+.scope-overlay--rifle .scope-axis--y {
+  height: min(31vh, 31vw);
+  opacity: .28;
+}
+
+.scope-overlay--shotgun {
+  display: none;
 }
 
 .weapon-view {
   position: fixed;
   z-index: 7;
-  right: -10.5vw;
-  bottom: -14.5vh;
-  width: min(75vw, 1120px);
   pointer-events: none;
   transform-origin: 100% 100%;
-  transform:
-    perspective(1100px)
-    rotateX(5deg)
-    rotateY(-9deg)
-    rotateZ(-2deg);
-  transition:
-    transform .2s cubic-bezier(.2,.75,.2,1),
-    right .2s cubic-bezier(.2,.75,.2,1),
-    bottom .2s cubic-bezier(.2,.75,.2,1),
-    opacity .16s ease;
   will-change: transform, right, bottom;
+}
+
+.weapon-view.is-hip {
+  right: 7.5vw;
+  bottom: -19vh;
+  width: min(72vw, 1080px);
+  transform:
+    perspective(1150px)
+    rotateX(6deg)
+    rotateY(-12deg)
+    rotateZ(-4deg);
+}
+
+.weapon-view.is-scoped {
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  transform: none;
 }
 
 .weapon-view__motion,
 .weapon-view__perspective,
 .weapon-view__kick {
-  transform-origin: 84% 88%;
+  transform-origin: 82% 90%;
   will-change: transform;
+}
+
+.weapon-view.is-hip .weapon-view__perspective {
+  transform: perspective(1050px) rotateX(2deg) rotateY(-8deg);
+}
+
+.weapon-view.is-scoped .weapon-view__perspective {
+  transform: none;
 }
 
 .weapon-view__motion {
   animation: weapon-breathe 3.8s ease-in-out infinite;
 }
 
-.weapon-view__perspective {
-  transform:
-    perspective(1050px)
-    rotateX(2deg)
-    rotateY(-7deg);
+.weapon-view.movement-walk.is-hip .weapon-view__motion { animation: weapon-walk .62s ease-in-out infinite; }
+.weapon-view.movement-run.is-hip .weapon-view__motion { animation: weapon-run .38s ease-in-out infinite; }
+.weapon-view.movement-crouch.is-hip .weapon-view__motion { animation: weapon-crouch 1.3s ease-in-out infinite; }
+.weapon-view.movement-slide.is-hip .weapon-view__motion { animation: weapon-slide .46s ease-in-out infinite; }
+.weapon-view.is-scoped .weapon-view__motion { animation: weapon-breathe-scoped 3s ease-in-out infinite; }
+
+.weapon-view__kick { transition: transform .1s ease-out; }
+
+.weapon-view.is-hip.is-kicking .weapon-view__kick {
+  transform: translate(18px, 18px) rotate(1deg);
 }
 
-.weapon-view.movement-walk .weapon-view__motion { animation: weapon-walk .62s ease-in-out infinite; }
-.weapon-view.movement-run .weapon-view__motion { animation: weapon-run .38s ease-in-out infinite; }
-.weapon-view.movement-crouch .weapon-view__motion { animation: weapon-crouch 1.3s ease-in-out infinite; }
-.weapon-view.movement-slide .weapon-view__motion { animation: weapon-slide .46s ease-in-out infinite; }
-.weapon-view.is-scoped .weapon-view__motion { animation: weapon-breathe-scoped 2.7s ease-in-out infinite; }
-
-.weapon-view__kick {
-  transition: transform .085s ease-out;
+.weapon-view--shotgun.is-hip.is-kicking .weapon-view__kick {
+  transform: translate(29px, 26px) rotate(1.9deg);
 }
 
-.weapon-view.is-kicking .weapon-view__kick {
-  transform: translate(17px, 18px) rotate(1deg);
+.weapon-view--sniper.is-hip.is-kicking .weapon-view__kick {
+  transform: translate(24px, 21px) rotate(1.45deg);
 }
 
-.weapon-view--shotgun.is-kicking .weapon-view__kick {
-  transform: translate(27px, 25px) rotate(1.8deg);
+.weapon-view.is-scoped.is-kicking .weapon-view__kick {
+  transform: translateY(7px) scale(.992);
 }
 
-.weapon-view--sniper.is-kicking .weapon-view__kick {
-  transform: translate(22px, 20px) rotate(1.35deg);
-}
-
-.weapon-view svg {
+.weapon-view.is-hip svg {
   display: block;
   width: 100%;
   overflow: visible;
   filter: drop-shadow(5px 6px 0 rgba(37,72,184,.08));
 }
 
+.weapon-view.is-scoped svg {
+  display: block;
+  width: 100vw;
+  height: 100vh;
+}
+
 .gun-fill,
-.gun-hand {
+.gun-hand,
+.ads-fill {
   fill: rgba(251,250,244,.96);
   stroke: var(--ink);
   stroke-width: 6;
@@ -779,7 +783,8 @@ button {
 
 .gun-line,
 .gun-line-only,
-.gun-barrel {
+.gun-barrel,
+.ads-line {
   fill: none;
   stroke: var(--ink);
   stroke-width: 7;
@@ -787,17 +792,35 @@ button {
   stroke-linejoin: round;
 }
 
-.gun-barrel {
-  stroke-width: 9;
-}
-
+.gun-barrel { stroke-width: 9; }
 .gun-barrel--thin,
-.gun-line--thin {
-  stroke-width: 4;
+.gun-line--thin,
+.ads-line--thin { stroke-width: 4; }
+
+.gun-dot,
+.ads-dot { fill: var(--ink); }
+.gun-dot--red,
+.ads-dot--red { fill: #ef476f; }
+
+.ads-optic-frame {
+  fill: rgba(251,250,244,.72);
+  stroke-width: 7;
 }
 
-.gun-dot { fill: var(--ink); }
-.gun-dot--red { fill: #ef476f; }
+.ads-lens {
+  fill: rgba(238,241,255,.16);
+  stroke: var(--ink);
+  stroke-width: 6;
+}
+
+.ads-drawing--sniper {
+  opacity: .62;
+}
+
+.ads-drawing--rifle,
+.ads-drawing--shotgun {
+  opacity: .78;
+}
 
 .muzzle-spark {
   opacity: 0;
@@ -809,54 +832,14 @@ button {
 
 .weapon-view.is-kicking .muzzle-spark { opacity: 1; }
 
-.weapon-view--rifle.is-scoped {
-  right: -2vw;
-  bottom: -16vh;
-  transform:
-    perspective(1100px)
-    translateX(-12vw)
-    translateY(6vh)
-    scale(1.08)
-    rotateX(2deg)
-    rotateY(-2deg)
-    rotateZ(-.7deg);
-}
-
-.weapon-view--sniper.is-scoped {
-  right: -1vw;
-  bottom: -15vh;
-  transform:
-    perspective(1100px)
-    translateX(-14vw)
-    translateY(8vh)
-    scale(1.1)
-    rotateX(1deg)
-    rotateY(-1deg)
-    rotateZ(-.4deg);
-  opacity: .78;
-}
-
-.weapon-view--shotgun.is-scoped {
-  right: -8vw;
-  bottom: -14vh;
-  transform:
-    perspective(1100px)
-    translateX(-3vw)
-    translateY(2vh)
-    scale(1.01)
-    rotateX(4deg)
-    rotateY(-7deg)
-    rotateZ(-1.4deg);
-}
-
 @keyframes weapon-breathe {
   0%,100% { transform: translate3d(0,0,0) rotate(0deg); }
   50% { transform: translate3d(-2px,-4px,0) rotate(.18deg); }
 }
 
 @keyframes weapon-breathe-scoped {
-  0%,100% { transform: translate3d(0,0,0) rotate(0deg); }
-  50% { transform: translate3d(-1px,-1.5px,0) rotate(.06deg); }
+  0%,100% { transform: translate3d(0,0,0) scale(1); }
+  50% { transform: translate3d(0,-1px,0) scale(.998); }
 }
 
 @keyframes weapon-walk {
@@ -881,6 +864,66 @@ button {
 @keyframes weapon-slide {
   0%,100% { transform: translate3d(18px,32px,0) rotate(2.1deg); }
   50% { transform: translate3d(7px,23px,0) rotate(1.1deg); }
+}
+
+.game-shell.is-empty-shake {
+  animation: empty-screen-shake .29s cubic-bezier(.3,.8,.2,1);
+}
+
+@keyframes empty-screen-shake {
+  0%,100% { transform: translate(0,0); }
+  15% { transform: translate(-7px,3px) rotate(-.12deg); }
+  32% { transform: translate(7px,-4px) rotate(.12deg); }
+  50% { transform: translate(-5px,-2px); }
+  68% { transform: translate(5px,3px); }
+  84% { transform: translate(-2px,1px); }
+}
+
+.empty-mag-vignette {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  pointer-events: none;
+  box-shadow: inset 0 0 0 4px rgba(239,71,111,.26), inset 0 0 130px 24px rgba(239,71,111,.42);
+  animation: empty-vignette 1.45s ease both;
+}
+
+.empty-mag-message {
+  position: fixed;
+  z-index: 31;
+  left: 50%;
+  top: 17%;
+  transform: translateX(-50%) rotate(-1deg);
+  padding: 10px 15px 9px;
+  border: 4px solid #ef476f;
+  background: rgba(251,250,244,.94);
+  color: #d72f5b;
+  box-shadow: 6px 6px 0 rgba(37,72,184,.18);
+  text-align: center;
+  font-size: clamp(1.15rem,2.2vw,1.8rem);
+  font-weight: 1000;
+  letter-spacing: .04em;
+  animation: empty-message-pop 1.45s ease both;
+}
+
+.empty-mag-message span {
+  display: block;
+  margin-top: 3px;
+  color: var(--ink);
+  font-size: .62em;
+  letter-spacing: .02em;
+}
+
+@keyframes empty-vignette {
+  0% { opacity: 0; }
+  10%,45% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes empty-message-pop {
+  0% { opacity: 0; transform: translateX(-50%) scale(.7) rotate(-3deg); }
+  12%,65% { opacity: 1; transform: translateX(-50%) scale(1) rotate(-1deg); }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-14px) scale(.96) rotate(1deg); }
 }
 
 .boost-status,
@@ -1092,10 +1135,16 @@ button {
     font-size: 10px;
   }
 
-  .weapon-view {
-    width: 98vw;
-    right: -18vw;
-    bottom: -10vh;
+  .weapon-view.is-hip {
+    width: 96vw;
+    right: -3vw;
+    bottom: -11vh;
+  }
+
+  .weapon-view.is-scoped {
+    width: 100vw;
+    right: auto;
+    bottom: auto;
   }
 
   .click-hint {

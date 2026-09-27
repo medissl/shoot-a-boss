@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { TARGET_COUNT, WEAPONS, type WeaponId } from "../game/config";
 import { useGameStore } from "../game/store";
 
@@ -13,15 +13,30 @@ export function HUD() {
   const scoped = useGameStore((state) => state.scoped);
   const boostActive = useGameStore((state) => state.speedBoostActive);
   const [pickupNotice, setPickupNotice] = useState("");
+  const [emptyAlert, setEmptyAlert] = useState(false);
+  const emptyTimer = useRef<number | null>(null);
 
   useEffect(() => {
-    const handler = (event: Event) => {
+    const pickupHandler = (event: Event) => {
       const kind = (event as CustomEvent<{ kind: "grenade" | "speed" }>).detail.kind;
       setPickupNotice(kind === "grenade" ? "+ PAPER BOMBS" : "+ SPEED BOOST");
       window.setTimeout(() => setPickupNotice(""), 1450);
     };
-    window.addEventListener("pickup-collected", handler as EventListener);
-    return () => window.removeEventListener("pickup-collected", handler as EventListener);
+
+    const emptyHandler = () => {
+      setEmptyAlert(true);
+      if (emptyTimer.current) window.clearTimeout(emptyTimer.current);
+      emptyTimer.current = window.setTimeout(() => setEmptyAlert(false), 1450);
+    };
+
+    window.addEventListener("pickup-collected", pickupHandler as EventListener);
+    window.addEventListener("empty-mag", emptyHandler);
+
+    return () => {
+      if (emptyTimer.current) window.clearTimeout(emptyTimer.current);
+      window.removeEventListener("pickup-collected", pickupHandler as EventListener);
+      window.removeEventListener("empty-mag", emptyHandler);
+    };
   }, []);
 
   return (
@@ -76,6 +91,16 @@ export function HUD() {
 
       {boostActive && <div className="boost-status">SPEED ×1.48</div>}
       {pickupNotice && <div className="pickup-notice">{pickupNotice}</div>}
+
+      {emptyAlert && (
+        <>
+          <div className="empty-mag-vignette" />
+          <div className="empty-mag-message">
+            MAGAZINE EMPTY
+            <span>press R to reload</span>
+          </div>
+        </>
+      )}
     </div>
   );
 }

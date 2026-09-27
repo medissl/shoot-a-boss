@@ -7,14 +7,14 @@ type StoryScene =
   | { kind: "shock"; duration: number };
 
 const SCENES: StoryScene[] = [
-  { kind: "panel", panel: 1, duration: 1700 },
-  { kind: "panel", panel: 2, duration: 1700 },
-  { kind: "panel", panel: 3, duration: 1700 },
-  { kind: "panel", panel: 4, duration: 1750 },
-  { kind: "later", duration: 1550 },
-  { kind: "panel", panel: 5, duration: 1800 },
-  { kind: "shock", duration: 620 },
-  { kind: "panel", panel: 6, duration: 2050 },
+  { kind: "panel", panel: 1, duration: 3600 },
+  { kind: "panel", panel: 2, duration: 3600 },
+  { kind: "panel", panel: 3, duration: 3600 },
+  { kind: "panel", panel: 4, duration: 3800 },
+  { kind: "later", duration: 2400 },
+  { kind: "panel", panel: 5, duration: 3800 },
+  { kind: "shock", duration: 850 },
+  { kind: "panel", panel: 6, duration: 3600 },
 ];
 
 function panelNumber(scene: StoryScene) {

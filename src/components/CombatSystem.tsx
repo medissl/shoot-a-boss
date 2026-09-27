@@ -34,17 +34,20 @@ function TraceLine({ trace }: { trace: Trace }) {
   return (
     <group position={midpoint} quaternion={quaternion}>
       <mesh>
-        <cylinderGeometry args={[0.006, 0.012, length, 5]} />
+        <cylinderGeometry args={[0.005, 0.01, length, 5]} />
         <meshBasicMaterial
           color={trace.hit ? "#ff6ea8" : "#5978e8"}
           transparent
-          opacity={trace.hit ? 0.9 : 0.58}
+          opacity={trace.hit ? 0.9 : 0.52}
           depthWrite={false}
         />
       </mesh>
       <mesh position={[0, length / 2, 0]}>
-        <octahedronGeometry args={[trace.hit ? 0.055 : 0.035, 0]} />
-        <meshBasicMaterial color={trace.hit ? "#ff8fbd" : "#eef2ff"} depthWrite={false} />
+        <octahedronGeometry args={[trace.hit ? 0.05 : 0.03, 0]} />
+        <meshBasicMaterial
+          color={trace.hit ? "#ff8fbd" : "#eef2ff"}
+          depthWrite={false}
+        />
       </mesh>
     </group>
   );
@@ -55,7 +58,7 @@ function ImpactBurst({ impact }: { impact: Impact }) {
     <group position={impact.position}>
       {impact.sparks.map((offset, index) => (
         <mesh position={offset} key={index}>
-          <octahedronGeometry args={[index % 2 ? 0.055 : 0.08, 0]} />
+          <octahedronGeometry args={[index % 2 ? 0.05 : 0.075, 0]} />
           <meshBasicMaterial
             color={index % 3 === 0 ? "#ffffff" : "#ff5f9d"}
             transparent
@@ -65,8 +68,14 @@ function ImpactBurst({ impact }: { impact: Impact }) {
         </mesh>
       ))}
       <mesh>
-        <ringGeometry args={[0.08, 0.13, 9]} />
-        <meshBasicMaterial color="#ff5f9d" side={THREE.DoubleSide} transparent opacity={0.8} depthWrite={false} />
+        <ringGeometry args={[0.075, 0.125, 9]} />
+        <meshBasicMaterial
+          color="#ff5f9d"
+          side={THREE.DoubleSide}
+          transparent
+          opacity={0.8}
+          depthWrite={false}
+        />
       </mesh>
     </group>
   );
@@ -75,6 +84,8 @@ function ImpactBurst({ impact }: { impact: Impact }) {
 export function CombatSystem() {
   const { camera, scene } = useThree();
   const lastShot = useRef(0);
+  const aimReadyAt = useRef(0);
+  const emptyAlertAt = useRef(0);
   const autoFire = useRef<number | null>(null);
   const nextTraceId = useRef(1);
   const nextImpactId = useRef(1);
@@ -92,8 +103,15 @@ export function CombatSystem() {
   useFrame((state) => {
     const perspective = state.camera as THREE.PerspectiveCamera;
     const wanted = scoped ? WEAPONS[weapon].scopedFov : 70;
-    const speed = weapon === "sniper" ? 0.12 : 0.2;
-    perspective.fov = THREE.MathUtils.lerp(perspective.fov, wanted, scoped ? speed : 0.16);
+    const speed =
+      weapon === "sniper"
+        ? scoped
+          ? 0.075
+          : 0.1
+        : scoped
+          ? 0.17
+          : 0.15;
+    perspective.fov = THREE.MathUtils.lerp(perspective.fov, wanted, speed);
     perspective.updateProjectionMatrix();
   });
 
@@ -101,7 +119,7 @@ export function CombatSystem() {
     function addTrace(from: THREE.Vector3, to: THREE.Vector3, hit: boolean) {
       const id = nextTraceId.current++;
       setTraces((current) => [
-        ...current.slice(-12),
+        ...current.slice(-10),
         {
           id,
           from: [from.x, from.y, from.z],
@@ -111,7 +129,7 @@ export function CombatSystem() {
       ]);
       window.setTimeout(() => {
         setTraces((current) => current.filter((trace) => trace.id !== id));
-      }, hit ? 82 : 58);
+      }, hit ? 74 : 48);
     }
 
     function addImpact(position: THREE.Vector3) {
@@ -123,7 +141,7 @@ export function CombatSystem() {
       ]);
 
       setImpacts((current) => [
-        ...current.slice(-16),
+        ...current.slice(-14),
         {
           id,
           position: [position.x, position.y, position.z],
@@ -133,17 +151,40 @@ export function CombatSystem() {
 
       window.setTimeout(() => {
         setImpacts((current) => current.filter((impact) => impact.id !== id));
-      }, 105);
+      }, 100);
+    }
+
+    function emptyMagazine(currentWeapon: WeaponId) {
+      const now = performance.now();
+      if (now - emptyAlertAt.current < 800) return;
+      emptyAlertAt.current = now;
+      window.dispatchEvent(
+        new CustomEvent("empty-mag", { detail: { weapon: currentWeapon } }),
+      );
     }
 
     function fire(currentWeapon: WeaponId) {
       const config = WEAPONS[currentWeapon];
       const now = performance.now();
+      const currentAmmo = useGameStore.getState().ammo[currentWeapon];
+
+      if (currentAmmo.mag <= 0) {
+        emptyMagazine(currentWeapon);
+        return;
+      }
+
       if (now - lastShot.current < config.cooldownMs) return;
-      if (!spendRound(currentWeapon)) return;
-      lastShot.current = now;
 
       const aimed = useGameStore.getState().scoped;
+      if (aimed && now < aimReadyAt.current) return;
+
+      if (!spendRound(currentWeapon)) {
+        emptyMagazine(currentWeapon);
+        return;
+      }
+
+      lastShot.current = now;
+
       const spread = aimed ? config.aimedSpread : config.hipSpread;
       const hits = new Map<string, number>();
 
@@ -172,13 +213,21 @@ export function CombatSystem() {
 
         addImpact(first.point);
 
-        const targetPart = first.object.userData.targetPart;
-        const headMultiplier = targetPart === "head" ? 1.6 : 1;
-        let damage = config.damage * headMultiplier;
+        const targetPart = first.object.userData.targetPart as string | undefined;
+        const partMultiplier =
+          targetPart === "head" ? 1.5 : targetPart === "leg" ? 0.3 : 1;
+
+        let damage = config.damage * partMultiplier;
 
         if (currentWeapon === "shotgun") {
-          const falloffDistance = Math.max(0, first.distance - 5);
-          damage *= THREE.MathUtils.clamp(1 - falloffDistance / 24, 0.22, 1);
+          const fullDamageDistance = 4.5;
+          const falloffDistance = Math.max(0, first.distance - fullDamageDistance);
+          const falloff = THREE.MathUtils.clamp(
+            1 - falloffDistance / 12,
+            0.06,
+            1,
+          );
+          damage *= falloff;
         }
 
         hits.set(targetId, (hits.get(targetId) ?? 0) + damage);
@@ -207,7 +256,10 @@ export function CombatSystem() {
 
       if (event.button === 2) {
         event.preventDefault();
+        const currentWeapon = useGameStore.getState().weapon;
         setScoped(true);
+        aimReadyAt.current =
+          performance.now() + WEAPONS[currentWeapon].aimDelayMs;
         return;
       }
 
@@ -231,7 +283,10 @@ export function CombatSystem() {
     };
 
     const mouseUp = (event: MouseEvent) => {
-      if (event.button === 2) setScoped(false);
+      if (event.button === 2) {
+        setScoped(false);
+        aimReadyAt.current = 0;
+      }
       if (event.button === 0) stopAutoFire();
     };
 
@@ -267,7 +322,10 @@ export function CombatSystem() {
   }, [camera, cycleWeapon, reload, scene, setScoped, setWeapon, spendRound]);
 
   useEffect(() => {
-    if (screen !== "playing") setScoped(false);
+    if (screen !== "playing") {
+      setScoped(false);
+      aimReadyAt.current = 0;
+    }
   }, [screen, setScoped]);
 
   return (
