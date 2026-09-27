@@ -3,6 +3,7 @@ import { useFrame } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { BOSS_MAX_HP } from "../game/config";
+import { enemyMotionFactor } from "../game/effects";
 import { getLevelDefinition } from "../game/levels";
 import {
   hasEnemyLineOfSight,
@@ -326,8 +327,9 @@ export function Dummy({
   const group = useRef<THREE.Group>(null);
   const warningRef = useRef<THREE.Mesh>(null);
   const shotRef = useRef<THREE.Mesh>(null);
-  const [hp, setHp] = useState(BOSS_MAX_HP);
-  const hpRef = useRef(BOSS_MAX_HP);
+  const maxHp = Math.round(BOSS_MAX_HP * (1 + (useGameStore.getState().currentLevel - 1) * 0.085));
+  const [hp, setHp] = useState(maxHp);
+  const hpRef = useRef(maxHp);
   const [pose, setPose] = useState<Pose>("idle");
   const [hitFlash, setHitFlash] = useState(false);
   const [damagePops, setDamagePops] = useState<DamagePop[]>([]);
@@ -508,6 +510,10 @@ export function Dummy({
     }
 
     if (eliminated) return;
+    if (enemyMotionFactor(id, useGameStore.getState().runId) === 0) {
+      if (warning) warning.visible = false;
+      return;
+    }
 
     const player = new THREE.Vector3(...useGameStore.getState().playerPosition);
     const here = root.position;
@@ -678,7 +684,9 @@ export function Dummy({
       }
     }
 
-    moveWithAvoidance(here, motion, ENEMY_RADIUS, drift, currentLevel);
+    const motionFactor = enemyMotionFactor(id, useGameStore.getState().runId);
+    if (motionFactor === 0 && warning) warning.visible = false;
+    moveWithAvoidance(here, motion.multiplyScalar(motionFactor), ENEMY_RADIUS, drift, currentLevel);
 
     root.lookAt(faceTarget.x, 0, faceTarget.z);
     root.rotation.x = 0;
@@ -699,7 +707,7 @@ export function Dummy({
 
   if (corpseGone) return null;
 
-  const hpRatio = Math.max(hp, 0) / BOSS_MAX_HP;
+  const hpRatio = Math.max(hp, 0) / maxHp;
 
   return (
     <>

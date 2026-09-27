@@ -42,6 +42,7 @@ export function UpgradeScreen() {
                 onClick={() => chooseUpgrade(id)}
               >
                 <span className="upgrade-option__glyph">{card.glyph}</span>
+                {card.weapon && <small>{card.weapon.toUpperCase()} ONLY</small>}
                 <small>STACK {upgrades[id] + (isSelected ? 0 : 1)}</small>
                 <strong>{card.name}</strong>
                 <p>{card.description}</p>

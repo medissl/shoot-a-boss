@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import { useGameStore, type GameScreen } from "../game/store";
 import type { WeaponId } from "../game/config";
+import { getLevelDefinition } from "../game/levels";
 
 const A = {
   introBgm: "/audio/IntroMenuBGM.mp3",
@@ -51,14 +52,20 @@ const reloadGain: Partial<Record<WeaponId, number>> = {
   shotgun: 0.17,
 };
 
-function bgmFor(screen: GameScreen) {
-  return ["playing", "paused", "reward", "won"].includes(screen)
-    ? A.gameBgm
-    : A.introBgm;
+function bgmFor(screen: GameScreen, level: number) {
+  if (!["playing", "paused", "reward", "won", "upgrade", "lost"].includes(screen)) return A.introBgm;
+  const theme = getLevelDefinition(level).theme;
+  return {
+    playground: "/audio/ThePlaygroundBGM.mp3",
+    jungle: "/audio/JungleIsleBGM.mp3",
+    gems: "/audio/GemstoneIslandBGM.mp3",
+    hell: "/audio/TheHellBGM.mp3",
+  }[theme];
 }
 
 export function AudioManager() {
   const screen = useGameStore((state) => state.screen);
+  const currentLevel = useGameStore((state) => state.currentLevel);
   const movementMode = useGameStore((state) => state.movementMode);
   const reloading = useGameStore((state) => state.reloading);
   const reloadingWeapon = useGameStore((state) => state.reloadingWeapon);
@@ -196,12 +203,9 @@ export function AudioManager() {
         void audio.play().then(startNew).catch(() => undefined);
       };
 
-      if (!bgmPath.current || audio.paused || audio.volume <= 0.001) {
-        switchTrack();
-        return;
-      }
-
-      rampVolume(audio, audio.volume, 0, 300, token, switchTrack);
+      // Change src and call play immediately. Deferring the call behind a fade
+      // loses the browser's user gesture when a stage is selected.
+      switchTrack();
     },
     [bgmLevel, cancelBgmFrame, ensureBgmAudio, rampVolume],
   );
@@ -266,7 +270,7 @@ export function AudioManager() {
       unlocked.current = true;
 
       const state = useGameStore.getState();
-      requestBgm(bgmFor(state.screen));
+      requestBgm(bgmFor(state.screen, state.currentLevel));
 
       if (state.screen === "playing") {
         const path = cocking[state.weapon];
@@ -276,7 +280,7 @@ export function AudioManager() {
 
     // Load/attempt the comic/menu track immediately. If autoplay is blocked,
     // the first pointer/key input restarts this exact one-player state machine.
-    requestBgm(bgmFor(useGameStore.getState().screen));
+    requestBgm(bgmFor(useGameStore.getState().screen, useGameStore.getState().currentLevel));
 
     window.addEventListener("pointerdown", unlock, { once: true });
     window.addEventListener("keydown", unlock, { once: true });
@@ -288,8 +292,27 @@ export function AudioManager() {
   }, [playOne, requestBgm]);
 
   useEffect(() => {
-    requestBgm(bgmFor(screen));
-  }, [requestBgm, screen]);
+    requestBgm(bgmFor(screen, currentLevel));
+  }, [requestBgm, screen, currentLevel]);
+
+  useEffect(() => {
+    const retry = () => {
+      const audio = bgmAudio.current;
+      if (audio?.paused && bgmPath.current) void audio.play().catch(() => undefined);
+    };
+    window.addEventListener("pointerdown", retry);
+    window.addEventListener("keydown", retry);
+    const stageSelected = () => {
+      const state = useGameStore.getState();
+      requestBgm(bgmFor(state.screen, state.currentLevel));
+    };
+    window.addEventListener("stage-selected", stageSelected);
+    return () => {
+      window.removeEventListener("pointerdown", retry);
+      window.removeEventListener("keydown", retry);
+      window.removeEventListener("stage-selected", stageSelected);
+    };
+  }, [requestBgm]);
 
   useEffect(() => {
     const audio = bgmAudio.current;

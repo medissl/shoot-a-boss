@@ -1090,6 +1090,33 @@ button {
   pointer-events: none;
 }
 
+.map-hint {
+  position: fixed;
+  z-index: 9;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  padding: 8px 14px;
+  border: 2px solid #2548b8;
+  background: rgba(251, 250, 244, .92);
+  color: #2548b8;
+  font: 800 11px "Comic Sans MS", ui-rounded, sans-serif;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.game-shell--gems .hud,
+.game-shell--hell .hud {
+  --ink: #f4f3f0;
+  text-shadow: 0 2px 5px rgba(6, 9, 25, .95);
+}
+
+.game-shell--gems .click-hint,
+.game-shell--hell .click-hint {
+  color: #f4f3f0;
+  text-shadow: 0 2px 5px #10101e;
+}
+
 /* -------------------------------------------------------------------------- */
 /* Pause                                                                      */
 /* -------------------------------------------------------------------------- */
@@ -1912,11 +1939,6 @@ button {
 .weapon-view--knife.is-kicking .weapon-view__kick {
   transform: translate3d(-22px,-12px,0) rotate(-2.4deg);
   transition-duration: .08s;
-}
-
-.game-shell--hell .hud,
-.game-shell--hell .click-hint {
-  --ink: #7a1717;
 }
 
 @media (max-width: 760px) {

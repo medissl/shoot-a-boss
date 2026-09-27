@@ -2,6 +2,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { WEAPONS, type WeaponId } from "../game/config";
+import { applyEnemyStatus } from "../game/effects";
 import { getUpgradeStats } from "../game/progression";
 import { useGameStore } from "../game/store";
 
@@ -330,9 +331,9 @@ export function CombatSystem() {
         return;
       }
 
-      const cooldown =
-        config.cooldownMs *
-        (currentWeapon === "sniper" ? 1 : stats.fireCooldown);
+      const cooldown = config.cooldownMs *
+        (currentWeapon === "sniper" ? Math.pow(0.82, state.upgrades.sniperBolt) : stats.fireCooldown) *
+        (currentWeapon === "rifle" ? Math.pow(0.88, state.upgrades.rifleOverclock) : 1);
 
       if (now - lastShot.current < cooldown) return;
 
@@ -348,10 +349,13 @@ export function CombatSystem() {
 
       const spread =
         (aimed ? config.aimedSpread : config.hipSpread) *
-        stats.spread;
+        stats.spread *
+        (currentWeapon === "rifle" ? Math.pow(0.78, state.upgrades.riflePrecision) : 1) *
+        (currentWeapon === "shotgun" ? Math.pow(0.82, state.upgrades.shotgunChoke) : 1);
       const hits = new Map<string, HitSummary>();
 
-      for (let pellet = 0; pellet < config.pellets; pellet += 1) {
+      const pelletCount = config.pellets + (currentWeapon === "shotgun" ? state.upgrades.shotgunPellets * 2 : 0);
+      for (let pellet = 0; pellet < pelletCount; pellet += 1) {
         const raycaster = new THREE.Raycaster();
         const spreadX = (Math.random() - 0.5) * spread;
         const spreadY = (Math.random() - 0.5) * spread;
@@ -479,7 +483,9 @@ export function CombatSystem() {
         let damage =
           config.damage *
           partMultiplier *
-          stats.damage ;
+          stats.damage *
+          (currentWeapon === "sniper" && aimed ? 1 + state.upgrades.sniperFocus * 0.3 : 1) *
+          (currentWeapon === "rifle" ? 1 + state.upgrades.riflePower * 0.16 : 1);
 
         if (currentWeapon === "shotgun") {
           const fullDamageDistance = 4.5;
@@ -493,6 +499,7 @@ export function CombatSystem() {
             1,
           );
           damage *= falloff;
+          if (first.distance < 6) damage *= 1 + state.upgrades.shotgunClose * 0.25;
         }
 
         const previous = hits.get(targetId);
@@ -509,6 +516,23 @@ export function CombatSystem() {
         }
       }
 
+      if (currentWeapon === "sniper" && state.upgrades.sniperPierce > 0) {
+        const piercingRay = new THREE.Raycaster();
+        piercingRay.far = config.maxRange;
+        piercingRay.setFromCamera(new THREE.Vector2(0, 0), camera);
+        const seen = new Set(hits.keys());
+        for (const intersection of piercingRay.intersectObjects(scene.children, true)) {
+          if (ignoresProjectile(intersection.object)) continue;
+          const id = inheritedUserData(intersection.object, "targetId");
+          if (!id) break;
+          if (seen.has(id)) continue;
+          seen.add(id);
+          hits.set(id, { damage: config.damage * stats.damage * 0.65 * state.upgrades.sniperPierce, part: "body" });
+          addImpact(intersection.point);
+          break;
+        }
+      }
+
       hits.forEach((summary, id) => {
         window.dispatchEvent(
           new CustomEvent("boss-hit", {
@@ -519,6 +543,23 @@ export function CombatSystem() {
             },
           }),
         );
+        if (currentWeapon === "rifle" && state.upgrades.rifleFreeze) {
+          applyEnemyStatus(id, state.runId, 360 + state.upgrades.rifleFreeze * 180);
+        }
+        if (currentWeapon === "shotgun" && state.upgrades.shotgunSlow) {
+          applyEnemyStatus(id, state.runId, 0, 1200 + state.upgrades.shotgunSlow * 800);
+        }
+        if (currentWeapon === "sniper" && state.upgrades.sniperFire) {
+          for (let tick = 1; tick <= 4; tick += 1) {
+            window.setTimeout(() => {
+              const live = useGameStore.getState();
+              if (live.runId !== state.runId || live.screen !== "playing" || live.eliminated.includes(id)) return;
+              window.dispatchEvent(new CustomEvent("boss-hit", {
+                detail: { id, damage: 8 * state.upgrades.sniperFire, part: "body" },
+              }));
+            }, tick * 1000);
+          }
+        }
       });
 
       window.dispatchEvent(
@@ -570,7 +611,7 @@ export function CombatSystem() {
         const stats = getUpgradeStats(state.upgrades);
         const interval = Math.max(
           55,
-          WEAPONS.rifle.cooldownMs * stats.fireCooldown,
+          WEAPONS.rifle.cooldownMs * stats.fireCooldown * Math.pow(0.88, state.upgrades.rifleOverclock),
         );
 
         autoFire.current = window.setInterval(() => {

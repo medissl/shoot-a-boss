@@ -1,8 +1,9 @@
-import { Edges, Html } from "@react-three/drei";
+import { Html } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { PEN_MONSTER_MAX_HP } from "../game/config";
+import { enemyMotionFactor } from "../game/effects";
 import { getLevelDefinition } from "../game/levels";
 import {
   hasEnemyLineOfSight,
@@ -100,7 +101,8 @@ export function PenMonster({
 }) {
   const root = useRef<THREE.Group>(null);
   const warning = useRef<THREE.Mesh>(null);
-  const hpRef = useRef(PEN_MONSTER_MAX_HP);
+  const maxHp = Math.round(PEN_MONSTER_MAX_HP * (1 + (useGameStore.getState().currentLevel - 1) * 0.085));
+  const hpRef = useRef(maxHp);
   const rechargeUntil = useRef(0);
   const shotsLeft = useRef(0);
   const telegraphUntil = useRef(0);
@@ -110,7 +112,7 @@ export function PenMonster({
   const nextPopId = useRef(1);
   const awarenessUntil = useRef(0);
   const roamTarget = useRef(new THREE.Vector3());
-  const [hp, setHp] = useState(PEN_MONSTER_MAX_HP);
+  const [hp, setHp] = useState(maxHp);
   const [dead, setDead] = useState(false);
   const [gone, setGone] = useState(false);
   const [projectiles, setProjectiles] = useState<Projectile[]>([]);
@@ -121,9 +123,10 @@ export function PenMonster({
   const eliminate = useGameStore((state) => state.eliminate);
   const eliminated = useGameStore((state) => state.eliminated.includes(id));
   const tuning = getLevelDefinition(currentLevel).enemy;
-  const sideBias = Number(id.split("-")[1]) % 2 === 0 ? 1 : -1;
+  const penIndex = Number(id.split("-")[1]) || 0;
+  const sideBias = penIndex % 2 === 0 ? 1 : -1;
   const safeSpawn = useMemo(
-    () => safeEnemySpawn(spawn, PEN_RADIUS, currentLevel),
+    () => spawn[1] > 2 ? spawn : safeEnemySpawn(spawn, PEN_RADIUS, currentLevel),
     [currentLevel, spawn],
   );
   const deadAt = useRef(0);
@@ -187,6 +190,11 @@ export function PenMonster({
       return;
     }
 
+    if (enemyMotionFactor(id, useGameStore.getState().runId) === 0) {
+      if (beam) beam.visible = false;
+      return;
+    }
+
     const player = new THREE.Vector3(...useGameStore.getState().playerPosition);
     const here = group.position;
     const toPlayer = player.clone().sub(here).setY(0);
@@ -203,7 +211,7 @@ export function PenMonster({
       distance < 39 * tuning.vision &&
       (distance < 7 ||
         forward.dot(direction) > -0.35) &&
-      hasEnemyLineOfSight(here, player, currentLevel, 0.12);
+      (safeSpawn[1] > 2 || hasEnemyLineOfSight(here, player, currentLevel, 0.12));
 
     const nowMs = performance.now();
     if (seesPlayer) awarenessUntil.current = nowMs + 4200;
@@ -292,7 +300,7 @@ export function PenMonster({
         here.distanceTo(roamTarget.current) < 1 ||
         now >= nextCycleAt.current
       ) {
-        const seed = Number(id.split("-")[1]) + 2;
+        const seed = penIndex + 2;
         const angle = seed * 1.7 + now * 0.31;
         const candidate: [number, number, number] = [
           safeSpawn[0] + Math.cos(angle) * 8,
@@ -311,9 +319,9 @@ export function PenMonster({
       }
     }
 
-    moveWithAvoidance(
+    if (safeSpawn[1] <= 2) moveWithAvoidance(
       here,
-      motion,
+      motion.multiplyScalar(enemyMotionFactor(id, useGameStore.getState().runId)),
       PEN_RADIUS,
       sideBias,
       currentLevel,
@@ -328,47 +336,42 @@ export function PenMonster({
   return (
     <>
       <group ref={root} position={safeSpawn}>
-        <mesh position={[0, 1.35, 0]} rotation={[0, 0, -0.06]} castShadow>
-          <cylinderGeometry args={[0.22, 0.28, 2.4, 10]} />
-          <meshStandardMaterial color="#f5f0df" roughness={1} />
-          <Edges color={BLUE} threshold={6} />
-        </mesh>
-
-        <mesh position={[0, 2.58, 0]}>
-          <coneGeometry args={[0.3, 0.75, 8]} />
-          <meshStandardMaterial color="#222544" roughness={1} />
-          <Edges color={BLUE} threshold={6} />
-        </mesh>
-
-        <mesh position={[0, 0.08, 0]}>
-          <coneGeometry args={[0.3, 0.7, 8]} />
-          <meshStandardMaterial color={RED} roughness={1} />
-          <Edges color={BLUE} threshold={6} />
-        </mesh>
-
-        <mesh position={[-0.22, 1.55, 0.24]} userData={{ ignoreProjectile: true }}>
-          <circleGeometry args={[0.07, 8]} />
-          <meshBasicMaterial color={INK} />
-        </mesh>
-        <mesh position={[0.22, 1.55, 0.24]} userData={{ ignoreProjectile: true }}>
-          <circleGeometry args={[0.07, 8]} />
-          <meshBasicMaterial color={INK} />
-        </mesh>
-
-        {!dead && (
-          <mesh
-            position={[0, 1.35, 0.08]}
-            userData={{ targetId: id, targetPart: "body" }}
-          >
-            <planeGeometry args={[0.95, 3.1]} />
-            <meshBasicMaterial
-              transparent
-              opacity={0}
-              depthWrite={false}
-              side={THREE.DoubleSide}
-            />
+        {/* A flat, broad cartoon silhouette. Every visible piece belongs to
+            the target, so whichever part the ray first meets takes damage. */}
+        <group userData={dead ? { ignoreProjectile: true } : { targetId: id, targetPart: "body" }}>
+          <mesh position={[0, 1.52, 0]} castShadow>
+            <planeGeometry args={[0.94, 2.52]} />
+            <meshBasicMaterial color={BLUE} side={THREE.DoubleSide} />
           </mesh>
-        )}
+          <mesh position={[0, 1.52, 0.012]}>
+            <planeGeometry args={[0.76, 2.35]} />
+            <meshBasicMaterial color="#f7f0d7" side={THREE.DoubleSide} />
+          </mesh>
+          <mesh position={[0, 2.75, 0.018]}>
+            <planeGeometry args={[0.76, 0.22]} />
+            <meshBasicMaterial color={RED} side={THREE.DoubleSide} />
+          </mesh>
+          <mesh position={[0, 0.29, 0.01]} rotation={[0, 0, -Math.PI / 2]}>
+            <circleGeometry args={[0.44, 3]} />
+            <meshBasicMaterial color={INK} side={THREE.DoubleSide} />
+          </mesh>
+          <mesh position={[-0.19, 1.65, 0.025]}>
+            <circleGeometry args={[0.07, 12]} />
+            <meshBasicMaterial color={INK} side={THREE.DoubleSide} />
+          </mesh>
+          <mesh position={[0.19, 1.65, 0.025]}>
+            <circleGeometry args={[0.07, 12]} />
+            <meshBasicMaterial color={INK} side={THREE.DoubleSide} />
+          </mesh>
+          <mesh position={[0, 1.4, 0.026]}>
+            <torusGeometry args={[0.13, 0.025, 5, 12, Math.PI]} />
+            <meshBasicMaterial color={INK} side={THREE.DoubleSide} />
+          </mesh>
+          {!dead && <mesh position={[0, 1.5, 0.05]}>
+            <planeGeometry args={[1.2, 3]} />
+            <meshBasicMaterial transparent opacity={0} depthWrite={false} side={THREE.DoubleSide} />
+          </mesh>}
+        </group>
 
         {!dead && (
           <group position={[0, 3.05, 0.04]} userData={{ ignoreProjectile: true }}>
@@ -378,11 +381,11 @@ export function PenMonster({
             </mesh>
             <mesh
               position={[
-                -0.625 + (hp / PEN_MONSTER_MAX_HP) * 0.625,
+                -0.625 + (hp / maxHp) * 0.625,
                 0,
                 0.01,
               ]}
-              scale={[hp / PEN_MONSTER_MAX_HP, 1, 1]}
+              scale={[hp / maxHp, 1, 1]}
             >
               <planeGeometry args={[1.22, 0.045]} />
               <meshBasicMaterial color={RED} />

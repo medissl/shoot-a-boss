@@ -10,7 +10,19 @@ export type UpgradeId =
   | "grenadePower"
   | "knifeDamage"
   | "secondWind"
-  | "bombBelt";
+  | "bombBelt"
+  | "sniperFire"
+  | "sniperFocus"
+  | "sniperPierce"
+  | "sniperBolt"
+  | "rifleFreeze"
+  | "riflePrecision"
+  | "rifleOverclock"
+  | "riflePower"
+  | "shotgunPellets"
+  | "shotgunChoke"
+  | "shotgunSlow"
+  | "shotgunClose";
 
 export type UpgradeLevels = Record<UpgradeId, number>;
 
@@ -19,6 +31,7 @@ export type UpgradeCard = {
   name: string;
   description: string;
   glyph: string;
+  weapon?: "sniper" | "rifle" | "shotgun";
 };
 
 export const UPGRADE_CARDS: UpgradeCard[] = [
@@ -34,6 +47,18 @@ export const UPGRADE_CARDS: UpgradeCard[] = [
   { id: "knifeDamage", name: "PAPER CUT", description: "+20% knife damage", glyph: "╱" },
   { id: "secondWind", name: "SECOND WIND", description: "heal 6 HP after every kill", glyph: "+" },
   { id: "bombBelt", name: "BOMB BELT", description: "+1 maximum paper bomb", glyph: "○" },
+  { id: "sniperFire", name: "BURNING INK", description: "Sniper hits burn for 4 seconds", glyph: "♨", weapon: "sniper" },
+  { id: "sniperFocus", name: "DEADLINE FOCUS", description: "+30% aimed sniper damage", glyph: "⌖", weapon: "sniper" },
+  { id: "sniperPierce", name: "THROUGH THE PAGE", description: "Sniper rounds pierce one more enemy", glyph: "⇥", weapon: "sniper" },
+  { id: "sniperBolt", name: "FAST BOLT", description: "18% faster sniper follow-up shots", glyph: "↻", weapon: "sniper" },
+  { id: "rifleFreeze", name: "COLD CALL", description: "Rifle hits briefly freeze enemies", glyph: "❄", weapon: "rifle" },
+  { id: "riflePrecision", name: "FINE PRINT", description: "Rifle spread 22% tighter", glyph: "◎", weapon: "rifle" },
+  { id: "rifleOverclock", name: "OVERTIME", description: "Rifle fires 12% faster", glyph: "⚡", weapon: "rifle" },
+  { id: "riflePower", name: "RED STAPLES", description: "+16% rifle damage", glyph: "✦", weapon: "rifle" },
+  { id: "shotgunPellets", name: "EXTRA STAPLES", description: "+2 pellets per shotgun blast", glyph: "⁙", weapon: "shotgun" },
+  { id: "shotgunChoke", name: "TIGHT BINDING", description: "Shotgun spread 18% tighter", glyph: "⌾", weapon: "shotgun" },
+  { id: "shotgunSlow", name: "HEAVY PAGES", description: "Shotgun hits slow enemies for 2 seconds", glyph: "◆", weapon: "shotgun" },
+  { id: "shotgunClose", name: "POINT BLANK", description: "+25% shotgun damage within 6 meters", glyph: "✹", weapon: "shotgun" },
 ];
 
 export function emptyUpgrades(): UpgradeLevels {
@@ -50,6 +75,9 @@ export function emptyUpgrades(): UpgradeLevels {
     knifeDamage: 0,
     secondWind: 0,
     bombBelt: 0,
+    sniperFire: 0, sniperFocus: 0, sniperPierce: 0, sniperBolt: 0,
+    rifleFreeze: 0, riflePrecision: 0, rifleOverclock: 0, riflePower: 0,
+    shotgunPellets: 0, shotgunChoke: 0, shotgunSlow: 0, shotgunClose: 0,
   };
 }
 
@@ -92,7 +120,12 @@ export function rollUpgradeChoices(
     [pool[index], pool[target]] = [pool[target], pool[index]];
   }
 
-  return pool.slice(0, 3).map((card) => card.id);
+  // Two different weapon paths and one flexible choice each time.
+  const specialists = pool.filter((card) => card.weapon);
+  const first = specialists[0];
+  const second = specialists.find((card) => card.weapon !== first.weapon)!;
+  const flexible = pool.find((card) => !card.weapon)!;
+  return [first, second, flexible].map((card) => card.id);
 }
 
 export function getUpgradeCard(id: UpgradeId) {

@@ -27,6 +27,12 @@ export type LevelDefinition = {
 
 export type NavBlocker = { x: number; z: number; w: number; d: number };
 
+export const ZIPLINES = [
+  { from: [0, 7.55, -8] as const, to: [26, 7.55, 26] as const },
+  { from: [26, 7.55, 26] as const, to: [-27, 7.55, 27] as const },
+  { from: [-27, 7.55, 27] as const, to: [0, 7.55, -8] as const },
+];
+
 export const LEVELS: LevelDefinition[] = [
   {
     level: 1,
@@ -42,7 +48,7 @@ export const LEVELS: LevelDefinition[] = [
     subtitle: "lost in the green",
     theme: "jungle",
     difficulty: "EASY",
-    enemy: { speed: 0.78, vision: 0.82, damage: 0.68, bosses: 5, paperwork: 1, pens: 0 },
+    enemy: { speed: 0.96, vision: 0.98, damage: 0.82, bosses: 6, paperwork: 1, pens: 0 },
   },
   {
     level: 3,
@@ -50,7 +56,7 @@ export const LEVELS: LevelDefinition[] = [
     subtitle: "shiny deadlines",
     theme: "gems",
     difficulty: "EASY +",
-    enemy: { speed: 0.88, vision: 0.9, damage: 0.78, bosses: 5, paperwork: 1, pens: 1 },
+    enemy: { speed: 1.06, vision: 1.04, damage: 0.93, bosses: 6, paperwork: 2, pens: 1 },
   },
   {
     level: 4,
@@ -58,7 +64,7 @@ export const LEVELS: LevelDefinition[] = [
     subtitle: "back to the office",
     theme: "playground",
     difficulty: "NORMAL",
-    enemy: { speed: 1.0, vision: 0.98, damage: 0.9, bosses: 6, paperwork: 1, pens: 1 },
+    enemy: { speed: 1.15, vision: 1.1, damage: 1.02, bosses: 7, paperwork: 2, pens: 1 },
   },
   {
     level: 5,
@@ -66,7 +72,7 @@ export const LEVELS: LevelDefinition[] = [
     subtitle: "the jungle noticed you",
     theme: "jungle",
     difficulty: "NORMAL +",
-    enemy: { speed: 1.1, vision: 1.04, damage: 1.0, bosses: 6, paperwork: 2, pens: 1 },
+    enemy: { speed: 1.25, vision: 1.16, damage: 1.14, bosses: 7, paperwork: 2, pens: 2 },
   },
   {
     level: 6,
@@ -74,7 +80,7 @@ export const LEVELS: LevelDefinition[] = [
     subtitle: "nothing stays calm",
     theme: "gems",
     difficulty: "HARD",
-    enemy: { speed: 1.2, vision: 1.1, damage: 1.1, bosses: 7, paperwork: 2, pens: 1 },
+    enemy: { speed: 1.36, vision: 1.22, damage: 1.26, bosses: 8, paperwork: 2, pens: 2 },
   },
   {
     level: 7,
@@ -82,7 +88,7 @@ export const LEVELS: LevelDefinition[] = [
     subtitle: "the shift fights back",
     theme: "playground",
     difficulty: "HARD +",
-    enemy: { speed: 1.34, vision: 1.18, damage: 1.22, bosses: 7, paperwork: 2, pens: 2 },
+    enemy: { speed: 1.47, vision: 1.28, damage: 1.39, bosses: 8, paperwork: 3, pens: 2 },
   },
   {
     level: 8,
@@ -90,7 +96,7 @@ export const LEVELS: LevelDefinition[] = [
     subtitle: "no quiet path left",
     theme: "jungle",
     difficulty: "VERY HARD",
-    enemy: { speed: 1.48, vision: 1.26, damage: 1.36, bosses: 8, paperwork: 2, pens: 2 },
+    enemy: { speed: 1.59, vision: 1.35, damage: 1.52, bosses: 9, paperwork: 3, pens: 2 },
   },
   {
     level: 9,
@@ -98,7 +104,7 @@ export const LEVELS: LevelDefinition[] = [
     subtitle: "everything is hunting",
     theme: "gems",
     difficulty: "BRUTAL",
-    enemy: { speed: 1.64, vision: 1.34, damage: 1.52, bosses: 8, paperwork: 3, pens: 2 },
+    enemy: { speed: 1.74, vision: 1.42, damage: 1.68, bosses: 9, paperwork: 3, pens: 3 },
   },
   {
     level: 10,
@@ -106,7 +112,7 @@ export const LEVELS: LevelDefinition[] = [
     subtitle: "final deadline",
     theme: "hell",
     difficulty: "ALMOST IMPOSSIBLE",
-    enemy: { speed: 1.88, vision: 1.48, damage: 1.78, bosses: 9, paperwork: 3, pens: 3 },
+    enemy: { speed: 1.95, vision: 1.55, damage: 1.88, bosses: 10, paperwork: 4, pens: 3 },
   },
 ];
 
@@ -116,7 +122,7 @@ export function getLevelDefinition(level: number) {
 
 export function getTargetCount(level: number) {
   const enemy = getLevelDefinition(level).enemy;
-  return enemy.bosses + enemy.paperwork + enemy.pens;
+  return enemy.bosses + enemy.paperwork + enemy.pens + (getLevelDefinition(level).theme === "gems" ? 1 : 0);
 }
 
 const JUNGLE_BLOCKERS: NavBlocker[] = [
@@ -129,6 +135,10 @@ const JUNGLE_BLOCKERS: NavBlocker[] = [
   { x: -27, z: 27, w: 3.4, d: 3.4 },
   { x: -38, z: 5, w: 3.2, d: 3.2 },
   { x: 0, z: -8, w: 5.2, d: 5.2 },
+  { x: -20, z: -5, w: 6, d: 5 },
+  { x: 16, z: -29, w: 6, d: 5 },
+  { x: 32, z: 11, w: 6, d: 5 },
+  { x: -19, z: 22, w: 6, d: 5 },
 ];
 
 const GEM_BLOCKERS: NavBlocker[] = [
@@ -137,17 +147,11 @@ const GEM_BLOCKERS: NavBlocker[] = [
   { x: 31, z: 14, w: 9, d: 9 },
   { x: 3, z: 28, w: 10, d: 10 },
   { x: -29, z: 22, w: 8, d: 8 },
-  { x: -2, z: -4, w: 6, d: 6 },
+  { x: 0, z: -4, w: 26, d: 26 },
 ];
 
 const HELL_BLOCKERS: NavBlocker[] = [
-  { x: -30, z: -24, w: 10, d: 10 },
-  { x: 25, z: -29, w: 9, d: 9 },
-  { x: 34, z: 9, w: 10, d: 10 },
-  { x: 10, z: 30, w: 11, d: 11 },
-  { x: -28, z: 27, w: 10, d: 10 },
-  { x: -5, z: 2, w: 7, d: 7 },
-  { x: 14, z: 4, w: 6, d: 6 },
+  { x: 0, z: -4, w: 26, d: 26 },
 ];
 
 export function getLevelBlockers(level: number): NavBlocker[] {
@@ -172,6 +176,10 @@ const JUNGLE_LADDERS: LadderZone[] = [
     exitY: 7.35,
     exitZ: -8,
   },
+  ...([ [26, 26], [-27, 27] ] as [number, number][]).map(([x, z]): LadderZone => ({
+    x: x + 3.05, z, w: 2.8, d: 3, minY: 0.45, maxY: 7.35,
+    snapX: x + 3.05, snapZ: z, exitX: x + 1.05, exitY: 7.35, exitZ: z,
+  })),
 ];
 
 export function getLevelLadders(level: number): LadderZone[] {

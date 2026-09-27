@@ -6,7 +6,7 @@ import {
 import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
-import { getLevelLadders } from "../game/levels";
+import { getLevelLadders, ZIPLINES } from "../game/levels";
 import { getUpgradeStats } from "../game/progression";
 import { useGameStore } from "../game/store";
 
@@ -35,6 +35,8 @@ export function PlayerController() {
   const pointerLocked = useRef(false);
   const cameraTarget = useRef(new THREE.Vector3());
   const climbingActive = useRef(false);
+  const ziplineIndex = useRef(-1);
+  const ziplineProgress = useRef(0);
 
   const { camera, gl } = useThree();
   const cameraRef = useRef(camera);
@@ -154,6 +156,21 @@ export function PlayerController() {
         jumpQueued.current = true;
       }
 
+      if (event.code === "KeyE" && useGameStore.getState().currentLevel &&
+        ziplineIndex.current < 0 && useGameStore.getState().screen === "playing") {
+        const position = body.current?.translation();
+        if (position) {
+          const index = ZIPLINES.findIndex(({ from }) =>
+            Math.hypot(position.x - from[0], position.z - from[2]) < 3.7 &&
+            position.y > 5.5 && position.y < 9,
+          );
+          if (index >= 0 && [2, 5, 8].includes(useGameStore.getState().currentLevel)) {
+            ziplineIndex.current = index;
+            ziplineProgress.current = 0;
+          }
+        }
+      }
+
       if (event.code === "KeyC") {
         lastCrouchAt.current = performance.now();
         const direction = movementVector();
@@ -205,7 +222,26 @@ export function PlayerController() {
     const now = performance.now();
     const position = rigid.translation();
 
-    const ladder = getLevelLadders(level).find(
+    const riding = ziplineIndex.current >= 0;
+    if (riding) {
+      const route = ZIPLINES[ziplineIndex.current];
+      const length = Math.hypot(route.to[0] - route.from[0], route.to[2] - route.from[2]);
+      ziplineProgress.current = Math.min(1, ziplineProgress.current + delta * 21 / length);
+      const t = ziplineProgress.current;
+      rigid.setGravityScale(0, true);
+      rigid.setTranslation({
+        x: THREE.MathUtils.lerp(route.from[0], route.to[0], t),
+        y: route.from[1],
+        z: THREE.MathUtils.lerp(route.from[2], route.to[2], t),
+      }, true);
+      rigid.setLinvel({ x: 0, y: 0, z: 0 }, true);
+      if (t >= 1) {
+        ziplineIndex.current = -1;
+        rigid.setGravityScale(1, true);
+      }
+    }
+
+    const ladder = !riding && getLevelLadders(level).find(
       (zone) =>
         Math.abs(position.x - zone.x) <= zone.w / 2 &&
         Math.abs(position.z - zone.z) <= zone.d / 2 &&
@@ -327,7 +363,7 @@ export function PlayerController() {
       slideUntil.current = 0;
     }
 
-    if (!exitedLadder) {
+    if (!exitedLadder && !riding) {
       rigid.setLinvel(
         {
           x: horizontal.x,

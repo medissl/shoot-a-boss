@@ -76,6 +76,8 @@ export function GameCanvas() {
               />
             ))}
 
+            {definition.theme === "gems" && <PenMonster id="pen-peak" spawn={[0, 5.2, -4]} />}
+
             {bossSpawns.map((spawn, index) => {
               const ranged = index % 3 === 1 || index % 5 === 4;
               return (
@@ -96,6 +98,9 @@ export function GameCanvas() {
       <WeaponView />
       <MenuOverlay />
       <div className="click-hint">click to lock mouse · ESC pause</div>
+      {definition.theme === "jungle" && <div className="map-hint">CLIMB THE YELLOW LADDERS · PRESS E ON A TREE PLATFORM TO RIDE THE ZIPLINE</div>}
+      {definition.theme === "gems" && <div className="map-hint">FOLLOW THE STONE STEPS UP THE MOUNTAIN · WATCH FOR THE PEN ABOVE</div>}
+      {definition.theme === "hell" && <div className="map-hint">LAVA RIVERS BURN · LEAVE THE MOUNTAIN WHEN THE RED RING APPEARS</div>}
       <div className="game-fade-in" />
     </div>
   );

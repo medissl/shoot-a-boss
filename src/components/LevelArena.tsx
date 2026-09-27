@@ -5,11 +5,10 @@ import { getLevelDefinition } from "../game/levels";
 import { useGameStore } from "../game/store";
 import { Arena } from "./Arena";
 import { ReactiveFoliage } from "./Foliage";
+import { CrystalField, HellHazards, JungleHuts, JungleTowers, TieredMountain } from "./WorldFeatures";
 
 const BLUE = "#2548b8";
-const PAPER = "#fbfaf4";
 const GREEN = "#78a85d";
-const GREEN_DARK = "#3f754b";
 const BARK = "#856846";
 
 function WorldBase({
@@ -17,24 +16,26 @@ function WorldBase({
   wall,
   background,
   grid = BLUE,
+  dark = false,
 }: {
   floor: string;
   wall: string;
   background: string;
   grid?: string;
+  dark?: boolean;
 }) {
   const size = ARENA_HALF_SIZE * 2;
 
   return (
     <>
       <color attach="background" args={[background]} />
-      <fog attach="fog" args={[background, 84, 155]} />
-      <hemisphereLight intensity={1.7} color="#ffffff" groundColor={wall} />
+      <fog attach="fog" args={[background, dark ? 42 : 84, dark ? 115 : 155]} />
+      <hemisphereLight intensity={dark ? 0.27 : 1.7} color={dark ? "#8889cc" : "#ffffff"} groundColor={wall} />
       <directionalLight
         castShadow
         position={[18, 27, 12]}
-        intensity={1.85}
-        color="#ffffff"
+        intensity={dark ? 0.4 : 1.85}
+        color={dark ? "#6e80c0" : "#ffffff"}
         shadow-mapSize={[2048, 2048]}
       />
 
@@ -123,62 +124,6 @@ function JungleTree({
   );
 }
 
-function JungleBigTree() {
-  return (
-    <group position={[0, 0, -8]}>
-      <RigidBody type="fixed" colliders={false}>
-        <CuboidCollider args={[1.55, 3.25, 1.55]} position={[0, 3.25, 0]} />
-        <mesh position={[0, 3.25, 0]} castShadow>
-          <cylinderGeometry args={[1.2, 1.6, 6.5, 10]} />
-          <meshStandardMaterial color={BARK} roughness={1} />
-          <Edges color={BLUE} threshold={8} />
-        </mesh>
-      </RigidBody>
-
-      {[
-        [-1.8, 5.7, 0.1, 2.3],
-        [1.8, 5.9, 0.2, 2.35],
-        [0, 7.35, -0.2, 2.8],
-      ].map(([x, y, z, radius], index) => (
-        <mesh key={index} position={[x, y, z]} castShadow>
-          <icosahedronGeometry args={[radius, 1]} />
-          <meshStandardMaterial
-            color={index === 1 ? GREEN_DARK : GREEN}
-            roughness={1}
-          />
-          <Edges color={BLUE} threshold={10} />
-        </mesh>
-      ))}
-
-      <RigidBody type="fixed" colliders={false}>
-        <CuboidCollider args={[2.5, 0.16, 2.2]} position={[0.1, 6.45, 0]} />
-        <mesh position={[0.1, 6.45, 0]} castShadow>
-          <boxGeometry args={[5, 0.32, 4.4]} />
-          <meshStandardMaterial color={PAPER} roughness={1} />
-          <Edges color={BLUE} threshold={8} />
-        </mesh>
-      </RigidBody>
-
-      <group position={[2.15, 0, 0]}>
-        <mesh position={[0, 3.55, -0.68]}>
-          <boxGeometry args={[0.1, 7.1, 0.1]} />
-          <meshBasicMaterial color={BLUE} />
-        </mesh>
-        <mesh position={[0, 3.55, 0.68]}>
-          <boxGeometry args={[0.1, 7.1, 0.1]} />
-          <meshBasicMaterial color={BLUE} />
-        </mesh>
-        {Array.from({ length: 14 }, (_, index) => (
-          <mesh key={index} position={[0, 0.5 + index * 0.48, 0]}>
-            <boxGeometry args={[0.1, 0.07, 1.38]} />
-            <meshBasicMaterial color={index % 4 === 0 ? "#d77b16" : BLUE} />
-          </mesh>
-        ))}
-      </group>
-    </group>
-  );
-}
-
 function JungleArena({ level }: { level: number }) {
   const drift = ((level * 13) % 7) - 3;
 
@@ -190,8 +135,9 @@ function JungleArena({ level }: { level: number }) {
         background="#f2f4df"
         grid="#4b7b58"
       />
-      <JungleBigTree />
-      {JUNGLE_TREES.map((position, index) => (
+      <JungleTowers />
+      <JungleHuts />
+      {JUNGLE_TREES.filter((_, index) => index !== 4 && index !== 6).map((position, index) => (
         <JungleTree
           key={index}
           position={[
@@ -287,45 +233,25 @@ function GemArena({ hell = false, level }: { hell?: boolean; level: number }) {
   return (
     <>
       <WorldBase
-        floor={hell ? "#651515" : "#e2e8f3"}
-        wall={hell ? "#7a1717" : "#cdd8ec"}
-        background={hell ? "#310909" : "#f4f7fb"}
+        floor={hell ? "#4b2322" : "#25293e"}
+        wall={hell ? "#602522" : "#25283e"}
+        background={hell ? "#210d15" : "#101423"}
         grid={hell ? "#ff6048" : BLUE}
+        dark={!hell}
       />
-      {GEM_ROCKS.map(([x, y, z, radius], index) => (
+      <TieredMountain hell={hell} />
+      {!hell && <><CrystalField /><pointLight position={[0, 9, -4]} intensity={5} distance={36} color="#86b5ff" /></>}
+      {hell && <><HellHazards /><pointLight position={[0, 12, -4]} intensity={8} distance={44} color="#ff5235" /></>}
+      {!hell && GEM_ROCKS.slice(0, 5).map(([x, y, z, radius], index) => (
         <GemRock
           key={index}
           position={[x + (index % 2 ? shift : -shift), y, z]}
           radius={radius}
-          hell={hell}
+          hell={false}
           index={index}
         />
       ))}
 
-      {hell &&
-        [
-          [-40, 0, 38],
-          [39, 0, -35],
-          [0, 0, 42],
-        ].map(([x, y, z], index) => (
-          <group key={index} position={[x, y, z]}>
-            <mesh position={[0, 2.2, 0]} castShadow>
-              <cylinderGeometry args={[0.35, 0.6, 4.4, 7]} />
-              <meshStandardMaterial color="#3b1812" roughness={1} />
-              <Edges color="#ff6048" threshold={8} />
-            </mesh>
-            <mesh position={[-0.8, 4.1, 0]} rotation={[0, 0, 0.65]}>
-              <coneGeometry args={[0.55, 2.5, 5]} />
-              <meshStandardMaterial color="#7a1717" roughness={1} />
-              <Edges color="#ff6048" threshold={8} />
-            </mesh>
-            <mesh position={[0.85, 3.9, 0]} rotation={[0, 0, -0.7]}>
-              <coneGeometry args={[0.5, 2.2, 5]} />
-              <meshStandardMaterial color="#7a1717" roughness={1} />
-              <Edges color="#ff6048" threshold={8} />
-            </mesh>
-          </group>
-        ))}
     </>
   );
 }

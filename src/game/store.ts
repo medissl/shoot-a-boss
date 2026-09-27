@@ -209,6 +209,7 @@ export const useGameStore = create<GameStore>((set, get) => {
         ...freshRun(1, upgrades),
       }));
       announceRifle();
+      window.dispatchEvent(new Event("stage-selected"));
     },
 
     startLevel: (level) => {
@@ -224,6 +225,7 @@ export const useGameStore = create<GameStore>((set, get) => {
         ...freshRun(safeLevel, upgrades),
       }));
       announceRifle();
+      window.dispatchEvent(new Event("stage-selected"));
     },
 
     nextLevel: () => {
@@ -243,6 +245,7 @@ export const useGameStore = create<GameStore>((set, get) => {
         ...freshRun(next, state.upgrades),
       }));
       announceRifle();
+      window.dispatchEvent(new Event("stage-selected"));
     },
 
     chooseUpgrade: (id) => {

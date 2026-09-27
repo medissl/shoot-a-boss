@@ -3,6 +3,7 @@ import { useFrame } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { PAPER_MONSTER_MAX_HP } from "../game/config";
+import { enemyMotionFactor } from "../game/effects";
 import { getLevelDefinition } from "../game/levels";
 import {
   hasEnemyLineOfSight,
@@ -31,13 +32,14 @@ export function PaperworkMonster({
 }) {
   const root = useRef<THREE.Group>(null);
   const material = useRef<THREE.MeshStandardMaterial>(null);
-  const hpRef = useRef(PAPER_MONSTER_MAX_HP);
+  const maxHp = Math.round(PAPER_MONSTER_MAX_HP * (1 + (useGameStore.getState().currentLevel - 1) * 0.085));
+  const hpRef = useRef(maxHp);
   const nextAttackAt = useRef(0);
   const deadAt = useRef(0);
   const nextPopId = useRef(1);
   const awarenessUntil = useRef(0);
   const nextRoamAt = useRef(0);
-  const [hp, setHp] = useState(PAPER_MONSTER_MAX_HP);
+  const [hp, setHp] = useState(maxHp);
   const [hit, setHit] = useState(false);
   const [dead, setDead] = useState(false);
   const [gone, setGone] = useState(false);
@@ -117,6 +119,8 @@ export function PaperworkMonster({
       if (elapsed >= 4 && !gone) setGone(true);
       return;
     }
+
+    if (enemyMotionFactor(id, useGameStore.getState().runId) === 0) return;
 
     const player = new THREE.Vector3(
       ...useGameStore.getState().playerPosition,
@@ -199,7 +203,7 @@ export function PaperworkMonster({
 
     moveWithAvoidance(
       here,
-      motion,
+      motion.multiplyScalar(enemyMotionFactor(id, useGameStore.getState().runId)),
       MONSTER_RADIUS,
       sideBias,
       currentLevel,
@@ -214,7 +218,7 @@ export function PaperworkMonster({
 
   if (gone) return null;
 
-  const hpRatio = hp / PAPER_MONSTER_MAX_HP;
+  const hpRatio = hp / maxHp;
 
   return (
     <group ref={root} position={safeSpawn}>
