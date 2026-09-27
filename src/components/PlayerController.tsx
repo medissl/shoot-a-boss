@@ -3,6 +3,7 @@ import { CapsuleCollider, RigidBody, type RapierRigidBody } from "@react-three/r
 import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
+import { LADDER_ZONES } from "../game/config";
 import { useGameStore } from "../game/store";
 
 const WALK_SPEED = 6.6;
@@ -104,7 +105,17 @@ export function PlayerController() {
       now < useGameStore.getState().speedBoostUntil ? 1.62 : 1;
 
     const position = rigid.translation();
-    const nearGround = position.y <= 1.52;
+    const ladder = LADDER_ZONES.find(
+      (zone) =>
+        Math.abs(position.x - zone.x) <= zone.w / 2 &&
+        Math.abs(position.z - zone.z) <= zone.d / 2 &&
+        position.y >= zone.minY &&
+        position.y <= zone.maxY,
+    );
+    const climbing = Boolean(ladder && (keys.current.KeyW || keys.current.Space || keys.current.KeyS));
+    const nearGround =
+      position.y <= 1.52 ||
+      (!climbing && Math.abs(velocity.y) < 0.12);
 
     if (!nearGround) wentAirborne.current = true;
     if (nearGround && !wasGrounded.current && wentAirborne.current) {
@@ -129,7 +140,17 @@ export function PlayerController() {
     }
 
     let vertical = velocity.y;
-    if (wantsJump) {
+
+    if (climbing && ladder) {
+      vertical = keys.current.KeyS ? -4.2 : 4.8;
+      horizontal.multiplyScalar(0.12);
+
+      const snapX = THREE.MathUtils.lerp(position.x, ladder.x, 0.15);
+      const snapZ = THREE.MathUtils.lerp(position.z, ladder.z, 0.15);
+      rigid.setTranslation({ x: snapX, y: position.y, z: snapZ }, true);
+    }
+
+    if (wantsJump && !climbing) {
       const boosted = now - lastCrouchAt.current <= CROUCH_BOOST_WINDOW_MS;
       vertical = boosted ? BOOST_JUMP_SPEED : JUMP_SPEED;
       if (boosted) {

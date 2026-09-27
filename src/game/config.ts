@@ -1,7 +1,7 @@
 export const TARGET_COUNT = 10;
 export const GRENADE_COUNT = 3;
 export const BOSS_MAX_HP = 240;
-export const ARENA_HALF_SIZE = 38;
+export const ARENA_HALF_SIZE = 52;
 
 export type WeaponId = "sniper" | "rifle" | "shotgun";
 
@@ -88,33 +88,50 @@ export const ARENA_OBSTACLES: ArenaObstacle[] = [
   { x: 3, z: -9, w: 4, d: 7, h: 2.2, color: "paper" },
   { x: 28, z: 24, w: 6, d: 6, h: 3.3, color: "blue" },
   { x: -30, z: 25, w: 5, d: 6, h: 3.0, color: "paper" },
+  { x: -43, z: 4, w: 6, d: 13, h: 4.2, color: "paper" },
+  { x: 43, z: 7, w: 7, d: 12, h: 5.0, color: "blue" },
+  { x: -11, z: 42, w: 12, d: 6, h: 3.6, color: "blue" },
+  { x: 16, z: 43, w: 10, d: 5, h: 4.0, color: "paper" },
+  { x: -7, z: -43, w: 8, d: 6, h: 4.6, color: "paper" },
 ];
 
-export const ENEMY_BLOCKERS = ARENA_OBSTACLES.map(({ x, z, w, d }) => ({
-  x,
-  z,
-  w,
-  d,
-}));
+export const ENEMY_BLOCKERS = [
+  ...ARENA_OBSTACLES.map(({ x, z, w, d }) => ({ x, z, w, d })),
+  { x: -39, z: -34, w: 18, d: 16 },
+  { x: 35, z: -34, w: 18, d: 18 },
+];
 
 export const TARGET_SPAWNS: [number, number, number][] = [
-  [-32, 0, -31],
-  [-9, 0, -31],
-  [10, 0, -30],
-  [31, 0, -28],
-  [-32, 0, 3],
-  [32, 0, 7],
-  [-28, 0, 30],
-  [-5, 0, 32],
-  [15, 0, 31],
-  [32, 0, 29],
+  [-47, 0, -44],
+  [-18, 0, -45],
+  [7, 0, -42],
+  [47, 0, -43],
+  [-46, 0, 5],
+  [46, 0, 10],
+  [-42, 0, 44],
+  [-11, 0, 47],
+  [20, 0, 45],
+  [46, 0, 42],
 ];
 
 export const PICKUP_SPAWNS: [number, number, number][] = [
   [-7, 0.55, -20],
   [23, 0.55, 18],
   [-25, 0.55, 17],
-  [7, 0.55, 20],
-  [0, 0.55, 33],
-  [30, 0.55, -12],
+  [7, 0.55, 31],
+  [0, 0.55, 46],
+  [41, 0.55, -8],
+  [-43, 0.55, 31],
+  [34, 8.7, -34],
 ];
+
+export const LADDER_ZONES = [
+  {
+    x: 44.1,
+    z: -34,
+    w: 2.2,
+    d: 3.1,
+    minY: 0.5,
+    maxY: 9.2,
+  },
+] as const;
