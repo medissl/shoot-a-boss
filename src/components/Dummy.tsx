@@ -1,3 +1,4 @@
+import { Html } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
@@ -17,6 +18,12 @@ type GrenadeDetail = {
 export type EnemyArchetype = "melee" | "ranged";
 export type RangedWeapon = "handgun" | "bow";
 type Pose = "idle" | "walk" | "punch" | "aim";
+type HitPart = "head" | "body" | "leg";
+type DamagePop = {
+  id: number;
+  amount: number;
+  part: HitPart;
+};
 
 const BLUE = "#2548b8";
 const PAPER = "#fbfaf4";
@@ -324,6 +331,8 @@ export function Dummy({
   const [hp, setHp] = useState(BOSS_MAX_HP);
   const [pose, setPose] = useState<Pose>("idle");
   const [hitFlash, setHitFlash] = useState(false);
+  const [damagePops, setDamagePops] = useState<DamagePop[]>([]);
+  const nextDamagePopId = useRef(1);
 
   const canvas = useMemo(() => {
     const element = document.createElement("canvas");
@@ -359,11 +368,32 @@ export function Dummy({
 
   useEffect(() => {
     const handler = (event: Event) => {
-      const detail = (event as CustomEvent<{ id: string; damage: number }>).detail;
+      const detail = (
+        event as CustomEvent<{
+          id: string;
+          damage: number;
+          part?: HitPart;
+        }>
+      ).detail;
       if (detail.id !== id || eliminated) return;
+
+      const part: HitPart =
+        detail.part === "head" || detail.part === "leg"
+          ? detail.part
+          : "body";
+      const popId = nextDamagePopId.current++;
+
       setHp((current) => Math.max(0, current - detail.damage));
+      setDamagePops((current) => [
+        ...current.slice(-3),
+        { id: popId, amount: Math.round(detail.damage), part },
+      ]);
       setHitFlash(true);
+
       window.setTimeout(() => setHitFlash(false), 135);
+      window.setTimeout(() => {
+        setDamagePops((current) => current.filter((pop) => pop.id !== popId));
+      }, 760);
     };
 
     const grenadeHandler = (event: Event) => {
@@ -521,7 +551,10 @@ export function Dummy({
   return (
     <>
       <group ref={group} position={spawn}>
-        <mesh position={[0, 1.8, 0]}>
+        <mesh
+          position={[0, 1.8, 0]}
+          userData={{ ignoreProjectile: true }}
+        >
           <planeGeometry args={[3.35, 3.65]} />
           <meshBasicMaterial
             map={texture}
@@ -531,22 +564,22 @@ export function Dummy({
           />
         </mesh>
 
-        <mesh position={[0, 3.0, 0.08]} userData={{ targetId: id, targetPart: "head" }}>
-          <planeGeometry args={[1.25, 1.08]} />
+        <mesh position={[0, 3.02, 0.08]} userData={{ targetId: id, targetPart: "head" }}>
+          <planeGeometry args={[1.42, 1.22]} />
           <meshBasicMaterial transparent opacity={0} depthWrite={false} side={THREE.DoubleSide} />
         </mesh>
 
-        <mesh position={[0, 1.82, 0.07]} userData={{ targetId: id, targetPart: "body" }}>
-          <planeGeometry args={[2.85, 1.95]} />
+        <mesh position={[0, 1.84, 0.07]} userData={{ targetId: id, targetPart: "body" }}>
+          <planeGeometry args={[3.15, 2.28]} />
           <meshBasicMaterial transparent opacity={0} depthWrite={false} side={THREE.DoubleSide} />
         </mesh>
 
-        <mesh position={[0, 0.62, 0.09]} userData={{ targetId: id, targetPart: "leg" }}>
-          <planeGeometry args={[2.05, 0.95]} />
+        <mesh position={[0, 0.55, 0.09]} userData={{ targetId: id, targetPart: "leg" }}>
+          <planeGeometry args={[2.18, 1.15]} />
           <meshBasicMaterial transparent opacity={0} depthWrite={false} side={THREE.DoubleSide} />
         </mesh>
 
-        <group position={[0, 3.82, 0.04]}>
+        <group position={[0, 3.82, 0.04]} userData={{ ignoreProjectile: true }}>
           <mesh>
             <planeGeometry args={[1.82, 0.085]} />
             <meshBasicMaterial color="#b7c6f5" />
@@ -561,7 +594,30 @@ export function Dummy({
         </group>
       </group>
 
-      <mesh ref={warningRef} visible={false}>
+      {damagePops.map((pop, index) => (
+        <Html
+          key={pop.id}
+          position={[
+            group.current?.position.x ?? spawn[0],
+            (group.current?.position.y ?? spawn[1]) + 3.35 + index * 0.15,
+            group.current?.position.z ?? spawn[2],
+          ]}
+          center
+          zIndexRange={[40, 0]}
+          style={{ pointerEvents: "none" }}
+        >
+          <div className={`boss-damage-pop boss-damage-pop--${pop.part}`}>
+            {pop.part === "head" && <span>HEADSHOT</span>}
+            <strong>{pop.amount}</strong>
+          </div>
+        </Html>
+      ))}
+
+      <mesh
+        ref={warningRef}
+        visible={false}
+        userData={{ ignoreProjectile: true }}
+      >
         <cylinderGeometry args={[1, 1, 1, 6]} />
         <meshBasicMaterial
           color="#ff315e"
@@ -571,7 +627,11 @@ export function Dummy({
         />
       </mesh>
 
-      <mesh ref={shotRef} visible={false}>
+      <mesh
+        ref={shotRef}
+        visible={false}
+        userData={{ ignoreProjectile: true }}
+      >
         <cylinderGeometry args={[1, 1, 1, 6]} />
         <meshBasicMaterial
           color={rangedWeapon === "bow" ? "#ff7ca7" : "#ff315e"}
