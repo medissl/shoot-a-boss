@@ -14,7 +14,6 @@ const GREEN_DARK = "#397447";
 const GREEN_LIGHT = "#a5cc76";
 const PINK = "#ef6f9d";
 const YELLOW = "#f2b441";
-const PAPER = "#fbfaf4";
 
 type PlantKind = "weed" | "flower" | "sapling";
 
