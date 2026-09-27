@@ -5,6 +5,12 @@ type AmmoState = Record<WeaponId, { mag: number; reserve: number }>;
 type GameScreen = "story" | "playing" | "paused" | "won" | "lost";
 export type MovementMode = "idle" | "walk" | "run" | "crouch" | "slide";
 
+const RELOAD_MS: Record<WeaponId, number> = {
+  sniper: 2050,
+  rifle: 1650,
+  shotgun: 2200,
+};
+
 type GameStore = {
   screen: GameScreen;
   runId: number;
@@ -19,6 +25,11 @@ type GameStore = {
   speedBoostUntil: number;
   speedBoostActive: boolean;
   movementMode: MovementMode;
+  reloading: boolean;
+  reloadingWeapon: WeaponId | null;
+  reloadStartedAt: number;
+  reloadDurationMs: number;
+  reloadToken: number;
   startGame: () => void;
   pause: () => void;
   resume: () => void;
@@ -60,7 +71,22 @@ function freshRun() {
     speedBoostUntil: 0,
     speedBoostActive: false,
     movementMode: "idle" as MovementMode,
+    reloading: false,
+    reloadingWeapon: null as WeaponId | null,
+    reloadStartedAt: 0,
+    reloadDurationMs: 0,
+    reloadToken: 0,
   };
+}
+
+function cancelReload(set: (state: Partial<GameStore>) => void, get: () => GameStore) {
+  set({
+    reloading: false,
+    reloadingWeapon: null,
+    reloadStartedAt: 0,
+    reloadDurationMs: 0,
+    reloadToken: get().reloadToken + 1,
+  });
 }
 
 export const useGameStore = create<GameStore>((set, get) => ({
@@ -77,7 +103,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
     })),
 
   pause: () => {
-    if (get().screen === "playing") set({ screen: "paused", scoped: false });
+    if (get().screen === "playing") {
+      cancelReload(set, get);
+      set({ screen: "paused", scoped: false });
+    }
   },
 
   resume: () => {
@@ -91,15 +120,20 @@ export const useGameStore = create<GameStore>((set, get) => ({
       ...freshRun(),
     })),
 
-  setWeapon: (weapon) => set({ weapon, scoped: false }),
+  setWeapon: (weapon) => {
+    cancelReload(set, get);
+    set({ weapon, scoped: false });
+  },
 
   cycleWeapon: (direction) => {
     const current = weaponOrder.indexOf(get().weapon);
     const next = (current + direction + weaponOrder.length) % weaponOrder.length;
+    cancelReload(set, get);
     set({ weapon: weaponOrder[next], scoped: false });
   },
 
   spendRound: (weapon) => {
+    if (get().reloading) return false;
     const current = get().ammo[weapon];
     if (current.mag <= 0) return false;
 
@@ -113,21 +147,55 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   reload: () => {
+    if (get().reloading || get().screen !== "playing") return;
+
     const weapon = get().weapon;
     const current = get().ammo[weapon];
     const needed = WEAPONS[weapon].magazine - current.mag;
     const moved = Math.min(needed, current.reserve);
     if (moved <= 0) return;
 
-    set((state) => ({
-      ammo: {
-        ...state.ammo,
-        [weapon]: {
-          mag: current.mag + moved,
-          reserve: current.reserve - moved,
+    const duration = RELOAD_MS[weapon];
+    const token = get().reloadToken + 1;
+
+    set({
+      reloading: true,
+      reloadingWeapon: weapon,
+      reloadStartedAt: performance.now(),
+      reloadDurationMs: duration,
+      reloadToken: token,
+      scoped: false,
+    });
+
+    window.setTimeout(() => {
+      const state = get();
+      if (
+        state.reloadToken !== token ||
+        !state.reloading ||
+        state.reloadingWeapon !== weapon ||
+        state.screen !== "playing"
+      ) {
+        return;
+      }
+
+      const latest = state.ammo[weapon];
+      const latestNeeded = WEAPONS[weapon].magazine - latest.mag;
+      const latestMoved = Math.min(latestNeeded, latest.reserve);
+
+      set((currentState) => ({
+        ammo: {
+          ...currentState.ammo,
+          [weapon]: {
+            mag: latest.mag + latestMoved,
+            reserve: latest.reserve - latestMoved,
+          },
         },
-      },
-    }));
+        reloading: false,
+        reloadingWeapon: null,
+        reloadStartedAt: 0,
+        reloadDurationMs: 0,
+      }));
+    }, duration);
   },
 
   spendGrenade: () => {
@@ -153,6 +221,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   damagePlayer: (amount) => {
     const next = Math.max(0, get().hp - amount);
+    window.dispatchEvent(
+      new CustomEvent("player-damaged", { detail: { amount } }),
+    );
     set({ hp: next, ...(next === 0 ? { screen: "lost", scoped: false } : {}) });
   },
 
@@ -168,7 +239,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   setSensitivity: (sensitivity) => set({ sensitivity }),
-  setScoped: (scoped) => set({ scoped }),
+  setScoped: (scoped) => {
+    if (get().reloading && scoped) return;
+    set({ scoped });
+  },
   setPlayerPosition: (playerPosition) => set({ playerPosition }),
   setMovementMode: (movementMode) => {
     if (get().movementMode !== movementMode) set({ movementMode });
