@@ -3,7 +3,7 @@ import { GRENADE_COUNT, TARGET_COUNT, WEAPONS, type WeaponId } from "./config";
 
 type AmmoState = Record<WeaponId, { mag: number; reserve: number }>;
 
-type GameScreen = "story" | "menu" | "playing" | "paused" | "won" | "lost";
+type GameScreen = "story" | "playing" | "paused" | "won" | "lost";
 
 type GameStore = {
   screen: GameScreen;
@@ -16,17 +16,18 @@ type GameStore = {
   sensitivity: number;
   scoped: boolean;
   playerPosition: [number, number, number];
-  showMenu: () => void;
+  speedBoostUntil: number;
   startGame: () => void;
   pause: () => void;
   resume: () => void;
-  returnToMenu: () => void;
   restart: () => void;
   setWeapon: (weapon: WeaponId) => void;
   cycleWeapon: (direction: 1 | -1) => void;
   spendRound: (weapon: WeaponId) => boolean;
   reload: () => void;
   spendGrenade: () => boolean;
+  refillGrenades: (amount?: number) => void;
+  grantSpeedBoost: (durationMs?: number) => void;
   damagePlayer: (amount: number) => void;
   eliminate: (id: string) => void;
   setSensitivity: (value: number) => void;
@@ -53,6 +54,7 @@ function freshRun() {
     eliminated: [] as string[],
     scoped: false,
     playerPosition: [0, 1.4, 12] as [number, number, number],
+    speedBoostUntil: 0,
   };
 }
 
@@ -61,8 +63,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
   runId: 0,
   ...freshRun(),
   sensitivity: 0.85,
-
-  showMenu: () => set({ screen: "menu", scoped: false }),
 
   startGame: () =>
     set((state) => ({
@@ -78,8 +78,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
   resume: () => {
     if (get().screen === "paused") set({ screen: "playing" });
   },
-
-  returnToMenu: () => set({ screen: "menu", scoped: false }),
 
   restart: () =>
     set((state) => ({
@@ -132,6 +130,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set((state) => ({ grenades: state.grenades - 1 }));
     return true;
   },
+
+  refillGrenades: (amount = 1) =>
+    set((state) => ({
+      grenades: Math.min(GRENADE_COUNT, state.grenades + amount),
+    })),
+
+  grantSpeedBoost: (durationMs = 7000) =>
+    set({ speedBoostUntil: performance.now() + durationMs }),
 
   damagePlayer: (amount) => {
     const next = Math.max(0, get().hp - amount);
