@@ -6,7 +6,11 @@ export function MainMenu() {
   const startGame = useGameStore((state) => state.startGame);
   const readComic = useGameStore((state) => state.readComic);
   const sensitivity = useGameStore((state) => state.sensitivity);
+  const bgmVolume = useGameStore((state) => state.bgmVolume);
+  const sfxVolume = useGameStore((state) => state.sfxVolume);
   const setSensitivity = useGameStore((state) => state.setSensitivity);
+  const setBgmVolume = useGameStore((state) => state.setBgmVolume);
+  const setSfxVolume = useGameStore((state) => state.setSfxVolume);
   const [optionsOpen, setOptionsOpen] = useState(false);
 
   return (
@@ -49,6 +53,32 @@ export function MainMenu() {
                 step="0.05"
                 value={sensitivity}
                 onChange={(event) => setSensitivity(Number(event.target.value))}
+              />
+            </label>
+
+            <label className="sensitivity-control audio-control">
+              <span>BGM VOLUME</span>
+              <b>{Math.round(bgmVolume * 100)}%</b>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.05"
+                value={bgmVolume}
+                onChange={(event) => setBgmVolume(Number(event.target.value))}
+              />
+            </label>
+
+            <label className="sensitivity-control audio-control">
+              <span>SFX VOLUME</span>
+              <b>{Math.round(sfxVolume * 100)}%</b>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.05"
+                value={sfxVolume}
+                onChange={(event) => setSfxVolume(Number(event.target.value))}
               />
             </label>
           </div>

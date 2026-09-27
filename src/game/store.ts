@@ -27,6 +27,8 @@ type GameStore = {
   grenades: number;
   eliminated: string[];
   sensitivity: number;
+  bgmVolume: number;
+  sfxVolume: number;
   scoped: boolean;
   playerPosition: [number, number, number];
   speedBoostUntil: number;
@@ -53,10 +55,19 @@ type GameStore = {
   damagePlayer: (amount: number) => void;
   eliminate: (id: string) => void;
   setSensitivity: (value: number) => void;
+  setBgmVolume: (value: number) => void;
+  setSfxVolume: (value: number) => void;
   setScoped: (value: boolean) => void;
   setPlayerPosition: (value: [number, number, number]) => void;
   setMovementMode: (value: MovementMode) => void;
 };
+
+function readStoredVolume(key: string, fallback: number) {
+  if (typeof window === "undefined") return fallback;
+  const raw = window.localStorage.getItem(key);
+  const parsed = raw ? Number(raw) : Number.NaN;
+  return Number.isFinite(parsed) ? Math.min(1, Math.max(0, parsed)) : fallback;
+}
 
 function freshAmmo(): AmmoState {
   return {
@@ -103,6 +114,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
   runId: 0,
   ...freshRun(),
   sensitivity: 0.85,
+  bgmVolume: readStoredVolume("shoot-a-boss:bgm-volume", 0.34),
+  sfxVolume: readStoredVolume("shoot-a-boss:sfx-volume", 0.42),
 
   startGame: () => {
     set((state) => ({
@@ -287,6 +300,20 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   setSensitivity: (sensitivity) => set({ sensitivity }),
+  setBgmVolume: (bgmVolume) => {
+    const value = Math.min(1, Math.max(0, bgmVolume));
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("shoot-a-boss:bgm-volume", String(value));
+    }
+    set({ bgmVolume: value });
+  },
+  setSfxVolume: (sfxVolume) => {
+    const value = Math.min(1, Math.max(0, sfxVolume));
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("shoot-a-boss:sfx-volume", String(value));
+    }
+    set({ sfxVolume: value });
+  },
   setScoped: (scoped) => {
     if (get().reloading && scoped) return;
     set({ scoped });

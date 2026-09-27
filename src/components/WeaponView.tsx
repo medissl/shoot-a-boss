@@ -11,7 +11,7 @@ function HipWeaponArt({ weapon }: { weapon: "sniper" | "rifle" | "shotgun" }) {
       </defs>
 
       {weapon === "rifle" && (
-        <g className="gun-drawing gun-drawing--rifle">
+        <g className="gun-drawing gun-drawing--rifle" transform="translate(0 108) scale(1 .72)">
           <path className="gun-barrel" d="M237 128 L347 225" />
           <circle className="gun-dot gun-dot--red" cx="237" cy="128" r="5" />
           <path className="gun-fill gun-hatch" d="M337 211 L382 201 L641 438 L600 481 L365 257 Z" />
@@ -26,7 +26,7 @@ function HipWeaponArt({ weapon }: { weapon: "sniper" | "rifle" | "shotgun" }) {
       )}
 
       {weapon === "shotgun" && (
-        <g className="gun-drawing gun-drawing--shotgun">
+        <g className="gun-drawing gun-drawing--shotgun" transform="translate(0 108) scale(1 .72)">
           <path className="gun-barrel" d="M230 121 L350 228" />
           <path className="gun-barrel gun-barrel--thin" d="M245 135 L361 239" />
           <circle className="gun-dot gun-dot--red" cx="230" cy="121" r="6" />
@@ -41,7 +41,7 @@ function HipWeaponArt({ weapon }: { weapon: "sniper" | "rifle" | "shotgun" }) {
       )}
 
       {weapon === "sniper" && (
-        <g className="gun-drawing gun-drawing--sniper">
+        <g className="gun-drawing gun-drawing--sniper" transform="translate(0 108) scale(1 .72)">
           <path className="gun-barrel" d="M224 114 L357 232" />
           <path className="gun-barrel gun-barrel--thin" d="M238 127 L367 242" />
           <circle className="gun-dot" cx="224" cy="114" r="5" />
@@ -62,7 +62,7 @@ function HipWeaponArt({ weapon }: { weapon: "sniper" | "rifle" | "shotgun" }) {
         </g>
       )}
 
-      <g className="muzzle-spark">
+      <g className="muzzle-spark" transform="translate(0 108) scale(1 .72)">
         <path d="M230 122 l-26 -21 M230 122 l-5 -31 M230 122 l22 -23 M230 122 l31 5" />
       </g>
     </svg>
