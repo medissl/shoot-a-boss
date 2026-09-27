@@ -35,16 +35,21 @@ export function PlayerController() {
   const cameraTarget = useRef(new THREE.Vector3());
 
   const { camera, gl } = useThree();
+  const cameraRef = useRef(camera);
   const screen = useGameStore((state) => state.screen);
-  const sensitivity = useGameStore((state) => state.sensitivity);
   const pause = useGameStore((state) => state.pause);
   const setPlayerPosition = useGameStore((state) => state.setPlayerPosition);
   const setMovementMode = useGameStore((state) => state.setMovementMode);
 
   useEffect(() => {
-    camera.rotation.order = "YXZ";
-    yaw.current = camera.rotation.y;
-    pitch.current = THREE.MathUtils.clamp(camera.rotation.x, -1.42, 1.42);
+    const activeCamera = cameraRef.current;
+    activeCamera.rotation.order = "YXZ";
+    yaw.current = activeCamera.rotation.y;
+    pitch.current = THREE.MathUtils.clamp(
+      activeCamera.rotation.x,
+      -1.42,
+      1.42,
+    );
 
     const canvas = gl.domElement;
 
@@ -88,7 +93,7 @@ export function PlayerController() {
         1.42,
       );
 
-      camera.rotation.set(pitch.current, yaw.current, 0, "YXZ");
+      activeCamera.rotation.set(pitch.current, yaw.current, 0, "YXZ");
     };
 
     const preventMenu = (event: Event) => event.preventDefault();
@@ -104,7 +109,7 @@ export function PlayerController() {
       document.removeEventListener("pointerlockchange", pointerChange);
       document.removeEventListener("mousemove", mouseMove);
     };
-  }, [camera, gl, pause]);
+  }, [gl, pause]);
 
   useEffect(() => {
     if (
@@ -118,12 +123,12 @@ export function PlayerController() {
   useEffect(() => {
     function movementVector() {
       const forward = new THREE.Vector3();
-      camera.getWorldDirection(forward);
+      cameraRef.current.getWorldDirection(forward);
       forward.y = 0;
       if (forward.lengthSq() > 0.0001) forward.normalize();
 
       const right = new THREE.Vector3()
-        .crossVectors(forward, camera.up)
+        .crossVectors(forward, cameraRef.current.up)
         .normalize();
       const input = new THREE.Vector3();
 
@@ -168,7 +173,7 @@ export function PlayerController() {
       window.removeEventListener("keydown", down);
       window.removeEventListener("keyup", up);
     };
-  }, [camera]);
+  }, []);
 
   useFrame((_state, delta) => {
     const rigid = body.current;
@@ -177,12 +182,12 @@ export function PlayerController() {
     const velocity = rigid.linvel();
 
     const forward = new THREE.Vector3();
-    camera.getWorldDirection(forward);
+    cameraRef.current.getWorldDirection(forward);
     forward.y = 0;
     if (forward.lengthSq() > 0.0001) forward.normalize();
 
     const right = new THREE.Vector3()
-      .crossVectors(forward, camera.up)
+      .crossVectors(forward, cameraRef.current.up)
       .normalize();
 
     const input = new THREE.Vector3();
@@ -342,14 +347,15 @@ export function PlayerController() {
       translated.z,
     );
 
-    const targetDistance = camera.position.distanceTo(cameraTarget.current);
+    const activeCamera = cameraRef.current;
+    const targetDistance = activeCamera.position.distanceTo(cameraTarget.current);
 
     if (targetDistance > 2.2) {
-      camera.position.copy(cameraTarget.current);
+      activeCamera.position.copy(cameraTarget.current);
     } else {
       const damping = climbing ? 18 : 30;
       const alpha = 1 - Math.exp(-damping * Math.min(delta, 0.05));
-      camera.position.lerp(cameraTarget.current, alpha);
+      activeCamera.position.lerp(cameraTarget.current, alpha);
     }
 
     setPlayerPosition([translated.x, translated.y, translated.z]);
