@@ -46,7 +46,7 @@ export function UpgradeScreen() {
                 {card.weapon && <small>{card.weapon.toUpperCase()} ONLY</small>}
                 <small>{card.maxStacks === 1 ? "UNIQUE" : `STACK ${upgrades[id] + (isSelected ? 0 : 1)} / ${card.maxStacks}`}</small>
                 <strong>{card.name}</strong>
-                <p>{upgradeDescription(card, upgrades[id])}</p>
+                <p>{upgradeDescription(card, upgrades[id] - (isSelected ? 1 : 0))}</p>
                 {isSelected && <b>TAKEN ✓</b>}
               </button>
             );

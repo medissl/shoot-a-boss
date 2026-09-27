@@ -149,6 +149,15 @@ export function PlayerController() {
     }
 
     const down = (event: KeyboardEvent) => {
+      if (event.code === "Escape") {
+        const state = useGameStore.getState();
+        if (state.tutorialOpen) return;
+        if (state.screen === "playing") {
+          if (document.pointerLockElement) document.exitPointerLock();
+          state.pause();
+        } else if (state.screen === "paused") state.resume();
+        return;
+      }
       if (event.repeat && ["Space", "KeyC"].includes(event.code)) return;
       keys.current[event.code] = true;
 
