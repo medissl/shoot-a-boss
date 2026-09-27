@@ -11,7 +11,7 @@ type SurfaceHit = {
 
 function ChipBurst({ hit }: { hit: SurfaceHit }) {
   const refs = useRef<Array<THREE.Mesh | null>>([]);
-  const born = useRef(performance.now());
+  const born = useRef<number | null>(null);
 
   const chips = useMemo(
     () =>
@@ -34,8 +34,9 @@ function ChipBurst({ hit }: { hit: SurfaceHit }) {
     [hit.direction, hit.seed],
   );
 
-  useFrame((_state, delta) => {
-    const age = (performance.now() - born.current) / 1000;
+  useFrame((state, delta) => {
+    if (born.current === null) born.current = state.clock.elapsedTime;
+    const age = state.clock.elapsedTime - born.current;
     refs.current.forEach((mesh, index) => {
       if (!mesh) return;
       const chip = chips[index];
