@@ -380,6 +380,7 @@ export function Dummy({
   const nextRoamAt = useRef(0);
   const awarenessUntil = useRef(0);
   const lastSeenPosition = useRef(new THREE.Vector3(...safeSpawn));
+  const previousPlayerPosition = useRef<THREE.Vector3 | null>(null);
 
   useEffect(() => () => texture.dispose(), [texture]);
 
@@ -516,6 +517,10 @@ export function Dummy({
     }
 
     const player = new THREE.Vector3(...useGameStore.getState().playerPosition);
+    const playerVelocity = previousPlayerPosition.current
+      ? player.clone().sub(previousPlayerPosition.current).divideScalar(Math.max(delta, 0.016)).clampLength(0, 16)
+      : new THREE.Vector3();
+    previousPlayerPosition.current = player.clone();
     const here = root.position;
     const toPlayer = player.clone().sub(here);
     toPlayer.y = 0;
@@ -602,7 +607,7 @@ export function Dummy({
         } else if (
           seesPlayer &&
           playerDistance < 2.0 &&
-          now - lastPunch.current > 1.08
+          now - lastPunch.current > Math.max(0.73, 1.08 - (currentLevel - 1) * 0.04)
         ) {
           lastPunch.current = now;
           punchUntil.current = now + 0.36;
@@ -639,7 +644,7 @@ export function Dummy({
             }
 
             aimingUntil.current = 0;
-            nextRangedShot.current = now + 2.35 + (number % 3) * 0.22;
+            nextRangedShot.current = now + Math.max(1.45, 2.35 - (currentLevel - 1) * 0.1) + (number % 3) * 0.18;
 
             if (shot) {
               setBeam(shot, muzzle, shotTarget.current, 0.034);
@@ -664,9 +669,11 @@ export function Dummy({
             desiredPose = "walk";
 
             if (seesPlayer && now >= nextRangedShot.current) {
-              telegraphTarget.current.copy(player);
+              telegraphTarget.current.copy(player).addScaledVector(
+                playerVelocity, Math.min(0.32, playerDistance / 75) * (currentLevel - 1) / 9,
+              );
               telegraphTarget.current.y += 0.35;
-              aimingUntil.current = now + 0.78;
+              aimingUntil.current = now + Math.max(0.55, 0.78 - (currentLevel - 1) * 0.026);
               desiredPose = "aim";
             }
           }

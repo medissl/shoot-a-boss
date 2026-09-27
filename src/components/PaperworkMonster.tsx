@@ -173,7 +173,7 @@ export function PaperworkMonster({
         playerDistance < 1.45 &&
         now >= nextAttackAt.current
       ) {
-        nextAttackAt.current = now + 0.78;
+        nextAttackAt.current = now + Math.max(0.54, 0.78 - (currentLevel - 1) * 0.027);
         damagePlayer(Math.round(10 * tuning.damage));
       }
     } else {

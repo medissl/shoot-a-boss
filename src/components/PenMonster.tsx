@@ -283,7 +283,7 @@ export function PenMonster({
             telegraphUntil.current = now + 0.34;
             nextCycleAt.current = now + 0.36;
           } else {
-            rechargeUntil.current = now + 20;
+            rechargeUntil.current = now + Math.max(13, 20 - (currentLevel - 1) * 0.75);
             if (beam) beam.visible = false;
           }
         }
