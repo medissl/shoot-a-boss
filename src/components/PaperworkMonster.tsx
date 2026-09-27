@@ -184,7 +184,7 @@ export function PaperworkMonster({
           0,
           safeSpawn[2] + Math.sin(angle) * 7.5,
         ];
-        const next = safeEnemySpawn(candidate, MONSTER_RADIUS);
+        const next = safeEnemySpawn(candidate, MONSTER_RADIUS, currentLevel);
         roamTarget.current.set(...next);
         nextRoamAt.current = now + 2.6 + seed * 0.35;
       }

@@ -71,31 +71,6 @@ function KnifeHipArt() {
   return (
     <g className="gun-drawing gun-drawing--knife">
       <path
-        className="knife-blade"
-        d="M325 230 L357 221 L612 409 L568 431 L390 338 L349 302 Z"
-      />
-      <path className="gun-line gun-line--thin" d="M357 222 L568 410" />
-      <path
-        className="knife-guard"
-        d="M558 405 L602 386 L647 426 L604 449 Z"
-      />
-      <path
-        className="gun-fill gun-hatch"
-        d="M603 445 L648 425 L776 535 L737 573 L616 486 Z"
-      />
-      <path className="gun-line gun-line--thin" d="M630 463 L748 553" />
-      <path
-        className="gun-hand"
-        d="M641 470 Q604 493 608 548 L651 585 L692 550 L685 499 Z"
-      />
-    </g>
-  );
-}
-
-function KnifeHipArt() {
-  return (
-    <g className="gun-drawing gun-drawing--knife">
-      <path
         className="gun-fill gun-hatch"
         d="M520 374 L344 234 L303 194 L322 255 L487 405 Z"
       />

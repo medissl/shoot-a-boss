@@ -6,7 +6,8 @@ import {
 import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
-import { getLadderZones, getUpgradeStats } from "../game/config";
+import { getLevelLadders } from "../game/levels";
+import { getUpgradeStats } from "../game/progression";
 import { useGameStore } from "../game/store";
 
 const WALK_SPEED = 6.6;
@@ -38,7 +39,7 @@ export function PlayerController() {
   const { camera, gl } = useThree();
   const cameraRef = useRef(camera);
   const screen = useGameStore((state) => state.screen);
-  const level = useGameStore((state) => state.level);
+  const level = useGameStore((state) => state.currentLevel);
   const weapon = useGameStore((state) => state.weapon);
   const upgrades = useGameStore((state) => state.upgrades);
   const pause = useGameStore((state) => state.pause);
@@ -204,7 +205,7 @@ export function PlayerController() {
     const now = performance.now();
     const position = rigid.translation();
 
-    const ladder = getLadderZones(level).find(
+    const ladder = getLevelLadders(level).find(
       (zone) =>
         Math.abs(position.x - zone.x) <= zone.w / 2 &&
         Math.abs(position.z - zone.z) <= zone.d / 2 &&

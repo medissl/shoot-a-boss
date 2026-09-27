@@ -561,7 +561,7 @@ export function Dummy({
           0,
           safeSpawn[2] + Math.sin(angle) * radius,
         ];
-        const next = safeEnemySpawn(candidate, ENEMY_RADIUS);
+        const next = safeEnemySpawn(candidate, ENEMY_RADIUS, currentLevel);
         roamTarget.current.set(...next);
         nextRoamAt.current = now + 3.6 + (number % 3) * 0.7;
       }

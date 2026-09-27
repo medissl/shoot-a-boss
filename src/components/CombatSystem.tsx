@@ -1,11 +1,8 @@
 import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
-import {
-  WEAPONS,
-  getUpgradeStats,
-  type WeaponId,
-} from "../game/config";
+import { WEAPONS, type WeaponId } from "../game/config";
+import { getUpgradeStats } from "../game/progression";
 import { useGameStore } from "../game/store";
 
 type Trace = {
@@ -150,7 +147,7 @@ export function CombatSystem() {
     const perspective = state.camera as THREE.PerspectiveCamera;
     const current = WEAPONS[weapon];
     const wanted =
-      scoped && !current.melee ? current.scopedFov : 70;
+      scoped && weapon !== "knife" ? current.scopedFov : 70;
     const speed =
       weapon === "sniper"
         ? scoped
@@ -225,19 +222,19 @@ export function CombatSystem() {
       const stats = getUpgradeStats(state.upgrades);
       const now = performance.now();
       const cooldown =
-        WEAPONS.knife.cooldownMs * stats.fireRate;
+        WEAPONS.knife.cooldownMs * stats.fireCooldown;
 
       if (now - lastShot.current < cooldown) return;
       lastShot.current = now;
 
       const raycaster = new THREE.Raycaster();
-      raycaster.far = stats.knifeRange;
+      raycaster.far = WEAPONS.knife.maxRange;
       raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
 
       const intersections = raycaster.intersectObjects(scene.children, true);
       const first = firstProjectileIntersection(intersections);
 
-      if (first && first.distance <= stats.knifeRange) {
+      if (first && first.distance <= WEAPONS.knife.maxRange) {
         const targetId = inheritedUserData(first.object, "targetId");
         const propId = inheritedUserData(first.object, "propId");
         const destructibleId = inheritedUserData(
@@ -335,7 +332,7 @@ export function CombatSystem() {
 
       const cooldown =
         config.cooldownMs *
-        (currentWeapon === "sniper" ? 1 : stats.fireRate);
+        (currentWeapon === "sniper" ? 1 : stats.fireCooldown);
 
       if (now - lastShot.current < cooldown) return;
 
@@ -351,7 +348,7 @@ export function CombatSystem() {
 
       const spread =
         (aimed ? config.aimedSpread : config.hipSpread) *
-        stats.accuracy;
+        stats.spread;
       const hits = new Map<string, HitSummary>();
 
       for (let pellet = 0; pellet < config.pellets; pellet += 1) {
@@ -482,8 +479,7 @@ export function CombatSystem() {
         let damage =
           config.damage *
           partMultiplier *
-          stats.damage *
-          (aimed ? stats.scopedDamage : 1);
+          stats.damage ;
 
         if (currentWeapon === "shotgun") {
           const fullDamageDistance = 4.5;
@@ -574,7 +570,7 @@ export function CombatSystem() {
         const stats = getUpgradeStats(state.upgrades);
         const interval = Math.max(
           55,
-          WEAPONS.rifle.cooldownMs * stats.fireRate,
+          WEAPONS.rifle.cooldownMs * stats.fireCooldown,
         );
 
         autoFire.current = window.setInterval(() => {
