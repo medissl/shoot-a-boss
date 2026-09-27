@@ -351,6 +351,7 @@ export function Dummy({
   const warningRef = useRef<THREE.Mesh>(null);
   const shotRef = useRef<THREE.Mesh>(null);
   const [hp, setHp] = useState(BOSS_MAX_HP);
+  const hpRef = useRef(BOSS_MAX_HP);
   const [pose, setPose] = useState<Pose>("idle");
   const [hitFlash, setHitFlash] = useState(false);
   const [damagePops, setDamagePops] = useState<DamagePop[]>([]);
@@ -411,7 +412,15 @@ export function Dummy({
           : "body";
       const popId = nextDamagePopId.current++;
 
-      setHp((current) => Math.max(0, current - detail.damage));
+      const nextHp = Math.max(0, hpRef.current - detail.damage);
+      hpRef.current = nextHp;
+      setHp(nextHp);
+      if (nextHp <= 0 && !dead) {
+        deadAt.current = performance.now();
+        setDead(true);
+        if (!eliminated) eliminate(id);
+      }
+
       setDamagePops((current) => [
         ...current.slice(-3),
         { id: popId, amount: Math.round(detail.damage), part },
@@ -458,7 +467,14 @@ export function Dummy({
       if (distance > detail.radius) return;
       const falloff = 1 - distance / detail.radius;
       const damage = Math.max(22, detail.damage * falloff);
-      setHp((current) => Math.max(0, current - damage));
+      const nextHp = Math.max(0, hpRef.current - damage);
+      hpRef.current = nextHp;
+      setHp(nextHp);
+      if (nextHp <= 0 && !dead) {
+        deadAt.current = performance.now();
+        setDead(true);
+        if (!eliminated) eliminate(id);
+      }
       setHitFlash(true);
       window.setTimeout(() => setHitFlash(false), 145);
     };
@@ -471,15 +487,7 @@ export function Dummy({
       window.removeEventListener("boss-impact", impactHandler as EventListener);
       window.removeEventListener("paper-grenade-explode", grenadeHandler as EventListener);
     };
-  }, [dead, eliminated, id]);
-
-  useEffect(() => {
-    if (hp <= 0 && !dead) {
-      deadAt.current = performance.now();
-      setDead(true);
-      if (!eliminated) eliminate(id);
-    }
-  }, [dead, eliminate, eliminated, hp, id]);
+  }, [dead, eliminate, eliminated, id]);
 
   useFrame((state, delta) => {
     const root = group.current;
