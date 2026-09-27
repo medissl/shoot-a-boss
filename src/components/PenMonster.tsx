@@ -1,3 +1,4 @@
+import { ScanHalo } from "./ScanHalo";
 import { Html } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -175,7 +176,7 @@ export function PenMonster({
   useFrame((state, delta) => {
     const group = root.current;
     const beam = warning.current;
-    if (!group || screen !== "playing") return;
+    if (!group || (screen !== "playing" || useGameStore.getState().tutorialOpen)) return;
 
     if (dead) {
       if (beam) beam.visible = false;
@@ -211,7 +212,7 @@ export function PenMonster({
       distance < 39 * tuning.vision &&
       (distance < 7 ||
         forward.dot(direction) > -0.35) &&
-      (safeSpawn[1] > 2 || hasEnemyLineOfSight(here, player, currentLevel, 0.12));
+      hasEnemyLineOfSight(here, player, currentLevel, 0.12);
 
     const nowMs = performance.now();
     if (seesPlayer) awarenessUntil.current = nowMs + 4200;
@@ -336,6 +337,7 @@ export function PenMonster({
   return (
     <>
       <group ref={root} position={safeSpawn}>
+        <ScanHalo id={id} size={1.4} />
         {/* A flat, broad cartoon silhouette. Every visible piece belongs to
             the target, so whichever part the ray first meets takes damage. */}
         <group userData={dead ? { ignoreProjectile: true } : { targetId: id, targetPart: "body" }}>

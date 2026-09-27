@@ -99,12 +99,6 @@ export function ComicIntro({ mode }: { mode: "launch" | "reader" }) {
               <span className="story-clock__hand story-clock__hand--minute" />
               <span className="story-clock__center" />
               <strong className="story-clock__twelve">12</strong>
-              {Array.from({ length: 12 }, (_, index) => (
-                <i
-                  key={index}
-                  style={{ "--tick": index } as React.CSSProperties}
-                />
-              ))}
             </div>
             <p>30 minutes later...</p>
           </div>

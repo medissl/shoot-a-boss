@@ -78,8 +78,6 @@ export function AudioManager() {
   // IntroMenuBGM and ShootingBGM can never overlap, even during rapid state changes.
   const bgmAudio = useRef<HTMLAudioElement | null>(null);
   const bgmPath = useRef<string | null>(null);
-  const bgmFrame = useRef<number | null>(null);
-  const bgmTransition = useRef(0);
 
   const stepLoop = useRef<{ path: string; audio: HTMLAudioElement } | null>(null);
   const rifleBurstTimer = useRef<number | null>(null);
@@ -123,92 +121,18 @@ export function AudioManager() {
     return bgmAudio.current;
   }, []);
 
-  const cancelBgmFrame = useCallback(() => {
-    if (bgmFrame.current !== null) {
-      cancelAnimationFrame(bgmFrame.current);
-      bgmFrame.current = null;
+  const requestBgm = useCallback((nextPath: string) => {
+    const audio = ensureBgmAudio();
+    // Switch the source inside the selecting click handler, while the browser
+    // still considers playback to be initiated by the player's gesture.
+    if (bgmPath.current !== nextPath) {
+      audio.pause();
+      audio.src = nextPath;
+      bgmPath.current = nextPath;
     }
-  }, []);
-
-  const rampVolume = useCallback(
-    (
-      audio: HTMLAudioElement,
-      from: number,
-      to: number,
-      duration: number,
-      token: number,
-      done?: () => void,
-    ) => {
-      cancelBgmFrame();
-      const started = performance.now();
-
-      const step = (now: number) => {
-        if (token !== bgmTransition.current) return;
-
-        const t = Math.min(1, (now - started) / duration);
-        audio.volume = from + (to - from) * t;
-
-        if (t < 1) {
-          bgmFrame.current = requestAnimationFrame(step);
-        } else {
-          bgmFrame.current = null;
-          done?.();
-        }
-      };
-
-      bgmFrame.current = requestAnimationFrame(step);
-    },
-    [cancelBgmFrame],
-  );
-
-  const requestBgm = useCallback(
-    (nextPath: string) => {
-      const audio = ensureBgmAudio();
-      const token = ++bgmTransition.current;
-      const target = bgmLevel();
-
-      if (bgmPath.current === nextPath) {
-        cancelBgmFrame();
-
-        const startCurrent = () => {
-          if (token !== bgmTransition.current) return;
-          rampVolume(audio, audio.volume, target, 320, token);
-        };
-
-        if (audio.paused) {
-          void audio.play().then(startCurrent).catch(() => undefined);
-        } else {
-          startCurrent();
-        }
-        return;
-      }
-
-      const switchTrack = () => {
-        if (token !== bgmTransition.current) return;
-
-        audio.pause();
-        audio.currentTime = 0;
-        audio.src = nextPath;
-        audio.load();
-        bgmPath.current = nextPath;
-        audio.volume = 0;
-
-        const startNew = () => {
-          if (token !== bgmTransition.current) return;
-          rampVolume(audio, 0, target, 520, token);
-        };
-
-        // We still attempt playback during the opening comic. Browsers that
-        // block autoplay leave the track loaded; first user input retries it.
-        void audio.play().then(startNew).catch(() => undefined);
-      };
-
-      // Change src and call play immediately. Deferring the call behind a fade
-      // loses the browser's user gesture when a stage is selected.
-      switchTrack();
-    },
-    [bgmLevel, cancelBgmFrame, ensureBgmAudio, rampVolume],
-  );
+    audio.volume = bgmLevel();
+    if (audio.paused) void audio.play().catch(() => undefined);
+  }, [bgmLevel, ensureBgmAudio]);
 
   const stopRifleBurst = useCallback(() => {
     rifleHeld.current = false;
@@ -302,6 +226,8 @@ export function AudioManager() {
     };
     window.addEventListener("pointerdown", retry);
     window.addEventListener("keydown", retry);
+    window.addEventListener("focus", retry);
+    document.addEventListener("visibilitychange", retry);
     const stageSelected = () => {
       const state = useGameStore.getState();
       requestBgm(bgmFor(state.screen, state.currentLevel));
@@ -310,6 +236,8 @@ export function AudioManager() {
     return () => {
       window.removeEventListener("pointerdown", retry);
       window.removeEventListener("keydown", retry);
+      window.removeEventListener("focus", retry);
+      document.removeEventListener("visibilitychange", retry);
       window.removeEventListener("stage-selected", stageSelected);
     };
   }, [requestBgm]);
@@ -442,8 +370,6 @@ export function AudioManager() {
 
   useEffect(
     () => () => {
-      cancelBgmFrame();
-      bgmTransition.current += 1;
       if (bgmAudio.current) {
         bgmAudio.current.pause();
         bgmAudio.current.src = "";
@@ -452,7 +378,7 @@ export function AudioManager() {
       stopRifleBurst();
       oneShots.current.forEach((audio) => audio.pause());
     },
-    [cancelBgmFrame, stopRifleBurst],
+    [stopRifleBurst],
   );
 
   return null;

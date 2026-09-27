@@ -1,6 +1,15 @@
 import * as THREE from "three";
 import { ARENA_HALF_SIZE } from "./config";
-import { getLevelBlockers } from "./levels";
+import { CAVE_CENTER_Z, CAVE_WALL_RADIUS, getLevelBlockers, getLevelDefinition, HELL_MOUNTAIN_RADIUS, JUNGLE_LOGS } from "./levels";
+
+function caveWall(x: number, z: number, padding: number) {
+  const dz = z - CAVE_CENTER_Z;
+  const radius = Math.hypot(x, dz);
+  const angle = Math.atan2(x, dz);
+  return Math.abs(angle) >= 0.185 &&
+    radius > CAVE_WALL_RADIUS - 1.8 - padding &&
+    radius < CAVE_WALL_RADIUS + 1.8 + padding;
+}
 
 export function isEnemyPositionBlocked(
   x: number,
@@ -8,6 +17,16 @@ export function isEnemyPositionBlocked(
   radius: number,
   level: number,
 ) {
+  const theme = getLevelDefinition(level).theme;
+  if (theme === "gems" && caveWall(x, z, radius)) return true;
+  if (theme === "hell" && Math.hypot(x, z - CAVE_CENTER_Z) < HELL_MOUNTAIN_RADIUS + radius) return true;
+  if (theme === "jungle" && radius > 0.9 && JUNGLE_LOGS.some((log) => {
+    const dx = x - log.x;
+    const dz = z - log.z;
+    const across = log.angle === 0 ? dx : dz;
+    const along = log.angle === 0 ? dz : dx;
+    return Math.abs(across) < 3.05 + radius && Math.abs(along) < log.length / 2 + radius;
+  })) return true;
   return getLevelBlockers(level).some((blocker) => {
     const halfW = blocker.w / 2 + radius;
     const halfD = blocker.d / 2 + radius;
@@ -93,6 +112,19 @@ export function hasEnemyLineOfSight(
   level: number,
   padding = 0.15,
 ) {
+  const theme = getLevelDefinition(level).theme;
+  const length = start.distanceTo(end);
+  if (theme === "gems" || theme === "hell") {
+    const samples = Math.ceil(length / 0.75);
+    for (let step = 1; step < samples; step += 1) {
+      const t = step / samples;
+      const x = THREE.MathUtils.lerp(start.x, end.x, t);
+      const y = THREE.MathUtils.lerp(start.y, end.y, t);
+      const z = THREE.MathUtils.lerp(start.z, end.z, t);
+      if (theme === "gems" && y < 18 && caveWall(x, z, padding)) return false;
+      if (theme === "hell" && y < 23 && Math.hypot(x, z - CAVE_CENTER_Z) < HELL_MOUNTAIN_RADIUS + padding) return false;
+    }
+  }
   return !getLevelBlockers(level).some((blocker) =>
     segmentIntersectsBox(start, end, blocker, padding),
   );

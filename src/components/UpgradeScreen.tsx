@@ -1,6 +1,6 @@
 import { Home, RefreshCw } from "lucide-react";
 import { getLevelDefinition } from "../game/levels";
-import { getUpgradeCard } from "../game/progression";
+import { getUpgradeCard, upgradeDescription } from "../game/progression";
 import { useGameStore } from "../game/store";
 
 export function UpgradeScreen() {
@@ -25,8 +25,8 @@ export function UpgradeScreen() {
         </p>
         <h1>PICK YOUR<br />DREAM PERK</h1>
         <p className="upgrade-copy">
-          Choose one card. It stacks with previous upgrades and carries into
-          the next stage.
+          Choose one card. Common 50% · rare 30% · epic 15% · legendary 5%.
+          Unique cards leave the pool once owned.
         </p>
 
         <div className="upgrade-grid">
@@ -37,15 +37,16 @@ export function UpgradeScreen() {
               <button
                 key={id}
                 type="button"
-                className={`upgrade-option ${isSelected ? "is-selected" : ""}`}
+                className={`upgrade-option rarity--${card.rarity} ${isSelected ? "is-selected" : ""}`}
                 disabled={Boolean(selected)}
                 onClick={() => chooseUpgrade(id)}
               >
                 <span className="upgrade-option__glyph">{card.glyph}</span>
+                <small className="upgrade-option__rarity">{card.rarity.toUpperCase()}</small>
                 {card.weapon && <small>{card.weapon.toUpperCase()} ONLY</small>}
-                <small>STACK {upgrades[id] + (isSelected ? 0 : 1)}</small>
+                <small>{card.maxStacks === 1 ? "UNIQUE" : `STACK ${upgrades[id] + (isSelected ? 0 : 1)} / ${card.maxStacks}`}</small>
                 <strong>{card.name}</strong>
-                <p>{card.description}</p>
+                <p>{upgradeDescription(card, upgrades[id])}</p>
                 {isSelected && <b>TAKEN ✓</b>}
               </button>
             );

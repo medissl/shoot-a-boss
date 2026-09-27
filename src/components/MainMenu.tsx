@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { LEVELS } from "../game/levels";
 import { useGameStore } from "../game/store";
+import { ControlsList } from "./ControlsList";
 
 export function MainMenu() {
   const startLevel = useGameStore((state) => state.startLevel);
@@ -22,6 +23,7 @@ export function MainMenu() {
   const setSfxVolume = useGameStore((state) => state.setSfxVolume);
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [levelSelectOpen, setLevelSelectOpen] = useState(false);
+  const [controlsOpen, setControlsOpen] = useState(false);
 
   return (
     <main className="main-menu-shell">
@@ -66,6 +68,10 @@ export function MainMenu() {
 
             {optionsOpen && (
               <div className="main-menu-options">
+                <button type="button" className="controls-toggle" onClick={() => setControlsOpen((value) => !value)}>
+                  CONTROLS {controlsOpen ? "−" : "+"}
+                </button>
+                {controlsOpen && <ControlsList />}
                 <label className="sensitivity-control">
                   <span>CAMERA SENSITIVITY</span>
                   <b>{sensitivity.toFixed(2)}×</b>
@@ -160,6 +166,7 @@ export function MainMenu() {
           </div>
         )}
       </section>
+      <small className="creator-credit creator-credit--menu">made by medianto susilo</small>
     </main>
   );
 }

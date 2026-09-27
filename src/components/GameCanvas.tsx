@@ -13,6 +13,8 @@ import { PenMonster } from "./PenMonster";
 import { PickupSystem } from "./PickupSystem";
 import { PlayerController } from "./PlayerController";
 import { SurfaceDamageSystem } from "./SurfaceDamageSystem";
+import { PaperDustStorm } from "./PaperDustStorm";
+import { ControlsPopup } from "./ControlsList";
 import { WeaponView } from "./WeaponView";
 import {
   getEnemySpawnPool,
@@ -57,6 +59,7 @@ export function GameCanvas() {
             <CombatSystem />
             <PaintSystem />
             <SurfaceDamageSystem />
+            {definition.theme === "playground" && <PaperDustStorm />}
             <PaperGrenadeSystem />
             <PickupSystem />
 
@@ -76,7 +79,11 @@ export function GameCanvas() {
               />
             ))}
 
-            {definition.theme === "gems" && <PenMonster id="pen-peak" spawn={[0, 5.2, -4]} />}
+            {definition.theme === "gems" && <>
+              <PaperworkMonster id="paper-inner" spawn={[0, 0, -4]} />
+              <PenMonster id="pen-mid" spawn={[22, 4.7, -4]} />
+              <PenMonster id="pen-peak" spawn={[0, 16.7, 21]} />
+            </>}
 
             {bossSpawns.map((spawn, index) => {
               const ranged = index % 3 === 1 || index % 5 === 4;
@@ -97,10 +104,11 @@ export function GameCanvas() {
       <HUD />
       <WeaponView />
       <MenuOverlay />
+      {currentLevel === 1 && <ControlsPopup />}
       <div className="click-hint">click to lock mouse · ESC pause</div>
-      {definition.theme === "jungle" && <div className="map-hint">CLIMB THE YELLOW LADDERS · PRESS E ON A TREE PLATFORM TO RIDE THE ZIPLINE</div>}
-      {definition.theme === "gems" && <div className="map-hint">FOLLOW THE STONE STEPS UP THE MOUNTAIN · WATCH FOR THE PEN ABOVE</div>}
-      {definition.theme === "hell" && <div className="map-hint">LAVA RIVERS BURN · LEAVE THE MOUNTAIN WHEN THE RED RING APPEARS</div>}
+      {definition.theme === "jungle" && <div className="map-hint">YELLOW LADDERS · E ZIPLINE FORWARD · SHIFT+E ZIPLINE BACK</div>}
+      {definition.theme === "gems" && <div className="map-hint">SHOOT THE MARKED GEMS TO LIGHT THE CAVE · FOLLOW THE INNER SPIRAL TO THE PEAK</div>}
+      {definition.theme === "hell" && <div className="map-hint">FIVE STONE BRIDGES CROSS THE LAVA · DODGE THE RED CIRCLES EVERY 10 SECONDS</div>}
       <div className="game-fade-in" />
     </div>
   );

@@ -123,6 +123,14 @@ function inheritedUserData(object: THREE.Object3D, key: string) {
   }
   return undefined;
 }
+function gemIdFor(object: THREE.Object3D): number | null {
+  let current: THREE.Object3D | null = object;
+  while (current) {
+    if (typeof current.userData.gemId === "number") return current.userData.gemId as number;
+    current = current.parent;
+  }
+  return null;
+}
 
 export function CombatSystem() {
   const { camera, scene } = useThree();
@@ -130,6 +138,7 @@ export function CombatSystem() {
   const aimReadyAt = useRef(0);
   const emptyAlertAt = useRef(0);
   const autoFire = useRef<number | null>(null);
+  const rifleShots = useRef(0);
   const nextTraceId = useRef(1);
   const nextImpactId = useRef(1);
   const [traces, setTraces] = useState<Trace[]>([]);
@@ -332,7 +341,7 @@ export function CombatSystem() {
       }
 
       const cooldown = config.cooldownMs *
-        (currentWeapon === "sniper" ? Math.pow(0.82, state.upgrades.sniperBolt) : stats.fireCooldown) *
+        (currentWeapon === "sniper" ? Math.pow(0.82, state.upgrades.sniperBolt) * (state.upgrades.sniperTwin ? 1.2 : 1) : stats.fireCooldown) *
         (currentWeapon === "rifle" ? Math.pow(0.88, state.upgrades.rifleOverclock) : 1);
 
       if (now - lastShot.current < cooldown) return;
@@ -347,27 +356,30 @@ export function CombatSystem() {
 
       lastShot.current = now;
 
+      if (currentWeapon === "rifle") rifleShots.current += 1;
       const spread =
         (aimed ? config.aimedSpread : config.hipSpread) *
         stats.spread *
-        (currentWeapon === "rifle" ? Math.pow(0.78, state.upgrades.riflePrecision) : 1) *
-        (currentWeapon === "shotgun" ? Math.pow(0.82, state.upgrades.shotgunChoke) : 1);
+        (currentWeapon === "rifle" ? Math.pow(0.78, state.upgrades.riflePrecision) * (state.upgrades.riflePower ? 1.12 : 1) : 1) *
+        (currentWeapon === "shotgun" ? Math.pow(0.75, state.upgrades.shotgunChoke) * (state.upgrades.shotgunPellets ? 1.12 : 1) : 1);
       const hits = new Map<string, HitSummary>();
 
-      const pelletCount = config.pellets + (currentWeapon === "shotgun" ? state.upgrades.shotgunPellets * 2 : 0);
+      const pelletCount = currentWeapon === "sniper" && state.upgrades.sniperTwin ? 2 :
+        Math.round((config.pellets + (currentWeapon === "shotgun" ? state.upgrades.shotgunPellets * 2 : 0)) * (currentWeapon === "shotgun" && state.upgrades.shotgunDouble ? 1.75 : 1));
       for (let pellet = 0; pellet < pelletCount; pellet += 1) {
         const raycaster = new THREE.Raycaster();
         const spreadX = (Math.random() - 0.5) * spread;
         const spreadY = (Math.random() - 0.5) * spread;
         raycaster.far = config.maxRange;
         raycaster.setFromCamera(
-          new THREE.Vector2(spreadX, spreadY),
+          new THREE.Vector2(spreadX + (currentWeapon === "sniper" && pellet === 1 ? 0.003 : 0), spreadY),
           camera,
         );
 
         const origin = raycaster.ray.origin
           .clone()
           .add(raycaster.ray.direction.clone().multiplyScalar(0.9));
+        if (currentWeapon === "sniper" && pellet === 1) origin.x += 0.14;
         const intersections = raycaster.intersectObjects(
           scene.children,
           true,
@@ -392,14 +404,21 @@ export function CombatSystem() {
         const destructibleId = first
           ? inheritedUserData(first.object, "destructibleId")
           : undefined;
+        const gemId = first ? gemIdFor(first.object) : null;
 
         addTrace(
           origin,
           end,
-          Boolean(targetId || propId || destructibleId),
+          Boolean(targetId || propId || destructibleId || gemId !== null),
         );
 
         if (!first) continue;
+
+        if (gemId !== null) {
+          addImpact(first.point);
+          window.dispatchEvent(new CustomEvent("gem-lit", { detail: { id: gemId } }));
+          continue;
+        }
 
         if (propId && !targetId) {
           addImpact(first.point);
@@ -482,10 +501,12 @@ export function CombatSystem() {
 
         let damage =
           config.damage *
+          (currentWeapon === "sniper" && pellet === 1 ? 0.65 : 1) *
           partMultiplier *
           stats.damage *
-          (currentWeapon === "sniper" && aimed ? 1 + state.upgrades.sniperFocus * 0.3 : 1) *
-          (currentWeapon === "rifle" ? 1 + state.upgrades.riflePower * 0.16 : 1);
+          (currentWeapon === "sniper" ? (aimed ? 1 + state.upgrades.sniperFocus * 0.2 : 1) * (state.upgrades.sniperBolt ? 0.9 : 1) : 1) *
+          (currentWeapon === "rifle" ? (1 + state.upgrades.riflePower * 0.18) * (state.upgrades.rifleFreeze ? 0.9 : 1) * (state.upgrades.rifleOverclock ? 0.91 : 1) : 1) *
+          (currentWeapon === "shotgun" ? (state.upgrades.shotgunChoke ? 0.88 : 1) * (state.upgrades.shotgunSlow ? 0.9 : 1) : 1);
 
         if (currentWeapon === "shotgun") {
           const fullDamageDistance = 4.5;
@@ -500,6 +521,7 @@ export function CombatSystem() {
           );
           damage *= falloff;
           if (first.distance < 6) damage *= 1 + state.upgrades.shotgunClose * 0.25;
+          else if (state.upgrades.shotgunClose) damage *= 0.9;
         }
 
         const previous = hits.get(targetId);
@@ -533,6 +555,9 @@ export function CombatSystem() {
         }
       }
 
+      if (currentWeapon === "rifle" && state.upgrades.rifleSurge && rifleShots.current % 5 === 0) {
+        hits.forEach((summary) => { summary.damage *= 1.75; });
+      }
       hits.forEach((summary, id) => {
         window.dispatchEvent(
           new CustomEvent("boss-hit", {
@@ -579,7 +604,7 @@ export function CombatSystem() {
 
     const mouseDown = (event: MouseEvent) => {
       const state = useGameStore.getState();
-      if (state.screen !== "playing") return;
+      if (state.screen !== "playing" || state.tutorialOpen) return;
 
       if (event.button === 2) {
         event.preventDefault();
@@ -640,7 +665,8 @@ export function CombatSystem() {
     };
 
     const keyDown = (event: KeyboardEvent) => {
-      if (useGameStore.getState().screen !== "playing") return;
+      if (useGameStore.getState().screen !== "playing" || useGameStore.getState().tutorialOpen) return;
+      if (event.code === "KeyQ" && !event.repeat) useGameStore.getState().triggerScan();
       if (event.code === "Digit1") setWeapon("sniper");
       if (event.code === "Digit2") setWeapon("rifle");
       if (event.code === "Digit3") setWeapon("shotgun");

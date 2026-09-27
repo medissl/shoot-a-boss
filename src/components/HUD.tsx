@@ -2,6 +2,7 @@ import type { CSSProperties } from "react";
 import { useEffect, useRef, useState } from "react";
 import { WEAPONS, type WeaponId } from "../game/config";
 import { getLevelDefinition } from "../game/levels";
+import { getUpgradeCard, type UpgradeId } from "../game/progression";
 import { useGameStore } from "../game/store";
 
 const WEAPON_ORDER: WeaponId[] = ["sniper", "rifle", "shotgun", "knife"];
@@ -27,12 +28,21 @@ export function HUD() {
   const reloading = useGameStore((state) => state.reloading);
   const reloadingWeapon = useGameStore((state) => state.reloadingWeapon);
   const reloadDurationMs = useGameStore((state) => state.reloadDurationMs);
+  const upgrades = useGameStore((state) => state.upgrades);
+  const scanTargets = useGameStore((state) => state.scanTargets);
+  const scanCooldownUntil = useGameStore((state) => state.scanCooldownUntil);
+  const [now, setNow] = useState(() => performance.now());
   const [pickupNotice, setPickupNotice] = useState("");
   const [emptyAlert, setEmptyAlert] = useState(false);
+  const [hazardNotice, setHazardNotice] = useState("");
   const [damageFlashKey, setDamageFlashKey] = useState(0);
   const [killPulseKey, setKillPulseKey] = useState(0);
   const emptyTimer = useRef<number | null>(null);
   const level = getLevelDefinition(currentLevel);
+  useEffect(() => {
+    const interval = window.setInterval(() => setNow(performance.now()), 300);
+    return () => window.clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     const pickupHandler = (event: Event) => {
@@ -49,11 +59,13 @@ export function HUD() {
 
     const damageHandler = () => setDamageFlashKey((current) => current + 1);
     const killHandler = () => setKillPulseKey((current) => current + 1);
+    const hazardHandler = (event: Event) => setHazardNotice((event as CustomEvent<{ message: string }>).detail.message);
 
     window.addEventListener("pickup-collected", pickupHandler as EventListener);
     window.addEventListener("empty-mag", emptyHandler);
     window.addEventListener("player-damaged", damageHandler);
     window.addEventListener("boss-killed", killHandler);
+    window.addEventListener("map-hazard-notice", hazardHandler);
 
     return () => {
       if (emptyTimer.current) window.clearTimeout(emptyTimer.current);
@@ -61,6 +73,7 @@ export function HUD() {
       window.removeEventListener("empty-mag", emptyHandler);
       window.removeEventListener("player-damaged", damageHandler);
       window.removeEventListener("boss-killed", killHandler);
+      window.removeEventListener("map-hazard-notice", hazardHandler);
     };
   }, []);
 
@@ -130,6 +143,14 @@ export function HUD() {
           </div>
         ))}
       </div>
+      <div className="hud-owned-cards">
+        <span>CARDS · ESC TO INSPECT</span>
+        <div>{(Object.entries(upgrades) as [UpgradeId, number][]).filter(([, count]) => count > 0).map(([id, count]) => {
+          const card = getUpgradeCard(id);
+          return <span title={`${card.name} ×${count}`} className={`hud-card rarity--${card.rarity}`} key={id}>{card.glyph}{count > 1 && <small>×{count}</small>}</span>;
+        })}</div>
+      </div>
+      <div className="hud-scan">Q · {scanTargets.length ? `REVEALING ${scanTargets.length}` : scanCooldownUntil > now ? `RECHARGE ${Math.ceil((scanCooldownUntil - now) / 1000)}S` : "REVEAL ENEMY"}</div>
 
       {!scoped && (
         <div className="doodle-crosshair">
@@ -168,6 +189,7 @@ export function HUD() {
       )}
 
       {pickupNotice && <div className="pickup-notice">{pickupNotice}</div>}
+      {hazardNotice && <div className="hazard-notice">⚠ {hazardNotice}</div>}
 
       {emptyAlert && (
         <div className="empty-mag-message">

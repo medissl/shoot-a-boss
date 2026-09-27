@@ -27,11 +27,33 @@ export type LevelDefinition = {
 
 export type NavBlocker = { x: number; z: number; w: number; d: number };
 
-export const ZIPLINES = [
-  { from: [0, 7.55, -8] as const, to: [26, 7.55, 26] as const },
-  { from: [26, 7.55, 26] as const, to: [-27, 7.55, 27] as const },
-  { from: [-27, 7.55, 27] as const, to: [0, 7.55, -8] as const },
+export const JUNGLE_TOWERS: [number, number, number][] = [
+  [-39, 0, -35], [-5, 0, -18], [27, 0, 4], [40, 0, 38],
 ];
+export const ZIPLINES = JUNGLE_TOWERS.slice(0, -1).map((tower, index) => ({
+  from: [tower[0], 7.55, tower[2]] as [number, number, number],
+  to: [JUNGLE_TOWERS[index + 1][0], 7.55, JUNGLE_TOWERS[index + 1][2]] as [number, number, number],
+}));
+export const JUNGLE_HUTS: [number, number][] = [[-20, -5], [16, -29], [32, 11], [-19, 22]];
+export const JUNGLE_LOGS: { x: number; z: number; length: number; angle: number }[] = [
+  { x: -4, z: 18, length: 15, angle: 0 },
+  { x: 16, z: -4, length: 14, angle: Math.PI / 2 },
+  { x: -36, z: 2, length: 13, angle: 0 },
+];
+export const JUNGLE_SMALL_TREES: [number, number][] = [
+  [-45, -15], [-37, -23], [-24, -38], [-18, -30], [-3, -38], [9, -37],
+  [32, -38], [42, -24], [39, -14], [8, -21], [-8, -6], [-42, 18],
+  [-35, 34], [-8, 40], [13, 39], [29, 41], [43, 23], [8, 27],
+];
+export const CAVE_CENTER_Z = -4;
+export const CAVE_WALL_RADIUS = 38;
+export const CAVE_WALL_SEGMENTS = 48;
+export const HELL_MOUNTAIN_RADIUS = 22;
+
+export function getPlayerSpawn(level: number): [number, number, number] {
+  const theme = getLevelDefinition(level).theme;
+  return theme === "gems" || theme === "hell" ? [0, 1.4, 43] : [0, 1.4, 12];
+}
 
 export const LEVELS: LevelDefinition[] = [
   {
@@ -122,7 +144,7 @@ export function getLevelDefinition(level: number) {
 
 export function getTargetCount(level: number) {
   const enemy = getLevelDefinition(level).enemy;
-  return enemy.bosses + enemy.paperwork + enemy.pens + (getLevelDefinition(level).theme === "gems" ? 1 : 0);
+  return enemy.bosses + enemy.paperwork + enemy.pens + (getLevelDefinition(level).theme === "gems" ? 3 : 0);
 }
 
 const JUNGLE_BLOCKERS: NavBlocker[] = [
@@ -130,29 +152,28 @@ const JUNGLE_BLOCKERS: NavBlocker[] = [
   { x: -8, z: -30, w: 3.6, d: 3.6 },
   { x: 22, z: -28, w: 3.2, d: 3.2 },
   { x: 34, z: -4, w: 3.6, d: 3.6 },
-  { x: 26, z: 26, w: 3.4, d: 3.4 },
   { x: 2, z: 31, w: 3.6, d: 3.6 },
+  { x: 26, z: 26, w: 3.4, d: 3.4 },
   { x: -27, z: 27, w: 3.4, d: 3.4 },
   { x: -38, z: 5, w: 3.2, d: 3.2 },
-  { x: 0, z: -8, w: 5.2, d: 5.2 },
-  { x: -20, z: -5, w: 6, d: 5 },
-  { x: 16, z: -29, w: 6, d: 5 },
-  { x: 32, z: 11, w: 6, d: 5 },
-  { x: -19, z: 22, w: 6, d: 5 },
+  ...JUNGLE_TOWERS.map(([x, , z]) => ({ x, z, w: 3.2, d: 3.2 })),
+  ...JUNGLE_SMALL_TREES.map(([x, z]) => ({ x, z, w: 1.7, d: 1.7 })),
+  ...JUNGLE_HUTS.flatMap(([x, z]): NavBlocker[] => [
+    { x: x - 2.9, z, w: 0.36, d: 5 }, { x: x + 2.9, z, w: 0.36, d: 5 },
+    { x, z: z - 2.4, w: 6, d: 0.36 },
+    { x: x - 2.05, z: z + 2.4, w: 1.9, d: 0.36 },
+    { x: x + 2.05, z: z + 2.4, w: 1.9, d: 0.36 },
+  ]),
+  ...JUNGLE_LOGS.flatMap(({ x, z, length, angle }): NavBlocker[] =>
+    angle === 0
+      ? [{ x: x - 3.05, z, w: 0.48, d: length }, { x: x + 3.05, z, w: 0.48, d: length }]
+      : [{ x, z: z - 3.05, w: length, d: 0.48 }, { x, z: z + 3.05, w: length, d: 0.48 }],
+  ),
 ];
 
-const GEM_BLOCKERS: NavBlocker[] = [
-  { x: -28, z: -22, w: 9, d: 9 },
-  { x: 21, z: -27, w: 8, d: 8 },
-  { x: 31, z: 14, w: 9, d: 9 },
-  { x: 3, z: 28, w: 10, d: 10 },
-  { x: -29, z: 22, w: 8, d: 8 },
-  { x: 0, z: -4, w: 26, d: 26 },
-];
+const GEM_BLOCKERS: NavBlocker[] = [];
 
-const HELL_BLOCKERS: NavBlocker[] = [
-  { x: 0, z: -4, w: 26, d: 26 },
-];
+const HELL_BLOCKERS: NavBlocker[] = [];
 
 export function getLevelBlockers(level: number): NavBlocker[] {
   const theme = getLevelDefinition(level).theme;
@@ -162,25 +183,10 @@ export function getLevelBlockers(level: number): NavBlocker[] {
   return HELL_BLOCKERS;
 }
 
-const JUNGLE_LADDERS: LadderZone[] = [
-  {
-    x: 2.15,
-    z: -8,
-    w: 2.8,
-    d: 3,
-    minY: 0.45,
-    maxY: 7.35,
-    snapX: 3.05,
-    snapZ: -8,
-    exitX: 1.05,
-    exitY: 7.35,
-    exitZ: -8,
-  },
-  ...([ [26, 26], [-27, 27] ] as [number, number][]).map(([x, z]): LadderZone => ({
+const JUNGLE_LADDERS: LadderZone[] = JUNGLE_TOWERS.map(([x, , z]): LadderZone => ({
     x: x + 3.05, z, w: 2.8, d: 3, minY: 0.45, maxY: 7.35,
     snapX: x + 3.05, snapZ: z, exitX: x + 1.05, exitY: 7.35, exitZ: z,
-  })),
-];
+  }));
 
 export function getLevelLadders(level: number): LadderZone[] {
   const theme = getLevelDefinition(level).theme;

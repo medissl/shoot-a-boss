@@ -1,3 +1,4 @@
+import { ScanHalo } from "./ScanHalo";
 import { Html } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -484,7 +485,7 @@ export function Dummy({
     const warning = warningRef.current;
     const shot = shotRef.current;
 
-    if (!root || screen !== "playing") {
+    if (!root || (screen !== "playing" || useGameStore.getState().tutorialOpen)) {
       if (warning) warning.visible = false;
       if (shot) shot.visible = false;
       return;
@@ -719,6 +720,7 @@ export function Dummy({
   return (
     <>
       <group ref={group} position={safeSpawn}>
+        <ScanHalo id={id} size={2.1} />
         <mesh
           position={[0, 1.8, 0]}
           userData={{ ignoreProjectile: true }}

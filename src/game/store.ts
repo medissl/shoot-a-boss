@@ -1,9 +1,10 @@
 import { create } from "zustand";
 import { GRENADE_COUNT, WEAPONS, type WeaponId } from "./config";
-import { getTargetCount } from "./levels";
+import { getLevelDefinition, getPlayerSpawn, getTargetCount } from "./levels";
 import {
   emptyUpgrades,
   getUpgradeStats,
+  getUpgradeCard,
   rollUpgradeChoices,
   type UpgradeId,
   type UpgradeLevels,
@@ -45,6 +46,10 @@ type GameStore = {
   upgradeChoices: UpgradeId[];
   upgradeRerollsLeft: number;
   selectedUpgrade: UpgradeId | null;
+  tutorialOpen: boolean;
+  scanTargets: string[];
+  scanUntil: number;
+  scanCooldownUntil: number;
   sensitivity: number;
   bgmVolume: number;
   sfxVolume: number;
@@ -63,6 +68,8 @@ type GameStore = {
   nextLevel: () => void;
   chooseUpgrade: (id: UpgradeId) => void;
   rerollUpgrades: () => void;
+  closeTutorial: () => void;
+  triggerScan: () => void;
   pause: () => void;
   resume: () => void;
   restart: () => void;
@@ -147,8 +154,11 @@ function freshRun(level: number, upgrades: UpgradeLevels) {
     ammo: freshAmmo(upgrades),
     grenades: stats.grenadeCapacity || GRENADE_COUNT,
     eliminated: [] as string[],
+    scanTargets: [] as string[],
+    scanUntil: 0,
+    scanCooldownUntil: 0,
     scoped: false,
-    playerPosition: [0, 1.4, 12] as [number, number, number],
+    playerPosition: getPlayerSpawn(level),
     speedBoostUntil: 0,
     speedBoostActive: false,
     movementMode: "idle" as MovementMode,
@@ -192,6 +202,7 @@ export const useGameStore = create<GameStore>((set, get) => {
     upgradeChoices: [],
     upgradeRerollsLeft: 1,
     selectedUpgrade: null,
+    tutorialOpen: false,
     ...freshRun(1, initialUpgrades),
     sensitivity: 0.85,
     bgmVolume: readStoredVolume("shoot-a-boss:bgm-volume", 0.34),
@@ -206,6 +217,7 @@ export const useGameStore = create<GameStore>((set, get) => {
         upgradeChoices: [],
         upgradeRerollsLeft: 1,
         selectedUpgrade: null,
+        tutorialOpen: true,
         ...freshRun(1, upgrades),
       }));
       announceRifle();
@@ -222,6 +234,7 @@ export const useGameStore = create<GameStore>((set, get) => {
         upgradeChoices: [],
         upgradeRerollsLeft: 1,
         selectedUpgrade: null,
+        tutorialOpen: safeLevel === 1,
         ...freshRun(safeLevel, upgrades),
       }));
       announceRifle();
@@ -242,6 +255,7 @@ export const useGameStore = create<GameStore>((set, get) => {
         upgradeChoices: [],
         upgradeRerollsLeft: 1,
         selectedUpgrade: null,
+        tutorialOpen: false,
         ...freshRun(next, state.upgrades),
       }));
       announceRifle();
@@ -250,15 +264,41 @@ export const useGameStore = create<GameStore>((set, get) => {
 
     chooseUpgrade: (id) => {
       const state = get();
-      if (state.screen !== "upgrade" || state.selectedUpgrade) return;
+      if (state.screen !== "upgrade" || state.selectedUpgrade || !state.upgradeChoices.includes(id)) return;
+      const card = getUpgradeCard(id);
+      if (state.upgrades[id] >= card.maxStacks) return;
+      const newUpgrades = { ...state.upgrades, [id]: state.upgrades[id] + 1 };
+      const maxHp = getUpgradeStats(newUpgrades).maxHp;
 
       set({
-        upgrades: {
-          ...state.upgrades,
-          [id]: state.upgrades[id] + 1,
-        },
+        upgrades: newUpgrades,
+        maxHp,
+        hp: Math.min(maxHp, state.hp + (maxHp - state.maxHp > 0 ? maxHp - state.maxHp : 0) + (id === "ironWill" ? 20 : 0)),
+        grenades: id === "bombBelt" ? Math.min(getUpgradeStats(newUpgrades).grenadeCapacity, state.grenades + 1) : state.grenades,
         selectedUpgrade: id,
       });
+    },
+
+    closeTutorial: () => set({ tutorialOpen: false }),
+    triggerScan: () => {
+      const state = get();
+      const now = performance.now();
+      if (state.screen !== "playing" || state.tutorialOpen || now < state.scanCooldownUntil) return;
+      const definition = getLevelDefinition(state.currentLevel).enemy;
+      const targets = [
+        ...Array.from({ length: definition.bosses }, (_, i) => `target-${i}`),
+        ...Array.from({ length: definition.paperwork }, (_, i) => `paper-${i}`),
+        ...Array.from({ length: definition.pens }, (_, i) => `pen-${i}`),
+        ...(getLevelDefinition(state.currentLevel).theme === "gems" ? ["paper-inner", "pen-mid", "pen-peak"] : []),
+      ].filter((id) => !state.eliminated.includes(id));
+      if (!targets.length) return;
+      const all = state.upgrades.recon > 0;
+      const selected = all ? targets : [targets[Math.floor(Math.random() * targets.length)]];
+      const until = now + (all ? 10000 : 5000);
+      set({ scanTargets: selected, scanUntil: until, scanCooldownUntil: now + 30000 });
+      window.setTimeout(() => {
+        if (get().scanUntil === until) set({ scanTargets: [] });
+      }, all ? 10000 : 5000);
     },
 
     rerollUpgrades: () => {
@@ -298,6 +338,7 @@ export const useGameStore = create<GameStore>((set, get) => {
       set((current) => ({
         screen: "playing",
         runId: current.runId + 1,
+        tutorialOpen: state.currentLevel === 1,
         ...freshRun(state.currentLevel, state.upgrades),
       }));
       announceRifle();
@@ -344,12 +385,13 @@ export const useGameStore = create<GameStore>((set, get) => {
       if (get().reloading) return false;
 
       const current = get().ammo[weapon];
-      if (current.mag <= 0) return false;
+      const cost = weapon === "shotgun" && get().upgrades.shotgunDouble ? 2 : 1;
+      if (current.mag < cost) return false;
 
       set((state) => ({
         ammo: {
           ...state.ammo,
-          [weapon]: { ...current, mag: current.mag - 1 },
+          [weapon]: { ...current, mag: current.mag - cost },
         },
       }));
       return true;
@@ -375,7 +417,9 @@ export const useGameStore = create<GameStore>((set, get) => {
       const baseDuration = BASE_RELOAD_MS[weapon] ?? 1500;
       const duration = Math.max(
         550,
-        Math.round(baseDuration * getUpgradeStats(state.upgrades).reloadTime),
+        Math.round(baseDuration * getUpgradeStats(state.upgrades).reloadTime *
+          (weapon === "sniper" && state.upgrades.sniperFire ? 1.2 : 1) *
+          (weapon === "shotgun" && state.upgrades.shotgunDouble ? 1.2 : 1)),
       );
       const token = state.reloadToken + 1;
 
@@ -510,7 +554,7 @@ export const useGameStore = create<GameStore>((set, get) => {
         return;
       }
 
-      set({ eliminated, hp: nextHp });
+      set({ eliminated, hp: nextHp, scanTargets: state.scanTargets.filter((target) => target !== id) });
     },
 
     setSensitivity: (sensitivity) => set({ sensitivity }),
