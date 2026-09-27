@@ -1,114 +1,75 @@
 import { useEffect, useRef, useState } from "react";
 import { useGameStore } from "../game/store";
 
-type WeaponId = "sniper" | "rifle" | "shotgun";
-
-function FrontHand() {
+function HipWeaponArt({ weapon }: { weapon: "sniper" | "rifle" | "shotgun" }) {
   return (
-    <path
-      className="gun-hand"
-      d="M668 448
-         C642 453 620 473 617 503
-         C615 529 626 550 646 566
-         L683 554
-         C698 534 703 511 695 489
-         C690 473 681 458 668 448 Z"
-    />
-  );
-}
-
-function HipWeaponArt({ weapon }: { weapon: WeaponId }) {
-  return (
-    <svg
-      className="weapon-hip-model"
-      viewBox="0 0 1000 600"
-      preserveAspectRatio="xMidYMid slice"
-      role="presentation"
-    >
+    <svg viewBox="0 0 900 620" role="presentation">
       <defs>
-        <pattern
-          id="gun-hatch"
-          width="11"
-          height="11"
-          patternUnits="userSpaceOnUse"
-          patternTransform="rotate(29)"
-        >
+        <pattern id="gun-hatch" width="11" height="11" patternUnits="userSpaceOnUse" patternTransform="rotate(29)">
           <line x1="0" y1="0" x2="0" y2="11" className="gun-hatch-line" />
         </pattern>
-        <linearGradient id="gun-paper-depth" x1="0" x2="1" y1="0" y2="1">
-          <stop offset="0" stopColor="#fffef8" />
-          <stop offset="1" stopColor="#eef2ff" />
-        </linearGradient>
       </defs>
 
       {weapon === "rifle" && (
         <g className="gun-drawing gun-drawing--rifle">
-          <path className="gun-barrel gun-barrel--thin" d="M503 318 L615 392" />
-          <path className="gun-fill gun-hatch" d="M610 384 L660 378 L846 520 L807 560 L643 418 Z" />
-          <path className="gun-fill" d="M641 405 L701 408 L791 477 L757 515 L673 443 Z" />
-          <path className="gun-fill gun-hatch" d="M786 493 L1000 596 L960 628 L758 527 Z" />
-          <path className="gun-fill" d="M742 466 Q784 487 807 535 L769 554 Q735 516 716 481 Z" />
-
-          <path className="gun-line gun-line--thin" d="M571 355 L597 336 L631 362 L608 387 Z" />
-          <path className="gun-fill gun-optic" d="M550 337 L596 340 L625 367 L598 391 L557 385 L536 361 Z" />
-          <path className="gun-line-only" d="M558 348 L588 350 L607 367 L590 381 L564 377 L549 362 Z" />
-          <circle className="gun-dot gun-dot--red" cx="579" cy="365" r="4.5" />
-
-          <path className="gun-line gun-line--thin" d="M690 432 L719 424 L740 439" />
-          <FrontHand />
-
-          <path className="gun-perspective-line" d="M506 318 L987 604" />
+          <path className="gun-barrel" d="M237 128 L347 225" />
+          <circle className="gun-dot gun-dot--red" cx="237" cy="128" r="5" />
+          <path className="gun-fill gun-hatch" d="M337 211 L382 201 L641 438 L600 481 L365 257 Z" />
+          <path className="gun-fill" d="M374 235 L432 237 L523 320 L486 356 L401 276 Z" />
+          <path className="gun-fill gun-hatch" d="M572 403 L812 571 L770 610 L548 451 Z" />
+          <path className="gun-fill" d="M488 335 Q530 362 560 429 L518 450 Q478 398 454 355 Z" />
+          <rect className="gun-fill gun-optic" x="335" y="176" width="105" height="60" rx="8" transform="rotate(42 388 206)" />
+          <rect className="gun-line-only" x="356" y="184" width="53" height="32" rx="4" transform="rotate(42 383 200)" />
+          <path className="gun-hand" d="M491 370 Q458 397 462 459 L507 491 L545 451 L532 393 Z" />
+          <path className="gun-hand" d="M642 468 Q610 498 621 555 L674 594 L710 553 L692 500 Z" />
         </g>
       )}
 
       {weapon === "shotgun" && (
         <g className="gun-drawing gun-drawing--shotgun">
-          <path className="gun-barrel" d="M500 318 L674 420" />
-          <path className="gun-barrel gun-barrel--thin" d="M505 329 L677 430" />
-          <circle className="gun-dot gun-dot--red" cx="500" cy="318" r="5.5" />
-
-          <path className="gun-fill" d="M666 407 L710 401 L858 515 L821 554 L693 442 Z" />
-          <path className="gun-fill gun-hatch" d="M635 389 L704 403 L758 445 L717 478 L651 430 Z" />
-          <path className="gun-line gun-line--thin" d="M650 401 L711 444 M661 393 L721 435" />
-          <path className="gun-fill gun-hatch" d="M832 500 L1000 590 L961 627 L803 538 Z" />
-
-          <FrontHand />
-          <path className="gun-perspective-line" d="M504 321 L986 600" />
+          <path className="gun-barrel" d="M230 121 L350 228" />
+          <path className="gun-barrel gun-barrel--thin" d="M245 135 L361 239" />
+          <circle className="gun-dot gun-dot--red" cx="230" cy="121" r="6" />
+          <path className="gun-fill" d="M344 218 L390 206 L654 450 L611 491 L371 262 Z" />
+          <path className="gun-fill gun-hatch" d="M404 263 L486 335 L449 377 L373 302 Z" />
+          <path className="gun-line gun-line--thin" d="M403 276 L466 334 M413 266 L476 324" />
+          <path className="gun-fill" d="M492 355 L579 432 L543 471 L458 390 Z" />
+          <path className="gun-fill gun-hatch" d="M578 430 L819 577 L782 616 L548 477 Z" />
+          <path className="gun-hand" d="M483 384 Q454 410 457 464 L501 497 L538 458 L527 408 Z" />
+          <path className="gun-hand" d="M645 481 Q613 508 624 560 L674 598 L709 558 L692 507 Z" />
         </g>
       )}
 
       {weapon === "sniper" && (
         <g className="gun-drawing gun-drawing--sniper">
-          <path className="gun-barrel" d="M500 318 L646 404" />
-          <path className="gun-barrel gun-barrel--thin" d="M504 329 L650 414" />
-
-          <path className="gun-fill" d="M642 394 L686 386 L847 511 L811 554 L670 430 Z" />
-          <path className="gun-fill gun-hatch" d="M676 420 L752 450 L801 490 L763 526 L692 468 Z" />
-          <path className="gun-fill gun-hatch" d="M820 496 L1000 590 L962 628 L791 536 Z" />
-
-          <g className="sniper-scope-perspective">
-            <path className="gun-fill" d="M560 345 L612 345 L684 401 L651 431 L594 398 L546 363 Z" />
-            <ellipse className="gun-fill" cx="563" cy="355" rx="25" ry="18" transform="rotate(30 563 355)" />
-            <ellipse className="gun-line-only" cx="563" cy="355" rx="14" ry="9" transform="rotate(30 563 355)" />
-            <ellipse className="gun-fill" cx="650" cy="409" rx="37" ry="27" transform="rotate(31 650 409)" />
-            <ellipse className="gun-line-only" cx="650" cy="409" rx="22" ry="15" transform="rotate(31 650 409)" />
-            <path className="gun-line gun-line--thin" d="M597 366 L604 343 M625 385 L635 361" />
+          <path className="gun-barrel" d="M224 114 L357 232" />
+          <path className="gun-barrel gun-barrel--thin" d="M238 127 L367 242" />
+          <circle className="gun-dot" cx="224" cy="114" r="5" />
+          <path className="gun-fill" d="M349 222 L392 208 L655 450 L613 493 L376 266 Z" />
+          <path className="gun-fill gun-hatch" d="M409 267 L508 355 L469 396 L378 306 Z" />
+          <path className="gun-fill" d="M511 365 L589 435 L552 474 L475 402 Z" />
+          <path className="gun-fill gun-hatch" d="M588 438 L819 579 L783 616 L555 480 Z" />
+          <g className="sniper-scope" transform="translate(407 251) rotate(42)">
+            <rect className="gun-fill" x="-102" y="-31" width="204" height="62" rx="18" />
+            <circle className="gun-fill" cx="-95" cy="0" r="39" />
+            <circle className="gun-line-only" cx="-95" cy="0" r="24" />
+            <circle className="gun-fill" cx="95" cy="0" r="45" />
+            <circle className="gun-line-only" cx="95" cy="0" r="28" />
           </g>
-
-          <path className="gun-line gun-line--thin" d="M728 457 L758 441 L779 447" />
-          <FrontHand />
-          <path className="gun-perspective-line" d="M504 320 L987 602" />
+          <path className="gun-line gun-line--thin" d="M503 371 L543 338 L566 343" />
+          <path className="gun-hand" d="M485 389 Q454 414 458 470 L504 501 L541 462 L530 411 Z" />
+          <path className="gun-hand" d="M643 484 Q613 510 624 562 L674 599 L710 560 L694 510 Z" />
         </g>
       )}
 
-      <g className="muzzle-spark muzzle-spark--hip">
-        <path d="M501 318 l-24 -17 M501 318 l-4 -27 M501 318 l22 -21 M501 318 l28 5" />
+      <g className="muzzle-spark">
+        <path d="M230 122 l-26 -21 M230 122 l-5 -31 M230 122 l22 -23 M230 122 l31 5" />
       </g>
     </svg>
   );
 }
 
-function ScopedWeaponArt({ weapon }: { weapon: WeaponId }) {
+function ScopedWeaponArt({ weapon }: { weapon: "sniper" | "rifle" | "shotgun" }) {
   return (
     <svg className="weapon-scope-model" viewBox="0 0 1000 600" role="presentation">
       {weapon === "sniper" && (
@@ -145,6 +106,7 @@ export function WeaponView() {
   const weapon = useGameStore((state) => state.weapon);
   const scoped = useGameStore((state) => state.scoped);
   const movementMode = useGameStore((state) => state.movementMode);
+  const reloading = useGameStore((state) => state.reloading);
   const reloading = useGameStore((state) => state.reloading);
   const [kick, setKick] = useState(false);
   const kickTimer = useRef<number | null>(null);
