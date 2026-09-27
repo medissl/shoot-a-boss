@@ -1,18 +1,32 @@
 import { create } from "zustand";
-import { GRENADE_COUNT, TARGET_COUNT, WEAPONS, type WeaponId } from "./config";
+import {
+  GRENADE_COUNT,
+  MAX_LEVEL,
+  UPGRADE_CARDS,
+  WEAPONS,
+  blankUpgrades,
+  getLevelTargetCount,
+  getUpgradeStats,
+  type UpgradeCounts,
+  type UpgradeId,
+  type WeaponId,
+} from "./config";
 
 type AmmoState = Record<WeaponId, { mag: number; reserve: number }>;
+
 export type GameScreen =
   | "story"
   | "comic"
   | "menu"
   | "playing"
   | "paused"
+  | "reward"
   | "won"
   | "lost";
+
 export type MovementMode = "idle" | "walk" | "run" | "crouch" | "slide";
 
-const RELOAD_MS: Record<WeaponId, number> = {
+const BASE_RELOAD_MS: Record<Exclude<WeaponId, "knife">, number> = {
   sniper: 1750,
   rifle: 1500,
   shotgun: 2000,
@@ -21,11 +35,18 @@ const RELOAD_MS: Record<WeaponId, number> = {
 type GameStore = {
   screen: GameScreen;
   runId: number;
+  level: number;
+  maxUnlockedLevel: number;
   hp: number;
+  maxHp: number;
   weapon: WeaponId;
   ammo: AmmoState;
   grenades: number;
+  grenadeCapacity: number;
   eliminated: string[];
+  upgrades: UpgradeCounts;
+  rewardChoices: UpgradeId[];
+  rewardRerolled: boolean;
   sensitivity: number;
   bgmVolume: number;
   sfxVolume: number;
@@ -39,12 +60,15 @@ type GameStore = {
   reloadStartedAt: number;
   reloadDurationMs: number;
   reloadToken: number;
-  startGame: () => void;
+  startGame: (level?: number) => void;
   pause: () => void;
   resume: () => void;
   restart: () => void;
+  nextLevel: () => void;
   goToMenu: () => void;
   readComic: () => void;
+  chooseUpgrade: (id: UpgradeId) => void;
+  rerollRewards: () => void;
   setWeapon: (weapon: WeaponId) => void;
   cycleWeapon: (direction: 1 | -1) => void;
   spendRound: (weapon: WeaponId) => boolean;
@@ -69,22 +93,59 @@ function readStoredVolume(key: string, fallback: number) {
   return Number.isFinite(parsed) ? Math.min(1, Math.max(0, parsed)) : fallback;
 }
 
-function freshAmmo(): AmmoState {
+function readUnlockedLevel() {
+  if (typeof window === "undefined") return 1;
+  const raw = Number(window.localStorage.getItem("shoot-a-boss:unlocked-level"));
+  return Number.isFinite(raw)
+    ? Math.min(MAX_LEVEL, Math.max(1, Math.floor(raw)))
+    : 1;
+}
+
+function storeUnlockedLevel(level: number) {
+  if (typeof window !== "undefined") {
+    window.localStorage.setItem(
+      "shoot-a-boss:unlocked-level",
+      String(Math.min(MAX_LEVEL, Math.max(1, level))),
+    );
+  }
+}
+
+function magazineCapacity(weapon: WeaponId, upgrades: UpgradeCounts) {
+  if (weapon === "knife") return 1;
+  const stats = getUpgradeStats(upgrades);
+  return Math.max(
+    1,
+    Math.ceil(WEAPONS[weapon].magazine * stats.magazine),
+  );
+}
+
+function freshAmmo(upgrades: UpgradeCounts): AmmoState {
   return {
-    sniper: { mag: WEAPONS.sniper.magazine, reserve: WEAPONS.sniper.reserve },
-    rifle: { mag: WEAPONS.rifle.magazine, reserve: WEAPONS.rifle.reserve },
-    shotgun: { mag: WEAPONS.shotgun.magazine, reserve: WEAPONS.shotgun.reserve },
+    sniper: {
+      mag: magazineCapacity("sniper", upgrades),
+      reserve: WEAPONS.sniper.reserve,
+    },
+    rifle: {
+      mag: magazineCapacity("rifle", upgrades),
+      reserve: WEAPONS.rifle.reserve,
+    },
+    shotgun: {
+      mag: magazineCapacity("shotgun", upgrades),
+      reserve: WEAPONS.shotgun.reserve,
+    },
+    knife: { mag: 1, reserve: 0 },
   };
 }
 
-const weaponOrder: WeaponId[] = ["sniper", "rifle", "shotgun"];
-
-function freshRun() {
+function freshRun(upgrades: UpgradeCounts) {
+  const stats = getUpgradeStats(upgrades);
   return {
-    hp: 100,
+    hp: stats.maxHp,
+    maxHp: stats.maxHp,
     weapon: "rifle" as WeaponId,
-    ammo: freshAmmo(),
-    grenades: GRENADE_COUNT,
+    ammo: freshAmmo(upgrades),
+    grenades: stats.grenadeCapacity,
+    grenadeCapacity: stats.grenadeCapacity,
     eliminated: [] as string[],
     scoped: false,
     playerPosition: [0, 1.4, 12] as [number, number, number],
@@ -96,10 +157,26 @@ function freshRun() {
     reloadStartedAt: 0,
     reloadDurationMs: 0,
     reloadToken: 0,
+    rewardChoices: [] as UpgradeId[],
+    rewardRerolled: false,
   };
 }
 
-function cancelReload(set: (state: Partial<GameStore>) => void, get: () => GameStore) {
+function pickRewardChoices(): UpgradeId[] {
+  const pool = UPGRADE_CARDS.map((card) => card.id);
+  for (let index = pool.length - 1; index > 0; index -= 1) {
+    const swapWith = Math.floor(Math.random() * (index + 1));
+    [pool[index], pool[swapWith]] = [pool[swapWith], pool[index]];
+  }
+  return pool.slice(0, 3);
+}
+
+const weaponOrder: WeaponId[] = ["sniper", "rifle", "shotgun", "knife"];
+
+function cancelReload(
+  set: (state: Partial<GameStore>) => void,
+  get: () => GameStore,
+) {
   set({
     reloading: false,
     reloadingWeapon: null,
@@ -109,217 +186,360 @@ function cancelReload(set: (state: Partial<GameStore>) => void, get: () => GameS
   });
 }
 
-export const useGameStore = create<GameStore>((set, get) => ({
-  screen: "story",
-  runId: 0,
-  ...freshRun(),
-  sensitivity: 0.85,
-  bgmVolume: readStoredVolume("shoot-a-boss:bgm-volume", 0.34),
-  sfxVolume: readStoredVolume("shoot-a-boss:sfx-volume", 0.42),
+export const useGameStore = create<GameStore>((set, get) => {
+  const initialUpgrades = blankUpgrades();
 
-  startGame: () => {
-    set((state) => ({
-      screen: "playing",
-      runId: state.runId + 1,
-      ...freshRun(),
-    }));
-    window.dispatchEvent(
-      new CustomEvent("weapon-selected", { detail: { weapon: "rifle" as WeaponId } }),
-    );
-  },
+  return {
+    screen: "story",
+    runId: 0,
+    level: 1,
+    maxUnlockedLevel: readUnlockedLevel(),
+    upgrades: initialUpgrades,
+    ...freshRun(initialUpgrades),
+    sensitivity: 0.85,
+    bgmVolume: readStoredVolume("shoot-a-boss:bgm-volume", 0.34),
+    sfxVolume: readStoredVolume("shoot-a-boss:sfx-volume", 0.42),
 
-  pause: () => {
-    if (get().screen === "playing") {
+    startGame: (requestedLevel = 1) => {
+      const level = Math.min(
+        get().maxUnlockedLevel,
+        Math.max(1, Math.floor(requestedLevel)),
+      );
+      const upgrades = blankUpgrades();
+
+      set((state) => ({
+        screen: "playing",
+        runId: state.runId + 1,
+        level,
+        upgrades,
+        ...freshRun(upgrades),
+      }));
+
+      window.dispatchEvent(
+        new CustomEvent("weapon-selected", {
+          detail: { weapon: "rifle" as WeaponId },
+        }),
+      );
+    },
+
+    pause: () => {
+      if (get().screen === "playing") {
+        cancelReload(set, get);
+        set({ screen: "paused", scoped: false, movementMode: "idle" });
+      }
+    },
+
+    resume: () => {
+      if (get().screen === "paused") set({ screen: "playing" });
+    },
+
+    restart: () => {
+      const upgrades = get().upgrades;
+      set((state) => ({
+        screen: "playing",
+        runId: state.runId + 1,
+        ...freshRun(upgrades),
+        upgrades,
+      }));
+
+      window.dispatchEvent(
+        new CustomEvent("weapon-selected", {
+          detail: { weapon: "rifle" as WeaponId },
+        }),
+      );
+    },
+
+    nextLevel: () => {
+      const current = get().level;
+      if (current >= MAX_LEVEL) {
+        get().goToMenu();
+        return;
+      }
+
+      const level = current + 1;
+      const upgrades = get().upgrades;
+      set((state) => ({
+        screen: "playing",
+        level,
+        runId: state.runId + 1,
+        ...freshRun(upgrades),
+        upgrades,
+      }));
+
+      window.dispatchEvent(
+        new CustomEvent("weapon-selected", {
+          detail: { weapon: "rifle" as WeaponId },
+        }),
+      );
+    },
+
+    goToMenu: () => {
       cancelReload(set, get);
-      set({ screen: "paused", scoped: false, movementMode: "idle" });
-    }
-  },
+      set({
+        screen: "menu",
+        scoped: false,
+        movementMode: "idle",
+        speedBoostActive: false,
+        speedBoostUntil: 0,
+      });
+    },
 
-  resume: () => {
-    if (get().screen === "paused") set({ screen: "playing" });
-  },
+    readComic: () => {
+      cancelReload(set, get);
+      set({ screen: "comic", scoped: false, movementMode: "idle" });
+    },
 
-  restart: () => {
-    set((state) => ({
-      screen: "playing",
-      runId: state.runId + 1,
-      ...freshRun(),
-    }));
-    window.dispatchEvent(
-      new CustomEvent("weapon-selected", { detail: { weapon: "rifle" as WeaponId } }),
-    );
-  },
+    chooseUpgrade: (id) => {
+      if (get().screen !== "reward") return;
 
-  goToMenu: () => {
-    cancelReload(set, get);
-    set({
-      screen: "menu",
-      scoped: false,
-      movementMode: "idle",
-      speedBoostActive: false,
-      speedBoostUntil: 0,
-    });
-  },
+      const upgrades = {
+        ...get().upgrades,
+        [id]: get().upgrades[id] + 1,
+      };
+      const stats = getUpgradeStats(upgrades);
+      const patch: Partial<GameStore> = {
+        upgrades,
+        maxHp: stats.maxHp,
+        grenadeCapacity: stats.grenadeCapacity,
+        screen: "won",
+      };
 
-  readComic: () => {
-    cancelReload(set, get);
-    set({ screen: "comic", scoped: false, movementMode: "idle" });
-  },
+      if (id === "maxHp") {
+        patch.hp = Math.min(stats.maxHp, get().hp + 25);
+      }
+      if (id === "grenades") {
+        patch.grenades = Math.min(stats.grenadeCapacity, get().grenades + 1);
+      }
 
-  setWeapon: (weapon) => {
-    cancelReload(set, get);
-    set({ weapon, scoped: false });
-    window.dispatchEvent(
-      new CustomEvent("weapon-selected", { detail: { weapon } }),
-    );
-  },
+      set(patch);
+    },
 
-  cycleWeapon: (direction) => {
-    const current = weaponOrder.indexOf(get().weapon);
-    const next = (current + direction + weaponOrder.length) % weaponOrder.length;
-    const weapon = weaponOrder[next];
-    cancelReload(set, get);
-    set({ weapon, scoped: false });
-    window.dispatchEvent(
-      new CustomEvent("weapon-selected", { detail: { weapon } }),
-    );
-  },
+    rerollRewards: () => {
+      if (get().screen !== "reward" || get().rewardRerolled) return;
+      set({
+        rewardChoices: pickRewardChoices(),
+        rewardRerolled: true,
+      });
+    },
 
-  spendRound: (weapon) => {
-    if (get().reloading) return false;
-    const current = get().ammo[weapon];
-    if (current.mag <= 0) return false;
+    setWeapon: (weapon) => {
+      cancelReload(set, get);
+      set({ weapon, scoped: false });
+      window.dispatchEvent(
+        new CustomEvent("weapon-selected", { detail: { weapon } }),
+      );
+    },
 
-    set((state) => ({
-      ammo: {
-        ...state.ammo,
-        [weapon]: { ...current, mag: current.mag - 1 },
-      },
-    }));
-    return true;
-  },
+    cycleWeapon: (direction) => {
+      const current = weaponOrder.indexOf(get().weapon);
+      const next =
+        (current + direction + weaponOrder.length) % weaponOrder.length;
+      const weapon = weaponOrder[next];
 
-  reload: () => {
-    if (get().reloading || get().screen !== "playing") return;
+      cancelReload(set, get);
+      set({ weapon, scoped: false });
+      window.dispatchEvent(
+        new CustomEvent("weapon-selected", { detail: { weapon } }),
+      );
+    },
 
-    const weapon = get().weapon;
-    const current = get().ammo[weapon];
-    const needed = WEAPONS[weapon].magazine - current.mag;
-    const moved = Math.min(needed, current.reserve);
-    if (moved <= 0) return;
+    spendRound: (weapon) => {
+      if (weapon === "knife") return true;
+      if (get().reloading) return false;
 
-    const duration = RELOAD_MS[weapon];
-    const token = get().reloadToken + 1;
+      const current = get().ammo[weapon];
+      if (current.mag <= 0) return false;
 
-    set({
-      reloading: true,
-      reloadingWeapon: weapon,
-      reloadStartedAt: performance.now(),
-      reloadDurationMs: duration,
-      reloadToken: token,
-      scoped: false,
-    });
+      set((state) => ({
+        ammo: {
+          ...state.ammo,
+          [weapon]: { ...current, mag: current.mag - 1 },
+        },
+      }));
+      return true;
+    },
 
-    window.setTimeout(() => {
+    reload: () => {
       const state = get();
       if (
-        state.reloadToken !== token ||
-        !state.reloading ||
-        state.reloadingWeapon !== weapon ||
-        state.screen !== "playing"
+        state.reloading ||
+        state.screen !== "playing" ||
+        state.weapon === "knife"
       ) {
         return;
       }
 
-      const latest = state.ammo[weapon];
-      const latestNeeded = WEAPONS[weapon].magazine - latest.mag;
-      const latestMoved = Math.min(latestNeeded, latest.reserve);
+      const weapon = state.weapon;
+      const current = state.ammo[weapon];
+      const capacity = magazineCapacity(weapon, state.upgrades);
+      const needed = capacity - current.mag;
+      const moved = Math.min(needed, current.reserve);
+      if (moved <= 0) return;
 
-      set((currentState) => ({
-        ammo: {
-          ...currentState.ammo,
-          [weapon]: {
-            mag: latest.mag + latestMoved,
-            reserve: latest.reserve - latestMoved,
+      const stats = getUpgradeStats(state.upgrades);
+      const duration = Math.round(
+        BASE_RELOAD_MS[weapon as Exclude<WeaponId, "knife">] * stats.reload,
+      );
+      const token = state.reloadToken + 1;
+
+      set({
+        reloading: true,
+        reloadingWeapon: weapon,
+        reloadStartedAt: performance.now(),
+        reloadDurationMs: duration,
+        reloadToken: token,
+        scoped: false,
+      });
+
+      window.setTimeout(() => {
+        const latestState = get();
+        if (
+          latestState.reloadToken !== token ||
+          !latestState.reloading ||
+          latestState.reloadingWeapon !== weapon ||
+          latestState.screen !== "playing"
+        ) {
+          return;
+        }
+
+        const latest = latestState.ammo[weapon];
+        const latestCapacity = magazineCapacity(
+          weapon,
+          latestState.upgrades,
+        );
+        const latestNeeded = latestCapacity - latest.mag;
+        const latestMoved = Math.min(latestNeeded, latest.reserve);
+
+        set((currentState) => ({
+          ammo: {
+            ...currentState.ammo,
+            [weapon]: {
+              mag: latest.mag + latestMoved,
+              reserve: latest.reserve - latestMoved,
+            },
           },
-        },
-        reloading: false,
-        reloadingWeapon: null,
-        reloadStartedAt: 0,
-        reloadDurationMs: 0,
-      }));
-    }, duration);
-  },
+          reloading: false,
+          reloadingWeapon: null,
+          reloadStartedAt: 0,
+          reloadDurationMs: 0,
+        }));
+      }, duration);
+    },
 
-  spendGrenade: () => {
-    if (get().grenades <= 0) return false;
-    set((state) => ({ grenades: state.grenades - 1 }));
-    return true;
-  },
+    spendGrenade: () => {
+      if (get().grenades <= 0) return false;
+      set((state) => ({ grenades: state.grenades - 1 }));
+      return true;
+    },
 
-  refillGrenades: (amount = 1) =>
-    set((state) => ({
-      grenades: Math.min(GRENADE_COUNT, state.grenades + amount),
-    })),
+    refillGrenades: (amount = 1) =>
+      set((state) => ({
+        grenades: Math.min(
+          state.grenadeCapacity,
+          state.grenades + amount,
+        ),
+      })),
 
-  grantSpeedBoost: (durationMs = 12000) => {
-    const speedBoostUntil = performance.now() + durationMs;
-    set({ speedBoostUntil, speedBoostActive: true });
-    window.setTimeout(() => {
-      if (get().speedBoostUntil <= performance.now()) {
-        set({ speedBoostActive: false });
+    grantSpeedBoost: (durationMs = 12000) => {
+      const speedBoostUntil = performance.now() + durationMs;
+      set({ speedBoostUntil, speedBoostActive: true });
+
+      window.setTimeout(() => {
+        if (get().speedBoostUntil <= performance.now()) {
+          set({ speedBoostActive: false });
+        }
+      }, durationMs + 60);
+    },
+
+    damagePlayer: (amount) => {
+      const next = Math.max(0, get().hp - amount);
+      window.dispatchEvent(
+        new CustomEvent("player-damaged", { detail: { amount } }),
+      );
+      set({
+        hp: next,
+        ...(next === 0
+          ? { screen: "lost" as const, scoped: false }
+          : {}),
+      });
+    },
+
+    eliminate: (id) => {
+      const state = get();
+      if (state.eliminated.includes(id)) return;
+
+      const eliminated = [...state.eliminated, id];
+      const killCount = eliminated.length;
+      const stats = getUpgradeStats(state.upgrades);
+      const healedHp =
+        stats.killHeal > 0
+          ? Math.min(state.maxHp, state.hp + stats.killHeal)
+          : state.hp;
+
+      window.dispatchEvent(
+        new CustomEvent("boss-killed", {
+          detail: { count: killCount, id },
+        }),
+      );
+
+      const cleared = killCount >= getLevelTargetCount(state.level);
+
+      if (cleared) {
+        const nextUnlocked = Math.min(
+          MAX_LEVEL,
+          Math.max(state.maxUnlockedLevel, state.level + 1),
+        );
+        storeUnlockedLevel(nextUnlocked);
+
+        set({
+          eliminated,
+          hp: healedHp,
+          maxUnlockedLevel: nextUnlocked,
+          screen: "reward",
+          scoped: false,
+          movementMode: "idle",
+          rewardChoices: pickRewardChoices(),
+          rewardRerolled: false,
+        });
+      } else {
+        set({ eliminated, hp: healedHp });
       }
-    }, durationMs + 60);
-  },
+    },
 
-  damagePlayer: (amount) => {
-    const next = Math.max(0, get().hp - amount);
-    window.dispatchEvent(
-      new CustomEvent("player-damaged", { detail: { amount } }),
-    );
-    set({ hp: next, ...(next === 0 ? { screen: "lost", scoped: false } : {}) });
-  },
+    setSensitivity: (sensitivity) => set({ sensitivity }),
 
-  eliminate: (id) => {
-    if (get().eliminated.includes(id)) return;
-    const eliminated = [...get().eliminated, id];
-    const killCount = eliminated.length;
+    setBgmVolume: (bgmVolume) => {
+      const value = Math.min(1, Math.max(0, bgmVolume));
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(
+          "shoot-a-boss:bgm-volume",
+          String(value),
+        );
+      }
+      set({ bgmVolume: value });
+    },
 
-    window.dispatchEvent(
-      new CustomEvent("boss-killed", {
-        detail: { count: killCount, id },
-      }),
-    );
+    setSfxVolume: (sfxVolume) => {
+      const value = Math.min(1, Math.max(0, sfxVolume));
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(
+          "shoot-a-boss:sfx-volume",
+          String(value),
+        );
+      }
+      set({ sfxVolume: value });
+    },
 
-    set({
-      eliminated,
-      ...(killCount >= TARGET_COUNT
-        ? { screen: "won" as const, scoped: false, movementMode: "idle" as const }
-        : {}),
-    });
-  },
+    setScoped: (scoped) => {
+      if (get().reloading && scoped) return;
+      if (get().weapon === "knife" && scoped) return;
+      set({ scoped });
+    },
 
-  setSensitivity: (sensitivity) => set({ sensitivity }),
-  setBgmVolume: (bgmVolume) => {
-    const value = Math.min(1, Math.max(0, bgmVolume));
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem("shoot-a-boss:bgm-volume", String(value));
-    }
-    set({ bgmVolume: value });
-  },
-  setSfxVolume: (sfxVolume) => {
-    const value = Math.min(1, Math.max(0, sfxVolume));
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem("shoot-a-boss:sfx-volume", String(value));
-    }
-    set({ sfxVolume: value });
-  },
-  setScoped: (scoped) => {
-    if (get().reloading && scoped) return;
-    set({ scoped });
-  },
-  setPlayerPosition: (playerPosition) => set({ playerPosition }),
-  setMovementMode: (movementMode) => {
-    if (get().movementMode !== movementMode) set({ movementMode });
-  },
-}));
+    setPlayerPosition: (playerPosition) => set({ playerPosition }),
+
+    setMovementMode: (movementMode) => {
+      if (get().movementMode !== movementMode) set({ movementMode });
+    },
+  };
+});
