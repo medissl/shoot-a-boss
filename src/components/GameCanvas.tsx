@@ -6,6 +6,7 @@ import { CombatSystem } from "./CombatSystem";
 import { Dummy } from "./Dummy";
 import { HUD } from "./HUD";
 import { MenuOverlay } from "./MenuOverlay";
+import { PaintSystem } from "./PaintSystem";
 import { PaperGrenadeSystem } from "./PaperGrenadeSystem";
 import { PickupSystem } from "./PickupSystem";
 import { PlayerController } from "./PlayerController";
@@ -25,6 +26,7 @@ export function GameCanvas() {
             <Arena />
             <PlayerController />
             <CombatSystem />
+            <PaintSystem />
             <PaperGrenadeSystem />
             <PickupSystem />
             {TARGET_SPAWNS.map((spawn, index) => {

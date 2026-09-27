@@ -25,6 +25,14 @@ type DamagePop = {
   part: HitPart;
 };
 
+type BodySplat = {
+  id: number;
+  x: number;
+  y: number;
+  size: number;
+  rotation: number;
+};
+
 const BLUE = "#2548b8";
 const PAPER = "#fbfaf4";
 const SHADE = "#dbe3ff";
@@ -38,6 +46,7 @@ function drawBoss(
   hit: boolean,
   archetype: EnemyArchetype,
   rangedWeapon: RangedWeapon,
+  dead = false,
 ) {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
@@ -74,10 +83,23 @@ function drawBoss(
   ctx.stroke();
 
   ctx.fillStyle = hit ? "#7a1730" : BLUE;
-  ctx.beginPath();
-  ctx.arc(-31, 111, 7, 0, Math.PI * 2);
-  ctx.arc(31, 111, 7, 0, Math.PI * 2);
-  ctx.fill();
+  if (dead) {
+    ctx.strokeStyle = BLUE;
+    ctx.lineWidth = 9;
+    for (const x of [-31, 31]) {
+      ctx.beginPath();
+      ctx.moveTo(x - 10, 101);
+      ctx.lineTo(x + 10, 121);
+      ctx.moveTo(x + 10, 101);
+      ctx.lineTo(x - 10, 121);
+      ctx.stroke();
+    }
+  } else {
+    ctx.beginPath();
+    ctx.arc(-31, 111, 7, 0, Math.PI * 2);
+    ctx.arc(31, 111, 7, 0, Math.PI * 2);
+    ctx.fill();
+  }
 
   // Nose.
   ctx.beginPath();
@@ -332,7 +354,13 @@ export function Dummy({
   const [pose, setPose] = useState<Pose>("idle");
   const [hitFlash, setHitFlash] = useState(false);
   const [damagePops, setDamagePops] = useState<DamagePop[]>([]);
+  const [bodySplats, setBodySplats] = useState<BodySplat[]>([]);
+  const [dead, setDead] = useState(false);
+  const [corpseGone, setCorpseGone] = useState(false);
   const nextDamagePopId = useRef(1);
+  const nextBodySplatId = useRef(1);
+  const deadAt = useRef(0);
+  const spriteMaterial = useRef<THREE.MeshBasicMaterial>(null);
 
   const canvas = useMemo(() => {
     const element = document.createElement("canvas");
@@ -342,13 +370,13 @@ export function Dummy({
   }, []);
 
   const texture = useMemo(() => {
-    drawBoss(canvas, pose, hitFlash, archetype, rangedWeapon);
+    drawBoss(canvas, pose, hitFlash, archetype, rangedWeapon, dead);
     const next = new THREE.CanvasTexture(canvas);
     next.colorSpace = THREE.SRGBColorSpace;
     next.minFilter = THREE.LinearFilter;
     next.magFilter = THREE.LinearFilter;
     return next;
-  }, [archetype, canvas, hitFlash, pose, rangedWeapon]);
+  }, [archetype, canvas, dead, hitFlash, pose, rangedWeapon]);
 
   const poseRef = useRef<Pose>("idle");
   const punchUntil = useRef(0);
@@ -396,6 +424,31 @@ export function Dummy({
       }, 760);
     };
 
+    const impactHandler = (event: Event) => {
+      const detail = (
+        event as CustomEvent<{
+          id: string;
+          point: [number, number, number];
+        }>
+      ).detail;
+      const root = group.current;
+      if (!root || detail.id !== id || dead) return;
+
+      root.updateMatrixWorld();
+      const local = root.worldToLocal(new THREE.Vector3(...detail.point));
+      const splatId = nextBodySplatId.current++;
+      setBodySplats((current) => [
+        ...current.slice(-17),
+        {
+          id: splatId,
+          x: local.x,
+          y: local.y,
+          size: 0.16 + Math.random() * 0.16,
+          rotation: Math.random() * Math.PI,
+        },
+      ]);
+    };
+
     const grenadeHandler = (event: Event) => {
       const detail = (event as CustomEvent<GrenadeDetail>).detail;
       const root = group.current;
@@ -411,27 +464,55 @@ export function Dummy({
     };
 
     window.addEventListener("boss-hit", handler as EventListener);
+    window.addEventListener("boss-impact", impactHandler as EventListener);
     window.addEventListener("paper-grenade-explode", grenadeHandler as EventListener);
     return () => {
       window.removeEventListener("boss-hit", handler as EventListener);
+      window.removeEventListener("boss-impact", impactHandler as EventListener);
       window.removeEventListener("paper-grenade-explode", grenadeHandler as EventListener);
     };
-  }, [eliminated, id]);
+  }, [dead, eliminated, id]);
 
   useEffect(() => {
-    if (hp <= 0 && !eliminated) eliminate(id);
-  }, [eliminate, eliminated, hp, id]);
+    if (hp <= 0 && !dead) {
+      deadAt.current = performance.now();
+      setDead(true);
+      if (!eliminated) eliminate(id);
+    }
+  }, [dead, eliminate, eliminated, hp, id]);
 
   useFrame((state, delta) => {
     const root = group.current;
     const warning = warningRef.current;
     const shot = shotRef.current;
 
-    if (!root || eliminated || screen !== "playing") {
+    if (!root || screen !== "playing") {
       if (warning) warning.visible = false;
       if (shot) shot.visible = false;
       return;
     }
+
+    if (dead) {
+      if (warning) warning.visible = false;
+      if (shot) shot.visible = false;
+
+      const elapsed = (performance.now() - deadAt.current) / 1000;
+      const fall = THREE.MathUtils.smoothstep(elapsed, 0, 0.72);
+      root.rotation.x = -Math.PI * 0.5 * fall;
+      root.rotation.z = -0.08 * fall;
+
+      if (spriteMaterial.current) {
+        spriteMaterial.current.opacity =
+          elapsed <= 7.1
+            ? 1
+            : THREE.MathUtils.clamp(1 - (elapsed - 7.1) / 0.9, 0, 1);
+      }
+
+      if (elapsed >= 8 && !corpseGone) setCorpseGone(true);
+      return;
+    }
+
+    if (eliminated) return;
 
     const player = new THREE.Vector3(...useGameStore.getState().playerPosition);
     const here = root.position;
@@ -544,7 +625,7 @@ export function Dummy({
     }
   });
 
-  if (eliminated) return null;
+  if (corpseGone) return null;
 
   const hpRatio = Math.max(hp, 0) / BOSS_MAX_HP;
 
@@ -557,6 +638,7 @@ export function Dummy({
         >
           <planeGeometry args={[3.35, 3.65]} />
           <meshBasicMaterial
+            ref={spriteMaterial}
             map={texture}
             transparent
             alphaTest={0.06}
@@ -564,22 +646,29 @@ export function Dummy({
           />
         </mesh>
 
-        <mesh position={[0, 3.02, 0.08]} userData={{ targetId: id, targetPart: "head" }}>
+        {!dead && (
+          <mesh position={[0, 3.02, 0.08]} userData={{ targetId: id, targetPart: "head" }}>
           <planeGeometry args={[1.42, 1.22]} />
           <meshBasicMaterial transparent opacity={0} depthWrite={false} side={THREE.DoubleSide} />
-        </mesh>
+          </mesh>
+        )}
 
-        <mesh position={[0, 1.84, 0.07]} userData={{ targetId: id, targetPart: "body" }}>
+        {!dead && (
+          <mesh position={[0, 1.84, 0.07]} userData={{ targetId: id, targetPart: "body" }}>
           <planeGeometry args={[3.15, 2.28]} />
           <meshBasicMaterial transparent opacity={0} depthWrite={false} side={THREE.DoubleSide} />
-        </mesh>
+          </mesh>
+        )}
 
-        <mesh position={[0, 0.55, 0.09]} userData={{ targetId: id, targetPart: "leg" }}>
+        {!dead && (
+          <mesh position={[0, 0.55, 0.09]} userData={{ targetId: id, targetPart: "leg" }}>
           <planeGeometry args={[2.18, 1.15]} />
           <meshBasicMaterial transparent opacity={0} depthWrite={false} side={THREE.DoubleSide} />
-        </mesh>
+          </mesh>
+        )}
 
-        <group position={[0, 3.82, 0.04]} userData={{ ignoreProjectile: true }}>
+        {!dead && (
+          <group position={[0, 3.82, 0.04]} userData={{ ignoreProjectile: true }}>
           <mesh>
             <planeGeometry args={[1.82, 0.085]} />
             <meshBasicMaterial color="#b7c6f5" />
@@ -591,7 +680,46 @@ export function Dummy({
             <planeGeometry args={[1.8, 0.06]} />
             <meshBasicMaterial color={hitFlash ? RED : BLUE} />
           </mesh>
-        </group>
+          </group>
+        )}
+
+        {bodySplats.map((splat) => (
+          <group
+            key={splat.id}
+            position={[splat.x, splat.y, 0.13]}
+            rotation={[0, 0, splat.rotation]}
+            userData={{ ignoreProjectile: true }}
+          >
+            <mesh>
+              <circleGeometry args={[splat.size, 9]} />
+              <meshBasicMaterial
+                color="#ff4f9a"
+                transparent
+                opacity={0.9}
+                side={THREE.DoubleSide}
+                depthWrite={false}
+              />
+            </mesh>
+            {[0, 1, 2, 3].map((petal) => (
+              <mesh
+                key={petal}
+                position={[
+                  Math.cos(petal * 1.57) * splat.size * 1.25,
+                  Math.sin(petal * 1.57) * splat.size * 1.25,
+                  0.001,
+                ]}
+              >
+                <circleGeometry args={[splat.size * 0.34, 7]} />
+                <meshBasicMaterial
+                  color={petal % 2 ? "#ff83b9" : "#e93682"}
+                  transparent
+                  opacity={0.78}
+                  depthWrite={false}
+                />
+              </mesh>
+            ))}
+          </group>
+        ))}
 
         {damagePops.map((pop, index) => (
           <Html

@@ -248,6 +248,25 @@ export function CombatSystem() {
         const rawPart = first.object.userData.targetPart as HitPart | undefined;
         const targetPart: HitPart =
           rawPart === "head" || rawPart === "leg" ? rawPart : "body";
+
+        window.dispatchEvent(
+          new CustomEvent("boss-impact", {
+            detail: {
+              id: targetId,
+              part: targetPart,
+              point: [first.point.x, first.point.y, first.point.z],
+            },
+          }),
+        );
+        window.dispatchEvent(
+          new CustomEvent("paint-splash", {
+            detail: {
+              position: [first.point.x, 0.025, first.point.z],
+              size: currentWeapon === "shotgun" ? 0.5 : 0.34,
+            },
+          }),
+        );
+
         const partMultiplier =
           targetPart === "head" ? 1.5 : targetPart === "leg" ? 0.3 : 1;
 
