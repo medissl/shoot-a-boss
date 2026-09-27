@@ -33,26 +33,28 @@ const A = {
   ],
 } as const;
 
-const cocking: Record<WeaponId, string> = {
+const cocking: Partial<Record<WeaponId, string>> = {
   sniper: A.sniperCock,
   rifle: A.rifleCock,
   shotgun: A.shotgunCock,
 };
 
-const reloads: Record<WeaponId, string> = {
+const reloads: Partial<Record<WeaponId, string>> = {
   sniper: A.sniperReload,
   rifle: A.rifleReload,
   shotgun: A.shotgunReload,
 };
 
-const reloadGain: Record<WeaponId, number> = {
+const reloadGain: Partial<Record<WeaponId, number>> = {
   sniper: 0.34,
   rifle: 0.24,
   shotgun: 0.17,
 };
 
 function bgmFor(screen: GameScreen) {
-  return ["playing", "paused"].includes(screen) ? A.gameBgm : A.introBgm;
+  return ["playing", "paused", "reward", "won"].includes(screen)
+    ? A.gameBgm
+    : A.introBgm;
 }
 
 export function AudioManager() {
@@ -267,7 +269,8 @@ export function AudioManager() {
       requestBgm(bgmFor(state.screen));
 
       if (state.screen === "playing") {
-        playOne(cocking[state.weapon], 0.3);
+        const path = cocking[state.weapon];
+        if (path) playOne(path, 0.3);
       }
     };
 
@@ -296,7 +299,9 @@ export function AudioManager() {
 
   useEffect(() => {
     if (!reloading || !reloadingWeapon) return;
-    playOne(reloads[reloadingWeapon], reloadGain[reloadingWeapon]);
+    const path = reloads[reloadingWeapon];
+    if (!path) return;
+    playOne(path, reloadGain[reloadingWeapon] ?? 0.25);
   }, [playOne, reloading, reloadingWeapon]);
 
   useEffect(() => {
@@ -341,7 +346,8 @@ export function AudioManager() {
     const weaponSelected = (event: Event) => {
       const selected = (event as CustomEvent<{ weapon: WeaponId }>).detail.weapon;
       if (useGameStore.getState().screen === "playing") {
-        playOne(cocking[selected], 0.3);
+        const path = cocking[selected];
+        if (path) playOne(path, 0.3);
       }
     };
 

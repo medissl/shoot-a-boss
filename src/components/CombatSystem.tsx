@@ -1,7 +1,11 @@
 import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
-import { WEAPONS, type WeaponId } from "../game/config";
+import {
+  WEAPONS,
+  getUpgradeStats,
+  type WeaponId,
+} from "../game/config";
 import { useGameStore } from "../game/store";
 
 type Trace = {
@@ -33,7 +37,10 @@ const PART_PRIORITY: Record<HitPart, number> = {
 function TraceLine({ trace }: { trace: Trace }) {
   const from = useMemo(() => new THREE.Vector3(...trace.from), [trace.from]);
   const to = useMemo(() => new THREE.Vector3(...trace.to), [trace.to]);
-  const midpoint = useMemo(() => from.clone().add(to).multiplyScalar(0.5), [from, to]);
+  const midpoint = useMemo(
+    () => from.clone().add(to).multiplyScalar(0.5),
+    [from, to],
+  );
   const length = from.distanceTo(to);
   const quaternion = useMemo(
     () =>
@@ -141,7 +148,9 @@ export function CombatSystem() {
 
   useFrame((state) => {
     const perspective = state.camera as THREE.PerspectiveCamera;
-    const wanted = scoped ? WEAPONS[weapon].scopedFov : 70;
+    const current = WEAPONS[weapon];
+    const wanted =
+      scoped && !current.melee ? current.scopedFov : 70;
     const speed =
       weapon === "sniper"
         ? scoped
@@ -150,6 +159,7 @@ export function CombatSystem() {
         : scoped
           ? 0.17
           : 0.15;
+
     perspective.fov = THREE.MathUtils.lerp(perspective.fov, wanted, speed);
     perspective.updateProjectionMatrix();
   });
@@ -166,6 +176,7 @@ export function CombatSystem() {
           hit,
         },
       ]);
+
       window.setTimeout(() => {
         setTraces((current) => current.filter((trace) => trace.id !== id));
       }, hit ? 74 : 48);
@@ -173,11 +184,14 @@ export function CombatSystem() {
 
     function addImpact(position: THREE.Vector3) {
       const id = nextImpactId.current++;
-      const sparks: [number, number, number][] = Array.from({ length: 8 }, () => [
-        (Math.random() - 0.5) * 0.42,
-        (Math.random() - 0.5) * 0.42,
-        (Math.random() - 0.5) * 0.26,
-      ]);
+      const sparks: [number, number, number][] = Array.from(
+        { length: 8 },
+        () => [
+          (Math.random() - 0.5) * 0.42,
+          (Math.random() - 0.5) * 0.42,
+          (Math.random() - 0.5) * 0.26,
+        ],
+      );
 
       setImpacts((current) => [
         ...current.slice(-14),
@@ -189,7 +203,9 @@ export function CombatSystem() {
       ]);
 
       window.setTimeout(() => {
-        setImpacts((current) => current.filter((impact) => impact.id !== id));
+        setImpacts((current) =>
+          current.filter((impact) => impact.id !== id),
+        );
       }, 100);
     }
 
@@ -198,15 +214,117 @@ export function CombatSystem() {
       if (now - emptyAlertAt.current < 800) return;
       emptyAlertAt.current = now;
       window.dispatchEvent(
-        new CustomEvent("empty-mag", { detail: { weapon: currentWeapon } }),
+        new CustomEvent("empty-mag", {
+          detail: { weapon: currentWeapon },
+        }),
+      );
+    }
+
+    function fireKnife() {
+      const state = useGameStore.getState();
+      const stats = getUpgradeStats(state.upgrades);
+      const now = performance.now();
+      const cooldown =
+        WEAPONS.knife.cooldownMs * stats.fireRate;
+
+      if (now - lastShot.current < cooldown) return;
+      lastShot.current = now;
+
+      const raycaster = new THREE.Raycaster();
+      raycaster.far = stats.knifeRange;
+      raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
+
+      const intersections = raycaster.intersectObjects(scene.children, true);
+      const first = firstProjectileIntersection(intersections);
+
+      if (first && first.distance <= stats.knifeRange) {
+        const targetId = inheritedUserData(first.object, "targetId");
+        const propId = inheritedUserData(first.object, "propId");
+        const destructibleId = inheritedUserData(
+          first.object,
+          "destructibleId",
+        );
+
+        addImpact(first.point);
+
+        if (targetId) {
+          const rawPart = first.object.userData.targetPart as
+            | HitPart
+            | undefined;
+          const part: HitPart =
+            rawPart === "head" || rawPart === "leg"
+              ? rawPart
+              : "body";
+          const partMultiplier =
+            part === "head" ? 1.5 : part === "leg" ? 0.3 : 1;
+          const damage =
+            WEAPONS.knife.damage *
+            stats.damage *
+            stats.knifeDamage *
+            partMultiplier;
+
+          window.dispatchEvent(
+            new CustomEvent("boss-impact", {
+              detail: {
+                id: targetId,
+                part,
+                point: [first.point.x, first.point.y, first.point.z],
+              },
+            }),
+          );
+          window.dispatchEvent(
+            new CustomEvent("boss-hit", {
+              detail: { id: targetId, damage, part },
+            }),
+          );
+        } else if (propId) {
+          window.dispatchEvent(
+            new CustomEvent("prop-shot", {
+              detail: {
+                id: propId,
+                direction: [
+                  raycaster.ray.direction.x,
+                  raycaster.ray.direction.y,
+                  raycaster.ray.direction.z,
+                ],
+                force: 1.8,
+              },
+            }),
+          );
+        } else if (destructibleId) {
+          window.dispatchEvent(
+            new CustomEvent("surface-hit", {
+              detail: {
+                id: destructibleId,
+                point: [first.point.x, first.point.y, first.point.z],
+                direction: [
+                  raycaster.ray.direction.x,
+                  raycaster.ray.direction.y,
+                  raycaster.ray.direction.z,
+                ],
+              },
+            }),
+          );
+        }
+      }
+
+      window.dispatchEvent(
+        new CustomEvent("weapon-fired", {
+          detail: { weapon: "knife" as WeaponId },
+        }),
       );
     }
 
     function fire(currentWeapon: WeaponId) {
       const state = useGameStore.getState();
       if (state.reloading) return;
+      if (currentWeapon === "knife") {
+        fireKnife();
+        return;
+      }
 
       const config = WEAPONS[currentWeapon];
+      const stats = getUpgradeStats(state.upgrades);
       const now = performance.now();
       const currentAmmo = state.ammo[currentWeapon];
 
@@ -215,7 +333,11 @@ export function CombatSystem() {
         return;
       }
 
-      if (now - lastShot.current < config.cooldownMs) return;
+      const cooldown =
+        config.cooldownMs *
+        (currentWeapon === "sniper" ? 1 : stats.fireRate);
+
+      if (now - lastShot.current < cooldown) return;
 
       const aimed = state.scoped;
       if (aimed && now < aimReadyAt.current) return;
@@ -227,7 +349,9 @@ export function CombatSystem() {
 
       lastShot.current = now;
 
-      const spread = aimed ? config.aimedSpread : config.hipSpread;
+      const spread =
+        (aimed ? config.aimedSpread : config.hipSpread) *
+        stats.accuracy;
       const hits = new Map<string, HitSummary>();
 
       for (let pellet = 0; pellet < config.pellets; pellet += 1) {
@@ -235,18 +359,28 @@ export function CombatSystem() {
         const spreadX = (Math.random() - 0.5) * spread;
         const spreadY = (Math.random() - 0.5) * spread;
         raycaster.far = config.maxRange;
-        raycaster.setFromCamera(new THREE.Vector2(spreadX, spreadY), camera);
-
-        const origin = raycaster.ray.origin.clone().add(
-          raycaster.ray.direction.clone().multiplyScalar(0.9),
+        raycaster.setFromCamera(
+          new THREE.Vector2(spreadX, spreadY),
+          camera,
         );
-        const intersections = raycaster.intersectObjects(scene.children, true);
+
+        const origin = raycaster.ray.origin
+          .clone()
+          .add(raycaster.ray.direction.clone().multiplyScalar(0.9));
+        const intersections = raycaster.intersectObjects(
+          scene.children,
+          true,
+        );
         const first = firstProjectileIntersection(intersections);
         const end = first
           ? first.point.clone()
           : raycaster.ray.origin
               .clone()
-              .add(raycaster.ray.direction.clone().multiplyScalar(config.maxRange));
+              .add(
+                raycaster.ray.direction
+                  .clone()
+                  .multiplyScalar(config.maxRange),
+              );
 
         const targetId = first
           ? inheritedUserData(first.object, "targetId")
@@ -258,7 +392,11 @@ export function CombatSystem() {
           ? inheritedUserData(first.object, "destructibleId")
           : undefined;
 
-        addTrace(origin, end, Boolean(targetId || propId || destructibleId));
+        addTrace(
+          origin,
+          end,
+          Boolean(targetId || propId || destructibleId),
+        );
 
         if (!first) continue;
 
@@ -307,9 +445,13 @@ export function CombatSystem() {
 
         addImpact(first.point);
 
-        const rawPart = first.object.userData.targetPart as HitPart | undefined;
+        const rawPart = first.object.userData.targetPart as
+          | HitPart
+          | undefined;
         const targetPart: HitPart =
-          rawPart === "head" || rawPart === "leg" ? rawPart : "body";
+          rawPart === "head" || rawPart === "leg"
+            ? rawPart
+            : "body";
 
         window.dispatchEvent(
           new CustomEvent("boss-impact", {
@@ -320,6 +462,7 @@ export function CombatSystem() {
             },
           }),
         );
+
         window.dispatchEvent(
           new CustomEvent("paint-splash", {
             detail: {
@@ -330,13 +473,24 @@ export function CombatSystem() {
         );
 
         const partMultiplier =
-          targetPart === "head" ? 1.5 : targetPart === "leg" ? 0.3 : 1;
+          targetPart === "head"
+            ? 1.5
+            : targetPart === "leg"
+              ? 0.3
+              : 1;
 
-        let damage = config.damage * partMultiplier;
+        let damage =
+          config.damage *
+          partMultiplier *
+          stats.damage *
+          (aimed ? stats.scopedDamage : 1);
 
         if (currentWeapon === "shotgun") {
           const fullDamageDistance = 4.5;
-          const falloffDistance = Math.max(0, first.distance - fullDamageDistance);
+          const falloffDistance = Math.max(
+            0,
+            first.distance - fullDamageDistance,
+          );
           const falloff = THREE.MathUtils.clamp(
             1 - falloffDistance / 12,
             0.06,
@@ -372,7 +526,9 @@ export function CombatSystem() {
       });
 
       window.dispatchEvent(
-        new CustomEvent("weapon-fired", { detail: { weapon: currentWeapon } }),
+        new CustomEvent("weapon-fired", {
+          detail: { weapon: currentWeapon },
+        }),
       );
     }
 
@@ -390,7 +546,8 @@ export function CombatSystem() {
 
       if (event.button === 2) {
         event.preventDefault();
-        if (state.reloading) return;
+        if (state.reloading || state.weapon === "knife") return;
+
         const currentWeapon = state.weapon;
         setScoped(true);
         aimReadyAt.current =
@@ -401,12 +558,25 @@ export function CombatSystem() {
       if (event.button !== 0 || state.reloading) return;
 
       const currentWeapon = state.weapon;
-      if (currentWeapon === "rifle" && state.ammo.rifle.mag > 0) {
+      if (
+        currentWeapon === "rifle" &&
+        state.ammo.rifle.mag > 0
+      ) {
         window.dispatchEvent(new Event("rifle-trigger-down"));
       }
+
       fire(currentWeapon);
 
-      if (currentWeapon === "rifle" && autoFire.current === null) {
+      if (
+        currentWeapon === "rifle" &&
+        autoFire.current === null
+      ) {
+        const stats = getUpgradeStats(state.upgrades);
+        const interval = Math.max(
+          55,
+          WEAPONS.rifle.cooldownMs * stats.fireRate,
+        );
+
         autoFire.current = window.setInterval(() => {
           const liveState = useGameStore.getState();
           if (
@@ -418,8 +588,9 @@ export function CombatSystem() {
             stopAutoFire();
             return;
           }
+
           fire("rifle");
-        }, WEAPONS.rifle.cooldownMs);
+        }, interval);
       }
     };
 
@@ -436,6 +607,7 @@ export function CombatSystem() {
       if (event.code === "Digit1") setWeapon("sniper");
       if (event.code === "Digit2") setWeapon("rifle");
       if (event.code === "Digit3") setWeapon("shotgun");
+      if (event.code === "Digit4") setWeapon("knife");
       if (event.code === "KeyR") reload();
     };
 
@@ -444,7 +616,8 @@ export function CombatSystem() {
       cycleWeapon(event.deltaY > 0 ? 1 : -1);
     };
 
-    const contextMenu = (event: MouseEvent) => event.preventDefault();
+    const contextMenu = (event: MouseEvent) =>
+      event.preventDefault();
 
     window.addEventListener("mousedown", mouseDown);
     window.addEventListener("mouseup", mouseUp);
@@ -460,7 +633,15 @@ export function CombatSystem() {
       window.removeEventListener("wheel", wheel);
       window.removeEventListener("contextmenu", contextMenu);
     };
-  }, [camera, cycleWeapon, reload, scene, setScoped, setWeapon, spendRound]);
+  }, [
+    camera,
+    cycleWeapon,
+    reload,
+    scene,
+    setScoped,
+    setWeapon,
+    spendRound,
+  ]);
 
   useEffect(() => {
     if (screen !== "playing" || reloading) {

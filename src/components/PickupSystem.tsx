@@ -2,7 +2,7 @@ import { Edges } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { useRef, useState } from "react";
 import * as THREE from "three";
-import { PICKUP_SPAWNS } from "../game/config";
+import { getPickupSpawns } from "../game/config";
 import { useGameStore } from "../game/store";
 
 type PickupKind = "grenade" | "speed";
@@ -92,9 +92,12 @@ function Pickup({
 }
 
 export function PickupSystem() {
+  const level = useGameStore((state) => state.level);
+  const spawns = getPickupSpawns(level);
+
   return (
     <>
-      {PICKUP_SPAWNS.map((position, index) => (
+      {spawns.map((position, index) => (
         <Pickup
           key={index}
           position={position}

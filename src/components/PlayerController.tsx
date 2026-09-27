@@ -6,7 +6,7 @@ import {
 import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
-import { LADDER_ZONES } from "../game/config";
+import { getLadderZones, getUpgradeStats } from "../game/config";
 import { useGameStore } from "../game/store";
 
 const WALK_SPEED = 6.6;
@@ -38,6 +38,9 @@ export function PlayerController() {
   const { camera, gl } = useThree();
   const cameraRef = useRef(camera);
   const screen = useGameStore((state) => state.screen);
+  const level = useGameStore((state) => state.level);
+  const weapon = useGameStore((state) => state.weapon);
+  const upgrades = useGameStore((state) => state.upgrades);
   const pause = useGameStore((state) => state.pause);
   const setPlayerPosition = useGameStore((state) => state.setPlayerPosition);
   const setMovementMode = useGameStore((state) => state.setMovementMode);
@@ -201,7 +204,7 @@ export function PlayerController() {
     const now = performance.now();
     const position = rigid.translation();
 
-    const ladder = LADDER_ZONES.find(
+    const ladder = getLadderZones(level).find(
       (zone) =>
         Math.abs(position.x - zone.x) <= zone.w / 2 &&
         Math.abs(position.z - zone.z) <= zone.d / 2 &&
@@ -223,8 +226,12 @@ export function PlayerController() {
       !sliding &&
       !climbing;
 
-    const speedMultiplier =
+    const upgradeStats = getUpgradeStats(upgrades);
+    const pickupSpeed =
       now < useGameStore.getState().speedBoostUntil ? 1.62 : 1;
+    const knifeSpeed = weapon === "knife" ? 1.2 : 1;
+    const speedMultiplier =
+      pickupSpeed * upgradeStats.movement * knifeSpeed;
 
     const nearGround =
       position.y <= 1.52 ||
@@ -306,7 +313,8 @@ export function PlayerController() {
     if (wantsJump) {
       const boosted =
         now - lastCrouchAt.current <= CROUCH_BOOST_WINDOW_MS;
-      vertical = boosted ? BOOST_JUMP_SPEED : JUMP_SPEED;
+      vertical =
+        (boosted ? BOOST_JUMP_SPEED : JUMP_SPEED) * upgradeStats.jump;
 
       if (boosted) {
         const launchDirection = input.lengthSq() > 0 ? input : forward;
