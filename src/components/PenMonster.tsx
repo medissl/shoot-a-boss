@@ -210,8 +210,11 @@ export function PenMonster({
     const aware = seesPlayer || nowMs < awarenessUntil.current;
     const now = state.clock.elapsedTime;
     const motion = new THREE.Vector3();
+    let faceTarget = aware ? player : roamTarget.current;
 
     if (aware) {
+      faceTarget = player;
+
       if (distance < 10) {
         motion.addScaledVector(
           direction,
@@ -282,6 +285,7 @@ export function PenMonster({
     } else {
       if (beam) beam.visible = false;
       shotsLeft.current = 0;
+      faceTarget = roamTarget.current;
 
       if (
         roamTarget.current.lengthSq() === 0 ||
@@ -314,7 +318,7 @@ export function PenMonster({
       sideBias,
       currentLevel,
     );
-    group.lookAt(player.x, 1.2, player.z);
+    group.lookAt(faceTarget.x, 1.2, faceTarget.z);
     group.rotation.x = 0;
     group.rotation.z = dead ? group.rotation.z : 0;
   });
@@ -366,20 +370,6 @@ export function PenMonster({
           </mesh>
         )}
 
-        <mesh
-          ref={warning}
-          visible={false}
-          userData={{ ignoreProjectile: true }}
-        >
-          <boxGeometry args={[1, 1, 1]} />
-          <meshBasicMaterial
-            color={RED}
-            transparent
-            opacity={0.72}
-            depthWrite={false}
-          />
-        </mesh>
-
         {!dead && (
           <group position={[0, 3.05, 0.04]} userData={{ ignoreProjectile: true }}>
             <mesh>
@@ -414,6 +404,20 @@ export function PenMonster({
           </Html>
         ))}
       </group>
+
+      <mesh
+        ref={warning}
+        visible={false}
+        userData={{ ignoreProjectile: true }}
+      >
+        <boxGeometry args={[1, 1, 1]} />
+        <meshBasicMaterial
+          color={RED}
+          transparent
+          opacity={0.72}
+          depthWrite={false}
+        />
+      </mesh>
 
       {projectiles.map((projectile) => (
         <InkProjectile
