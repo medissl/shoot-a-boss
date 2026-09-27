@@ -132,15 +132,15 @@ export function PaperworkMonster({
     if (forwardSight.lengthSq() > 0.001) forwardSight.normalize();
 
     const seesPlayer =
-      playerDistance < 28 &&
-      (playerDistance < 6.5 ||
+      playerDistance < 37 &&
+      (playerDistance < 8 ||
         forwardSight.lengthSq() < 0.001 ||
-        forwardSight.dot(playerDirection) > -0.18) &&
+        forwardSight.dot(playerDirection) > -0.5) &&
       hasEnemyLineOfSight(here, player, 0.1);
 
     const nowMs = performance.now();
     if (seesPlayer) {
-      awarenessUntil.current = nowMs + 3900;
+      awarenessUntil.current = nowMs + 4800;
       lastSeenPosition.current.copy(player);
     }
 

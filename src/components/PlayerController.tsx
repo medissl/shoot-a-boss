@@ -33,6 +33,7 @@ export function PlayerController() {
   const pitch = useRef(0);
   const pointerLocked = useRef(false);
   const cameraTarget = useRef(new THREE.Vector3());
+  const climbingActive = useRef(false);
 
   const { camera, gl } = useThree();
   const cameraRef = useRef(camera);
@@ -81,8 +82,8 @@ export function PlayerController() {
 
       // Browsers can occasionally report huge movement deltas when pointer lock
       // engages/disengages. Capping a single event prevents instant 180°/sky snaps.
-      const dx = THREE.MathUtils.clamp(event.movementX, -72, 72);
-      const dy = THREE.MathUtils.clamp(event.movementY, -72, 72);
+      const dx = THREE.MathUtils.clamp(event.movementX, -44, 44);
+      const dy = THREE.MathUtils.clamp(event.movementY, -44, 44);
       const speed =
         LOOK_RADIANS_PER_PIXEL * useGameStore.getState().sensitivity;
 
@@ -262,8 +263,24 @@ export function PlayerController() {
 
     if (climbing && ladder) {
       slideUntil.current = 0;
+      horizontal.set(0, 0, 0);
 
-      if (climbingUp && position.y >= ladder.maxY - 0.22) {
+      if (!climbingActive.current) {
+        climbingActive.current = true;
+        rigid.setGravityScale(0, true);
+        rigid.setLinvel({ x: 0, y: 0, z: 0 }, true);
+        rigid.setTranslation(
+          {
+            x: ladder.snapX,
+            y: position.y,
+            z: ladder.snapZ,
+          },
+          true,
+        );
+      }
+
+      if (climbingUp && position.y >= ladder.maxY - 0.18) {
+        rigid.setGravityScale(1, true);
         rigid.setTranslation(
           {
             x: ladder.exitX,
@@ -273,24 +290,17 @@ export function PlayerController() {
           true,
         );
         rigid.setLinvel({ x: 0, y: 0, z: 0 }, true);
-        horizontal.set(0, 0, 0);
+        climbingActive.current = false;
         vertical = 0;
         exitedLadder = true;
       } else {
-        // Do not teleport/snap the body into the ladder every frame. A gentle
-        // horizontal correction keeps the player in front of it without camera jitter.
-        const correction = new THREE.Vector3(
-          ladder.snapX - position.x,
-          0,
-          ladder.snapZ - position.z,
-        ).multiplyScalar(5.2);
-
-        if (correction.length() > 2.4) correction.setLength(2.4);
-        horizontal.copy(correction);
         vertical = climbingDown
-          ? -CLIMB_SPEED * 0.88
+          ? -CLIMB_SPEED * 0.82
           : CLIMB_SPEED;
       }
+    } else if (climbingActive.current) {
+      climbingActive.current = false;
+      rigid.setGravityScale(1, true);
     }
 
     if (wantsJump) {

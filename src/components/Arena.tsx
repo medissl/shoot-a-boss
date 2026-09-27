@@ -264,12 +264,12 @@ function EnterableHouse() {
 }
 
 function OfficeTower() {
-  const stairStartX = 14.6;
-  const stairEndX = 27.2;
-  const stairBaseY = 0.18;
-  const stairTopY = 8.52;
-  const stairWidth = 4.7;
-  const stairSteps = 26;
+  const stairStartX = 13.8;
+  const stairEndX = 26.05;
+  const stairBaseY = 0.05;
+  const stairTopY = 8.56;
+  const stairWidth = 4.6;
+  const stairSteps = 31;
   const stairRun = stairEndX - stairStartX;
   const stairRise = stairTopY - stairBaseY;
   const stairAngle = Math.atan2(stairRise, stairRun);
@@ -278,49 +278,51 @@ function OfficeTower() {
   return (
     <group>
       <group position={[35, 0, -34]}>
-        <DoodleBox position={[0, 4.1, 0]} scale={[17.5, 8.2, 17.5]} color={PALE_BLUE} />
-        <DoodleBox position={[0, 8.35, 0]} scale={[17.9, 0.38, 17.9]} color={PAPER} />
+        {/* Hollow shell: no giant solid cube blocking the stair approach. */}
+        <DoodleBox position={[0, 0.16, 0]} scale={[17.5, 0.32, 17.5]} color={PALE_BLUE} />
+        <DoodleBox position={[0, 4.1, -8.5]} scale={[17.5, 8.2, 0.5]} color={PALE_BLUE} />
+        <DoodleBox position={[0, 4.1, 8.5]} scale={[17.5, 8.2, 0.5]} color={PALE_BLUE} />
+        <DoodleBox position={[8.5, 4.1, 0]} scale={[0.5, 8.2, 17.5]} color={PALE_BLUE} />
+        <DoodleBox position={[-8.5, 4.1, -5.65]} scale={[0.5, 8.2, 6.15]} color={PALE_BLUE} />
+        <DoodleBox position={[-8.5, 4.1, 5.65]} scale={[0.5, 8.2, 6.15]} color={PALE_BLUE} />
+
+        {/* The roof itself is the stair landing. */}
+        <DoodleBox position={[0, 8.38, 0]} scale={[17.9, 0.34, 17.9]} color={PAPER} />
 
         {[-5.2, 0, 5.2].map((x) => (
           <DoodleWindow key={x} position={[x, 3.1, 8.76]} scale={[3.0, 1.65]} />
         ))}
-        {[-4.8, 0, 4.8].map((z) => (
+        {[-4.8, 4.8].map((z) => (
           <DoodleWindow
             key={z}
-            position={[-8.76, 3.05, z]}
-            rotation={[0, Math.PI / 2, 0]}
+            position={[8.76, 3.05, z]}
+            rotation={[0, -Math.PI / 2, 0]}
             scale={[2.7, 1.55]}
           />
         ))}
 
-        <mesh position={[0, 6.4, 8.78]}>
-          <planeGeometry args={[12.5, 0.22]} />
-          <meshBasicMaterial color={BLUE} transparent opacity={0.26} />
-        </mesh>
-
-        <DoodleBox position={[-7.9, 9.0, -7.4]} scale={[1.2, 1.3, 1.2]} color={PAPER} />
         <DoodleBox position={[0, 9.0, -8.55]} scale={[12.2, 1.3, 0.45]} color={PAPER} />
         <DoodleBox position={[-5.7, 9.0, 8.55]} scale={[6.1, 1.3, 0.45]} color={PAPER} />
         <DoodleBox position={[5.7, 9.0, 8.55]} scale={[6.1, 1.3, 0.45]} color={PAPER} />
-
-        {/* West parapet is deliberately split so the stairs open directly onto the roof. */}
-        <DoodleBox position={[-8.55, 9.0, -5.9]} scale={[0.45, 1.3, 5.0]} color={PAPER} />
-        <DoodleBox position={[-8.55, 9.0, 5.9]} scale={[0.45, 1.3, 5.0]} color={PAPER} />
         <DoodleBox position={[8.55, 9.0, -5.9]} scale={[0.45, 1.3, 5.0]} color={PAPER} />
         <DoodleBox position={[8.55, 9.0, 5.9]} scale={[0.45, 1.3, 5.0]} color={PAPER} />
 
         <DoodleBox position={[0, 9.45, -5.7]} scale={[6.7, 2.0, 3.7]} color={PAPER} />
         <DoodleWindow position={[0, 9.45, -3.82]} scale={[3.0, 0.9]} />
+
+        <DoodleBox position={[-4.9, 0.65, 1.9]} scale={[4.4, 0.16, 1.6]} color={PAPER} />
+        <DoodleBox position={[2.6, 0.65, -1.6]} scale={[4.1, 0.16, 1.6]} color={PAPER} />
+        <FilingCabinet position={[5.6, 0.1, 5.2]} />
+        <PaperStack position={[-3.0, 0.22, -3.5]} />
       </group>
 
-      {/* One smooth hidden ramp is the actual walking surface. The visible steps are decorative,
-          which removes the capsule catching/bouncing on every riser. */}
+      {/* Smooth physical ramp + thin visual treads. No jumping on risers. */}
       <RigidBody type="fixed" colliders={false}>
         <CuboidCollider
-          args={[stairLength / 2, 0.18, stairWidth / 2]}
+          args={[stairLength / 2, 0.16, stairWidth / 2]}
           position={[
             (stairStartX + stairEndX) / 2,
-            (stairBaseY + stairTopY) / 2,
+            (stairBaseY + stairTopY) / 2 - 0.03,
             -34,
           ]}
           rotation={[0, 0, stairAngle]}
@@ -330,15 +332,16 @@ function OfficeTower() {
           const t = index / (stairSteps - 1);
           const x = THREE.MathUtils.lerp(stairStartX, stairEndX, t);
           const y = THREE.MathUtils.lerp(stairBaseY, stairTopY, t);
+
           return (
             <mesh
               key={index}
-              position={[x, y - 0.07, -34]}
+              position={[x, y - 0.055, -34]}
               castShadow
               receiveShadow
               userData={{ destructibleId: `stair-${index}` }}
             >
-              <boxGeometry args={[0.66, 0.14, stairWidth]} />
+              <boxGeometry args={[0.46, 0.11, stairWidth]} />
               <meshStandardMaterial
                 color={index % 2 ? PAPER : PALE_BLUE}
                 roughness={1}
@@ -348,13 +351,6 @@ function OfficeTower() {
           );
         })}
       </RigidBody>
-
-      {/* Thin landing only: nothing tall sits in the player's path anymore. */}
-      <DoodleBox
-        position={[27.75, 8.48, -34]}
-        scale={[2.2, 0.18, stairWidth]}
-        color={PAPER}
-      />
 
       <group position={[44.35, 0, -34]}>
         <mesh position={[0, 4.8, -0.76]}>
@@ -409,7 +405,7 @@ function GreenTree({
 
 function ClimbableBigTree() {
   return (
-    <group position={[2, 0, 44]}>
+    <group position={[-32, 0, 35]}>
       <RigidBody type="fixed" colliders="hull">
         <mesh position={[0, 3.1, 0]} castShadow>
           <cylinderGeometry args={[1.25, 1.65, 6.2, 10]} />
