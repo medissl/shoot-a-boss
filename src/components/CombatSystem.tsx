@@ -16,8 +16,8 @@ export function CombatSystem() {
   const setWeapon = useGameStore((state) => state.setWeapon);
   const cycleWeapon = useGameStore((state) => state.cycleWeapon);
 
-  useFrame(() => {
-    const perspective = camera as THREE.PerspectiveCamera;
+  useFrame((state) => {
+    const perspective = state.camera as THREE.PerspectiveCamera;
     const wanted = scoped ? WEAPONS[weapon].scopedFov : 70;
     perspective.fov = THREE.MathUtils.lerp(perspective.fov, wanted, 0.18);
     perspective.updateProjectionMatrix();
