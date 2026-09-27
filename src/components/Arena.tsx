@@ -1,7 +1,7 @@
 import { Edges } from "@react-three/drei";
 import { CuboidCollider, RigidBody } from "@react-three/rapier";
 import * as THREE from "three";
-import { ARENA_HALF_SIZE } from "../game/config";
+import { ARENA_HALF_SIZE, ARENA_OBSTACLES } from "../game/config";
 
 const BLUE = "#2548b8";
 const PAPER = "#fbfaf4";
@@ -95,16 +95,55 @@ function GiantCoffee({ position }: { position: [number, number, number] }) {
   );
 }
 
+function DeskCluster({
+  position,
+  rotation = 0,
+}: {
+  position: [number, number, number];
+  rotation?: number;
+}) {
+  return (
+    <group position={position} rotation={[0, rotation, 0]}>
+      <DoodleBox position={[0, 0.72, 0]} scale={[4.2, 0.18, 1.6]} color={PAPER} />
+      <DoodleBox position={[-1.55, 0.35, 0]} scale={[0.18, 0.7, 1.35]} color={PALE_BLUE} />
+      <DoodleBox position={[1.55, 0.35, 0]} scale={[0.18, 0.7, 1.35]} color={PALE_BLUE} />
+      <mesh position={[0, 1.34, -0.15]} rotation={[0, 0, -0.03]}>
+        <planeGeometry args={[1.45, 0.9]} />
+        <meshBasicMaterial color={PALE_BLUE} />
+        <Edges color={BLUE} threshold={4} />
+      </mesh>
+    </group>
+  );
+}
+
+function PaperStack({ position }: { position: [number, number, number] }) {
+  return (
+    <group position={position}>
+      {Array.from({ length: 6 }, (_, index) => (
+        <mesh
+          key={index}
+          position={[index % 2 ? 0.07 : -0.05, index * 0.085, 0]}
+          rotation={[0, index % 2 ? 0.04 : -0.03, index % 3 ? 0.015 : -0.02]}
+        >
+          <boxGeometry args={[1.25, 0.08, 0.9]} />
+          <meshBasicMaterial color={index % 2 ? PALE_BLUE : PAPER} />
+          <Edges color={BLUE} threshold={3} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
 function DreamDome() {
   return (
-    <group position={[0, -3.8, 0]}>
+    <group position={[0, -4.5, 0]}>
       <mesh>
-        <sphereGeometry args={[43, 18, 9, 0, Math.PI * 2, 0, Math.PI / 2]} />
+        <sphereGeometry args={[57, 22, 11, 0, Math.PI * 2, 0, Math.PI / 2]} />
         <meshBasicMaterial
           color={BLUE}
           wireframe
           transparent
-          opacity={0.16}
+          opacity={0.13}
           side={THREE.BackSide}
           depthWrite={false}
         />
@@ -114,14 +153,16 @@ function DreamDome() {
 }
 
 export function Arena() {
+  const size = ARENA_HALF_SIZE * 2;
+
   return (
     <>
       <color attach="background" args={[PAPER]} />
-      <fog attach="fog" args={[PAPER, 42, 88]} />
+      <fog attach="fog" args={[PAPER, 58, 122]} />
       <hemisphereLight intensity={1.65} color="#ffffff" groundColor="#dce2f4" />
       <directionalLight
         castShadow
-        position={[12, 22, 8]}
+        position={[18, 27, 12]}
         intensity={1.75}
         color="#ffffff"
         shadow-mapSize={[1024, 1024]}
@@ -132,35 +173,47 @@ export function Arena() {
       <RigidBody type="fixed" colliders={false}>
         <CuboidCollider args={[ARENA_HALF_SIZE, 0.2, ARENA_HALF_SIZE]} position={[0, -0.2, 0]} />
         <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-          <planeGeometry args={[ARENA_HALF_SIZE * 2, ARENA_HALF_SIZE * 2, 20, 20]} />
+          <planeGeometry args={[size, size, 26, 26]} />
           <meshStandardMaterial color={PAPER} roughness={1} />
         </mesh>
-        <gridHelper
-          args={[ARENA_HALF_SIZE * 2, 28, BLUE, "#9daee9"]}
-          position={[0, 0.012, 0]}
-        />
+        <gridHelper args={[size, 38, BLUE, "#9daee9"]} position={[0, 0.012, 0]} />
       </RigidBody>
 
-      <DoodleBox position={[0, 2.2, -ARENA_HALF_SIZE]} scale={[56, 4.4, 0.7]} />
-      <DoodleBox position={[0, 2.2, ARENA_HALF_SIZE]} scale={[56, 4.4, 0.7]} />
-      <DoodleBox position={[-ARENA_HALF_SIZE, 2.2, 0]} scale={[0.7, 4.4, 56]} />
-      <DoodleBox position={[ARENA_HALF_SIZE, 2.2, 0]} scale={[0.7, 4.4, 56]} />
+      <DoodleBox position={[0, 2.5, -ARENA_HALF_SIZE]} scale={[size, 5, 0.7]} />
+      <DoodleBox position={[0, 2.5, ARENA_HALF_SIZE]} scale={[size, 5, 0.7]} />
+      <DoodleBox position={[-ARENA_HALF_SIZE, 2.5, 0]} scale={[0.7, 5, size]} />
+      <DoodleBox position={[ARENA_HALF_SIZE, 2.5, 0]} scale={[0.7, 5, size]} />
 
-      <DoodleBox position={[-10, 2.3, -8]} scale={[8, 4.6, 6]} color={PAPER} />
-      <DoodleBox position={[10, 1.65, -6]} scale={[7, 3.3, 5]} color={PALE_BLUE} />
-      <DoodleBox position={[-15, 1.35, 8]} scale={[5, 2.7, 7]} color={PAPER} />
-      <DoodleBox position={[12, 2.75, 11]} scale={[9, 5.5, 6]} color={PALE_BLUE} />
-      <DoodleBox position={[0, 0.8, 2]} scale={[5, 1.6, 3]} color={PAPER} />
+      {ARENA_OBSTACLES.map((obstacle, index) => (
+        <DoodleBox
+          key={index}
+          position={[obstacle.x, obstacle.h / 2, obstacle.z]}
+          scale={[obstacle.w, obstacle.h, obstacle.d]}
+          color={obstacle.color === "blue" ? PALE_BLUE : PAPER}
+        />
+      ))}
 
-      <FilingCabinet position={[-22, 0, 7]} />
-      <FilingCabinet position={[19, 0, -18]} />
-      <GiantCoffee position={[2, 0, -18]} />
+      <FilingCabinet position={[-34, 0, 13]} />
+      <FilingCabinet position={[32, 0, -18]} />
+      <FilingCabinet position={[18, 0, 31]} />
+      <GiantCoffee position={[3, 0, -34]} />
 
-      <PaperTree position={[-21, 0, -10]} />
-      <PaperTree position={[-6, 0, 14]} />
-      <PaperTree position={[5, 0, 21]} />
-      <PaperTree position={[21, 0, -2]} />
-      <PaperTree position={[17, 0, 20]} />
+      <DeskCluster position={[-4, 0, 12]} rotation={0.12} />
+      <DeskCluster position={[10, 0, 4]} rotation={-0.3} />
+      <DeskCluster position={[-24, 0, -22]} rotation={0.46} />
+      <DeskCluster position={[25, 0, -27]} rotation={-0.4} />
+
+      <PaperStack position={[-8, 0.08, 7]} />
+      <PaperStack position={[19, 0.08, 21]} />
+      <PaperStack position={[-26, 0.08, 29]} />
+
+      <PaperTree position={[-34, 0, -18]} />
+      <PaperTree position={[-9, 0, 20]} />
+      <PaperTree position={[8, 0, 34]} />
+      <PaperTree position={[34, 0, 13]} />
+      <PaperTree position={[26, 0, 32]} />
+      <PaperTree position={[-33, 0, 33]} />
+      <PaperTree position={[33, 0, -34]} />
     </>
   );
 }
