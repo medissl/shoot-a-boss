@@ -3,7 +3,11 @@ import { useFrame } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { BOSS_MAX_HP } from "../game/config";
-import { moveWithAvoidance } from "../game/navigation";
+import {
+  hasEnemyLineOfSight,
+  moveWithAvoidance,
+  safeEnemySpawn,
+} from "../game/navigation";
 import { useGameStore } from "../game/store";
 
 type GrenadeDetail = {
@@ -363,6 +367,14 @@ export function Dummy({
   const eliminate = useGameStore((state) => state.eliminate);
   const screen = useGameStore((state) => state.screen);
   const drift = Number(id.split("-")[1]) % 2 === 0 ? 1 : -1;
+  const safeSpawn = useMemo(
+    () => safeEnemySpawn(spawn, ENEMY_RADIUS),
+    [spawn],
+  );
+  const roamTarget = useRef(new THREE.Vector3(...safeSpawn));
+  const nextRoamAt = useRef(0);
+  const awarenessUntil = useRef(0);
+  const lastSeenPosition = useRef(new THREE.Vector3(...safeSpawn));
 
   useEffect(() => () => texture.dispose(), [texture]);
 
@@ -383,6 +395,7 @@ export function Dummy({
           : "body";
       const popId = nextDamagePopId.current++;
 
+      awarenessUntil.current = performance.now() + 5000;
       const nextHp = Math.max(0, hpRef.current - detail.damage);
       hpRef.current = nextHp;
       setHp(nextHp);
@@ -495,99 +508,174 @@ export function Dummy({
 
     const player = new THREE.Vector3(...useGameStore.getState().playerPosition);
     const here = root.position;
-    const towardPlayer = player.clone().sub(here);
-    towardPlayer.y = 0;
-    const distance = towardPlayer.length();
-    const desired = distance > 0.001 ? towardPlayer.normalize() : new THREE.Vector3();
-    const sideways = new THREE.Vector3(-desired.z, 0, desired.x);
+    const toPlayer = player.clone().sub(here);
+    toPlayer.y = 0;
+    const playerDistance = toPlayer.length();
+    const playerDirection =
+      playerDistance > 0.001 ? toPlayer.clone().normalize() : new THREE.Vector3();
+
+    const forwardSight = new THREE.Vector3(0, 0, 1)
+      .applyQuaternion(root.quaternion)
+      .setY(0);
+    if (forwardSight.lengthSq() > 0.001) forwardSight.normalize();
+
+    const inVisionCone =
+      playerDistance < 4.6 ||
+      forwardSight.lengthSq() < 0.001 ||
+      forwardSight.dot(playerDirection) > 0.08;
+
+    const seesPlayer =
+      playerDistance < 18.5 &&
+      inVisionCone &&
+      hasEnemyLineOfSight(here, player, 0.18);
+
+    const nowMs = performance.now();
+    if (seesPlayer) {
+      awarenessUntil.current = nowMs + 3200;
+      lastSeenPosition.current.copy(player);
+    }
+
+    const aware = seesPlayer || nowMs < awarenessUntil.current;
     const motion = new THREE.Vector3();
     const now = state.clock.elapsedTime;
     const number = Number(id.split("-")[1]);
     let desiredPose: Pose = "idle";
+    let faceTarget = roamTarget.current;
 
-    if (archetype === "melee") {
-      if (distance > 1.9) {
-        motion.addScaledVector(desired, 2.7 * delta);
-        motion.addScaledVector(
-          sideways,
-          Math.sin(now * 2 + number) * 0.24 * delta * drift,
-        );
-        desiredPose = "walk";
-      } else if (now - lastPunch.current > 1.08) {
-        lastPunch.current = now;
-        punchUntil.current = now + 0.36;
-        damagePlayer(10);
+    if (!aware) {
+      aimingUntil.current = 0;
+      if (warning) warning.visible = false;
+      if (shot) shot.visible = false;
+
+      if (
+        now >= nextRoamAt.current ||
+        here.distanceTo(roamTarget.current) < 1.35
+      ) {
+        const angle = number * 1.91 + now * 0.73;
+        const radius = 5.2 + (number % 3) * 2.1;
+        const candidate: [number, number, number] = [
+          safeSpawn[0] + Math.cos(angle) * radius,
+          0,
+          safeSpawn[2] + Math.sin(angle) * radius,
+        ];
+        const next = safeEnemySpawn(candidate, ENEMY_RADIUS);
+        roamTarget.current.set(...next);
+        nextRoamAt.current = now + 3.6 + (number % 3) * 0.7;
       }
 
-      if (now < punchUntil.current) desiredPose = "punch";
+      const roamDirection = roamTarget.current.clone().sub(here).setY(0);
+      const roamDistance = roamDirection.length();
+      if (roamDistance > 0.8) {
+        roamDirection.normalize();
+        motion.addScaledVector(roamDirection, 1.35 * delta);
+        desiredPose = "walk";
+        faceTarget = roamTarget.current;
+      }
     } else {
-      const currentlyAiming = aimingUntil.current > now;
+      const target = seesPlayer ? player : lastSeenPosition.current;
+      const towardTarget = target.clone().sub(here).setY(0);
+      const targetDistance = towardTarget.length();
+      const desired =
+        targetDistance > 0.001
+          ? towardTarget.clone().normalize()
+          : new THREE.Vector3();
+      const sideways = new THREE.Vector3(-desired.z, 0, desired.x);
+      faceTarget = target;
 
-      if (currentlyAiming) {
-        desiredPose = "aim";
-        if (warning) {
-          const muzzle = here.clone().add(new THREE.Vector3(0, 2.25, 0));
-          setBeam(warning, muzzle, telegraphTarget.current, 0.018);
-          warning.visible = true;
-        }
-      } else {
-        if (warning) warning.visible = false;
-
-        if (aimingUntil.current > 0 && now >= aimingUntil.current) {
-          const muzzle = here.clone().add(new THREE.Vector3(0, 2.25, 0));
-          shotTarget.current.copy(telegraphTarget.current);
-          shotVisibleUntil.current = now + 0.095;
-
-          if (player.distanceTo(telegraphTarget.current) < 1.65) {
-            damagePlayer(rangedWeapon === "bow" ? 14 : 12);
-          }
-
-          aimingUntil.current = 0;
-          nextRangedShot.current = now + 2.35 + (number % 3) * 0.22;
-
-          if (shot) {
-            setBeam(shot, muzzle, shotTarget.current, 0.034);
-            shot.visible = true;
-          }
-        }
-
-        if (distance < 9) {
-          motion.addScaledVector(desired, -3.1 * delta);
-          motion.addScaledVector(sideways, 0.95 * delta * drift);
-          desiredPose = "walk";
-        } else if (distance > 20) {
-          motion.addScaledVector(desired, 2.05 * delta);
-          desiredPose = "walk";
-        } else {
+      if (archetype === "melee") {
+        if (targetDistance > 1.9) {
+          motion.addScaledVector(desired, 2.7 * delta);
           motion.addScaledVector(
             sideways,
-            Math.sin(now * 1.6 + number) * 1.05 * delta * drift,
+            Math.sin(now * 2 + number) * 0.24 * delta * drift,
           );
           desiredPose = "walk";
+        } else if (
+          seesPlayer &&
+          playerDistance < 2.0 &&
+          now - lastPunch.current > 1.08
+        ) {
+          lastPunch.current = now;
+          punchUntil.current = now + 0.36;
+          damagePlayer(10);
+        }
 
-          if (now >= nextRangedShot.current) {
-            telegraphTarget.current.copy(player);
-            telegraphTarget.current.y += 0.35;
-            aimingUntil.current = now + 0.78;
-            desiredPose = "aim";
+        if (now < punchUntil.current) desiredPose = "punch";
+      } else {
+        const currentlyAiming = aimingUntil.current > now;
+
+        if (currentlyAiming && seesPlayer) {
+          desiredPose = "aim";
+          if (warning) {
+            const muzzle = here.clone().add(new THREE.Vector3(0, 2.25, 0));
+            setBeam(warning, muzzle, telegraphTarget.current, 0.018);
+            warning.visible = true;
+          }
+        } else {
+          if (warning) warning.visible = false;
+
+          if (
+            aimingUntil.current > 0 &&
+            now >= aimingUntil.current &&
+            seesPlayer
+          ) {
+            const muzzle = here.clone().add(new THREE.Vector3(0, 2.25, 0));
+            shotTarget.current.copy(telegraphTarget.current);
+            shotVisibleUntil.current = now + 0.095;
+
+            if (player.distanceTo(telegraphTarget.current) < 1.65) {
+              damagePlayer(rangedWeapon === "bow" ? 14 : 12);
+            }
+
+            aimingUntil.current = 0;
+            nextRangedShot.current = now + 2.35 + (number % 3) * 0.22;
+
+            if (shot) {
+              setBeam(shot, muzzle, shotTarget.current, 0.034);
+              shot.visible = true;
+            }
+          } else if (!seesPlayer) {
+            aimingUntil.current = 0;
+          }
+
+          if (targetDistance < 9 && seesPlayer) {
+            motion.addScaledVector(desired, -2.8 * delta);
+            motion.addScaledVector(sideways, 0.9 * delta * drift);
+            desiredPose = "walk";
+          } else if (targetDistance > 18 || !seesPlayer) {
+            motion.addScaledVector(desired, 1.9 * delta);
+            desiredPose = "walk";
+          } else {
+            motion.addScaledVector(
+              sideways,
+              Math.sin(now * 1.6 + number) * 0.95 * delta * drift,
+            );
+            desiredPose = "walk";
+
+            if (seesPlayer && now >= nextRangedShot.current) {
+              telegraphTarget.current.copy(player);
+              telegraphTarget.current.y += 0.35;
+              aimingUntil.current = now + 0.78;
+              desiredPose = "aim";
+            }
           }
         }
-      }
 
-      if (shot) {
-        if (now < shotVisibleUntil.current) {
-          const muzzle = here.clone().add(new THREE.Vector3(0, 2.25, 0));
-          setBeam(shot, muzzle, shotTarget.current, 0.034);
-          shot.visible = true;
-        } else {
-          shot.visible = false;
+        if (shot) {
+          if (now < shotVisibleUntil.current) {
+            const muzzle = here.clone().add(new THREE.Vector3(0, 2.25, 0));
+            setBeam(shot, muzzle, shotTarget.current, 0.034);
+            shot.visible = true;
+          } else {
+            shot.visible = false;
+          }
         }
       }
     }
 
     moveWithAvoidance(here, motion, ENEMY_RADIUS, drift);
 
-    root.lookAt(player.x, 0, player.z);
+    root.lookAt(faceTarget.x, 0, faceTarget.z);
     root.rotation.x = 0;
     root.rotation.z = 0;
 
@@ -610,7 +698,7 @@ export function Dummy({
 
   return (
     <>
-      <group ref={group} position={spawn}>
+      <group ref={group} position={safeSpawn}>
         <mesh
           position={[0, 1.8, 0]}
           userData={{ ignoreProjectile: true }}

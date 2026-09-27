@@ -1,9 +1,13 @@
 import { Edges, Html } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { PAPER_MONSTER_MAX_HP } from "../game/config";
-import { moveWithAvoidance } from "../game/navigation";
+import {
+  hasEnemyLineOfSight,
+  moveWithAvoidance,
+  safeEnemySpawn,
+} from "../game/navigation";
 import { useGameStore } from "../game/store";
 
 const BLUE = "#2548b8";
@@ -30,6 +34,8 @@ export function PaperworkMonster({
   const nextAttackAt = useRef(0);
   const deadAt = useRef(0);
   const nextPopId = useRef(1);
+  const awarenessUntil = useRef(0);
+  const nextRoamAt = useRef(0);
   const [hp, setHp] = useState(PAPER_MONSTER_MAX_HP);
   const [hit, setHit] = useState(false);
   const [dead, setDead] = useState(false);
@@ -41,6 +47,12 @@ export function PaperworkMonster({
   const damagePlayer = useGameStore((state) => state.damagePlayer);
   const screen = useGameStore((state) => state.screen);
   const sideBias = Number(id.split("-")[1]) % 2 === 0 ? 1 : -1;
+  const safeSpawn = useMemo(
+    () => safeEnemySpawn(spawn, MONSTER_RADIUS),
+    [spawn],
+  );
+  const roamTarget = useRef(new THREE.Vector3(...safeSpawn));
+  const lastSeenPosition = useRef(new THREE.Vector3(...safeSpawn));
 
   useEffect(() => {
     const handler = (event: Event) => {
@@ -52,6 +64,7 @@ export function PaperworkMonster({
       ).detail;
       if (detail.id !== id || dead || eliminated) return;
 
+      awarenessUntil.current = performance.now() + 4200;
       const nextHp = Math.max(0, hpRef.current - detail.damage);
       hpRef.current = nextHp;
       setHp(nextHp);
@@ -106,27 +119,88 @@ export function PaperworkMonster({
       ...useGameStore.getState().playerPosition,
     );
     const here = group.position;
-    const direction = player.clone().sub(here);
-    direction.y = 0;
-    const distance = direction.length();
+    const toPlayer = player.clone().sub(here).setY(0);
+    const playerDistance = toPlayer.length();
+    const playerDirection =
+      playerDistance > 0.001
+        ? toPlayer.clone().normalize()
+        : new THREE.Vector3();
 
-    if (distance > 0.001) {
-      direction.normalize();
-      const motion = direction.multiplyScalar(4.35 * delta);
-      moveWithAvoidance(here, motion, MONSTER_RADIUS, sideBias);
+    const forwardSight = new THREE.Vector3(0, 0, 1)
+      .applyQuaternion(group.quaternion)
+      .setY(0);
+    if (forwardSight.lengthSq() > 0.001) forwardSight.normalize();
+
+    const seesPlayer =
+      playerDistance < 15.5 &&
+      (playerDistance < 4.2 ||
+        forwardSight.lengthSq() < 0.001 ||
+        forwardSight.dot(playerDirection) > 0.06) &&
+      hasEnemyLineOfSight(here, player, 0.1);
+
+    const nowMs = performance.now();
+    if (seesPlayer) {
+      awarenessUntil.current = nowMs + 2400;
+      lastSeenPosition.current.copy(player);
     }
 
-    group.lookAt(player.x, 1.15, player.z);
+    const aware = seesPlayer || nowMs < awarenessUntil.current;
+    const now = state.clock.elapsedTime;
+    const motion = new THREE.Vector3();
+    let faceTarget = roamTarget.current;
+
+    if (aware) {
+      const target = seesPlayer ? player : lastSeenPosition.current;
+      const direction = target.clone().sub(here).setY(0);
+      const distance = direction.length();
+
+      if (distance > 0.001) {
+        direction.normalize();
+        motion.copy(direction).multiplyScalar(4.15 * delta);
+      }
+
+      faceTarget = target;
+
+      if (
+        seesPlayer &&
+        playerDistance < 1.45 &&
+        now >= nextAttackAt.current
+      ) {
+        nextAttackAt.current = now + 0.78;
+        damagePlayer(10);
+      }
+    } else {
+      if (
+        now >= nextRoamAt.current ||
+        here.distanceTo(roamTarget.current) < 0.9
+      ) {
+        const seed = Number(id.split("-")[1]) + 1;
+        const angle = seed * 2.15 + now * 0.8;
+        const candidate: [number, number, number] = [
+          safeSpawn[0] + Math.cos(angle) * 7.5,
+          0,
+          safeSpawn[2] + Math.sin(angle) * 7.5,
+        ];
+        const next = safeEnemySpawn(candidate, MONSTER_RADIUS);
+        roamTarget.current.set(...next);
+        nextRoamAt.current = now + 2.6 + seed * 0.35;
+      }
+
+      const direction = roamTarget.current.clone().sub(here).setY(0);
+      if (direction.length() > 0.7) {
+        direction.normalize();
+        motion.copy(direction).multiplyScalar(1.8 * delta);
+      }
+      faceTarget = roamTarget.current;
+    }
+
+    moveWithAvoidance(here, motion, MONSTER_RADIUS, sideBias);
+
+    group.lookAt(faceTarget.x, 1.15, faceTarget.z);
     group.rotation.x = 0;
     group.rotation.z = 0;
 
-    const now = state.clock.elapsedTime;
     group.position.y = Math.sin(now * 7.4 + sideBias) * 0.08;
-
-    if (distance < 1.45 && now >= nextAttackAt.current) {
-      nextAttackAt.current = now + 0.78;
-      damagePlayer(10);
-    }
   });
 
   if (gone) return null;
@@ -134,7 +208,7 @@ export function PaperworkMonster({
   const hpRatio = hp / PAPER_MONSTER_MAX_HP;
 
   return (
-    <group ref={root} position={spawn}>
+    <group ref={root} position={safeSpawn}>
       <mesh
         position={[0, 1.05, 0]}
         userData={{ ignoreProjectile: true }}

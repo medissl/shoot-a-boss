@@ -239,7 +239,7 @@ export function PlayerController() {
           : 0.52;
 
     camera.position.set(
-      translated.x,
+      translated.x + (climbing ? 0.48 : 0),
       translated.y + cameraHeight,
       translated.z,
     );
