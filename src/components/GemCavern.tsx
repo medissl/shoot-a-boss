@@ -1,7 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useRef } from "react";
+import { useFrame } from "@react-three/fiber";
 import { CuboidCollider, RigidBody, TrimeshCollider } from "@react-three/rapier";
 import * as THREE from "three";
 import { CAVE_CENTER_Z, CAVE_WALL_RADIUS, CAVE_WALL_SEGMENTS } from "../game/levels";
+import { useGameStore } from "../game/store";
 
 const colors = ["#00f9ee", "#ea3aff", "#ffe254", "#55ff8e", "#528bff"];
 const gems: [number, number, number][] = [
@@ -12,27 +14,92 @@ const gems: [number, number, number][] = [
 ];
 
 function Crystal({ id, position }: { id: number; position: [number, number, number] }) {
-  const [lit, setLit] = useState(false);
-  useEffect(() => {
-    const handler = (event: Event) => {
-      if ((event as CustomEvent<{ id: number }>).detail.id === id) setLit(true);
-    };
-    window.addEventListener("gem-lit", handler);
-    return () => window.removeEventListener("gem-lit", handler);
-  }, [id]);
   const color = colors[id % colors.length];
-  return <group position={position} userData={{ gemId: id }}>
+  return <group position={position}>
     {[0, 1, 2, 3].map((i) => <RigidBody key={i} type="fixed" colliders="hull">
       <mesh castShadow position={[(i - 1.4) * 0.8, 0.85 + (i % 2) * 0.5, (i % 2) * 0.6]} rotation={[0.15, i * 0.7, 0.15]}>
         <octahedronGeometry args={[i === 1 ? 1.35 : 0.8, 0]} />
-        <meshStandardMaterial color={color} emissive={color} emissiveIntensity={lit ? 2.3 : 0.42} metalness={0.3} roughness={0.22} />
+        <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.58} metalness={0.3} roughness={0.22} />
       </mesh>
     </RigidBody>)}
-    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.08, 0]} userData={{ gemId: id }}>
-      <ringGeometry args={[1.55, 1.82, 16]} />
-      <meshBasicMaterial color={lit ? "#ffffff" : "#ffed66"} side={THREE.DoubleSide} transparent opacity={lit ? 0.25 : 0.92} />
-    </mesh>
-    {lit && <pointLight position={[0, 2, 0]} color={color} intensity={8} distance={19} decay={1.4} />}
+  </group>;
+}
+
+function selectedGems(cycle: number) {
+  const count = 3 + ((cycle * 7 + 11) % 5);
+  const indices = gems.map((_, index) => index);
+  let seed = (Math.imul(cycle + 1, 1664525) + 1013904223) >>> 0;
+  for (let i = indices.length - 1; i > 0; i--) {
+    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+    const j = seed % (i + 1);
+    [indices[i], indices[j]] = [indices[j], indices[i]];
+  }
+  return indices.slice(0, count);
+}
+
+function GemLasers() {
+  const warnings = useRef<(THREE.Group | null)[]>([]);
+  const beams = useRef<(THREE.Group | null)[]>([]);
+  const elapsed = useRef(0);
+  const lastHit = useRef(0);
+  const notice = useRef("");
+  const cycleCache = useRef({ cycle: -1, indices: [] as number[] });
+  const screen = useGameStore((state) => state.screen);
+  useFrame((_, delta) => {
+    if (screen !== "playing" || useGameStore.getState().tutorialOpen) {
+      warnings.current.forEach((item) => { if (item) item.visible = false; });
+      beams.current.forEach((item) => { if (item) item.visible = false; });
+      return;
+    }
+    elapsed.current += Math.min(delta, 0.1);
+    const time = elapsed.current;
+    const cycle = Math.floor(time / 10);
+    const phase = time % 10;
+    if (cycleCache.current.cycle !== cycle) {
+      cycleCache.current = { cycle, indices: selectedGems(cycle) };
+    }
+    const warning = cycle > 0 && phase < 2;
+    const active = cycle > 0 && phase >= 2 && phase < 5;
+    const message = warning ? `GEM LASERS IN ${Math.ceil(2 - phase)}S · LEAVE THE MARKED AREAS`
+      : active ? `GEM LASERS ACTIVE · ${Math.ceil(5 - phase)}S LEFT`
+        : `NEXT GEM LASERS IN ${Math.ceil(10 - phase)}S`;
+    if (message !== notice.current) {
+      notice.current = message;
+      window.dispatchEvent(new CustomEvent("map-hazard-notice", { detail: { message } }));
+    }
+    for (let slot = 0; slot < 7; slot++) {
+      const point = gems[cycleCache.current.indices[slot]];
+      const marker = warnings.current[slot];
+      const beam = beams.current[slot];
+      if (marker) {
+        marker.visible = Boolean(point && warning);
+        if (point) marker.position.set(point[0], Math.max(0.1, point[1] - 0.45), point[2]);
+      }
+      if (beam) {
+        beam.visible = Boolean(point && active);
+        if (point) beam.position.set(point[0], point[1] + 5, point[2]);
+      }
+    }
+    if (!active || time - lastHit.current < 0.72) return;
+    const [x, y, z] = useGameStore.getState().playerPosition;
+    if (cycleCache.current.indices.some((index) => {
+      const gem = gems[index];
+      return Math.hypot(x - gem[0], z - gem[2]) < 4.3 && Math.abs(y - gem[1]) < 4.1;
+    })) {
+      const closest = cycleCache.current.indices.map((index) => gems[index]).sort((a, b) => Math.hypot(x - a[0], z - a[2]) - Math.hypot(x - b[0], z - b[2]))[0];
+      useGameStore.getState().damagePlayer(9, closest);
+      lastHit.current = time;
+    }
+  });
+  return <group userData={{ ignoreProjectile: true }}>
+    {Array.from({ length: 7 }, (_, slot) => <group key={`warning-${slot}`} ref={(node) => { warnings.current[slot] = node; }} visible={false}>
+      <mesh rotation={[-Math.PI / 2, 0, 0]}><circleGeometry args={[4.3, 24]} /><meshBasicMaterial color="#f9d34a" transparent opacity={0.3} depthWrite={false} side={THREE.DoubleSide} /></mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}><ringGeometry args={[3.8, 4.3, 24]} /><meshBasicMaterial color="#fff4a0" side={THREE.DoubleSide} /></mesh>
+    </group>)}
+    {Array.from({ length: 7 }, (_, slot) => <group key={`laser-${slot}`} ref={(node) => { beams.current[slot] = node; }} visible={false}>
+      <mesh><cylinderGeometry args={[4.3, 4.3, 10, 16, 1, true]} /><meshBasicMaterial color={colors[slot % colors.length]} transparent opacity={0.24} side={THREE.DoubleSide} depthWrite={false} /></mesh>
+      <mesh><cylinderGeometry args={[0.35, 0.35, 10, 8]} /><meshBasicMaterial color="#fffaf0" transparent opacity={0.85} depthWrite={false} /></mesh>
+    </group>)}
   </group>;
 }
 
@@ -100,6 +167,7 @@ export function GemCavern() {
     </RigidBody>)}
     <SpiralRamp />
     {gems.map((position, id) => <Crystal key={id} id={id} position={position} />)}
+    <GemLasers />
     <Minecart x={-12} z={-7} rotation={0.45} />
     <Minecart x={38} z={25} rotation={-0.3} />
     <Minecart x={-37} z={-31} rotation={1.2} />

@@ -53,7 +53,7 @@ const reloadGain: Partial<Record<WeaponId, number>> = {
 };
 
 function bgmFor(screen: GameScreen, level: number) {
-  if (!["playing", "paused", "reward", "won", "upgrade", "lost"].includes(screen)) return A.introBgm;
+  if (!["playing", "paused", "stageClear", "won", "upgrade", "lost"].includes(screen)) return A.introBgm;
   const theme = getLevelDefinition(level).theme;
   return {
     playground: "/audio/ThePlaygroundBGM.mp3",

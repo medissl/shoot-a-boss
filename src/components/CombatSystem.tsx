@@ -50,7 +50,7 @@ function TraceLine({ trace }: { trace: Trace }) {
   );
 
   return (
-    <group position={midpoint} quaternion={quaternion}>
+    <group position={midpoint} quaternion={quaternion} userData={{ ignoreProjectile: true }}>
       <mesh>
         <cylinderGeometry args={[0.005, 0.01, length, 5]} />
         <meshBasicMaterial
@@ -73,7 +73,7 @@ function TraceLine({ trace }: { trace: Trace }) {
 
 function ImpactBurst({ impact }: { impact: Impact }) {
   return (
-    <group position={impact.position}>
+    <group position={impact.position} userData={{ ignoreProjectile: true }}>
       {impact.sparks.map((offset, index) => (
         <mesh position={offset} key={index}>
           <octahedronGeometry args={[index % 2 ? 0.05 : 0.075, 0]} />
@@ -113,6 +113,13 @@ function firstProjectileIntersection(
 ) {
   return intersections.find(({ object }) => !ignoresProjectile(object));
 }
+function projectileMeshes(scene: THREE.Scene) {
+  const meshes: THREE.Object3D[] = [];
+  scene.traverse((object) => {
+    if (object instanceof THREE.Mesh && !ignoresProjectile(object)) meshes.push(object);
+  });
+  return meshes;
+}
 
 function inheritedUserData(object: THREE.Object3D, key: string) {
   let current: THREE.Object3D | null = object;
@@ -122,14 +129,6 @@ function inheritedUserData(object: THREE.Object3D, key: string) {
     current = current.parent;
   }
   return undefined;
-}
-function gemIdFor(object: THREE.Object3D): number | null {
-  let current: THREE.Object3D | null = object;
-  while (current) {
-    if (typeof current.userData.gemId === "number") return current.userData.gemId as number;
-    current = current.parent;
-  }
-  return null;
 }
 
 export function CombatSystem() {
@@ -241,7 +240,7 @@ export function CombatSystem() {
       raycaster.far = WEAPONS.knife.maxRange;
       raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
 
-      const intersections = raycaster.intersectObjects(scene.children, true);
+      const intersections = raycaster.intersectObjects(projectileMeshes(scene), false);
       const first = firstProjectileIntersection(intersections);
 
       if (first && first.distance <= WEAPONS.knife.maxRange) {
@@ -341,7 +340,7 @@ export function CombatSystem() {
       }
 
       const cooldown = config.cooldownMs *
-        (currentWeapon === "sniper" ? Math.pow(0.82, state.upgrades.sniperBolt) * (state.upgrades.sniperTwin ? 1.2 : 1) : stats.fireCooldown) *
+        (currentWeapon === "sniper" ? Math.pow(0.82, state.upgrades.sniperBolt) : stats.fireCooldown) *
         (currentWeapon === "rifle" ? Math.pow(0.88, state.upgrades.rifleOverclock) : 1);
 
       if (now - lastShot.current < cooldown) return;
@@ -360,9 +359,10 @@ export function CombatSystem() {
       const spread =
         (aimed ? config.aimedSpread : config.hipSpread) *
         stats.spread *
-        (currentWeapon === "rifle" ? Math.pow(0.78, state.upgrades.riflePrecision) * (state.upgrades.riflePower ? 1.12 : 1) : 1) *
-        (currentWeapon === "shotgun" ? Math.pow(0.75, state.upgrades.shotgunChoke) * (state.upgrades.shotgunPellets ? 1.12 : 1) : 1);
+        (currentWeapon === "rifle" ? Math.pow(0.78, state.upgrades.riflePrecision) : 1) *
+        (currentWeapon === "shotgun" ? Math.pow(0.75, state.upgrades.shotgunChoke) : 1);
       const hits = new Map<string, HitSummary>();
+      const candidates = projectileMeshes(scene);
 
       const pelletCount = currentWeapon === "sniper" && state.upgrades.sniperTwin ? 2 :
         Math.round((config.pellets + (currentWeapon === "shotgun" ? state.upgrades.shotgunPellets * 2 : 0)) * (currentWeapon === "shotgun" && state.upgrades.shotgunDouble ? 1.75 : 1));
@@ -380,10 +380,7 @@ export function CombatSystem() {
           .clone()
           .add(raycaster.ray.direction.clone().multiplyScalar(0.9));
         if (currentWeapon === "sniper" && pellet === 1) origin.x += 0.14;
-        const intersections = raycaster.intersectObjects(
-          scene.children,
-          true,
-        );
+        const intersections = raycaster.intersectObjects(candidates, false);
         const first = firstProjectileIntersection(intersections);
         const end = first
           ? first.point.clone()
@@ -404,21 +401,14 @@ export function CombatSystem() {
         const destructibleId = first
           ? inheritedUserData(first.object, "destructibleId")
           : undefined;
-        const gemId = first ? gemIdFor(first.object) : null;
 
         addTrace(
           origin,
           end,
-          Boolean(targetId || propId || destructibleId || gemId !== null),
+          Boolean(targetId || propId || destructibleId),
         );
 
         if (!first) continue;
-
-        if (gemId !== null) {
-          addImpact(first.point);
-          window.dispatchEvent(new CustomEvent("gem-lit", { detail: { id: gemId } }));
-          continue;
-        }
 
         if (propId && !targetId) {
           addImpact(first.point);
@@ -503,10 +493,9 @@ export function CombatSystem() {
           config.damage *
           (currentWeapon === "sniper" && pellet === 1 ? 0.65 : 1) *
           partMultiplier *
-          stats.damage *
-          (currentWeapon === "sniper" ? (aimed ? 1 + state.upgrades.sniperFocus * 0.2 : 1) * (state.upgrades.sniperBolt ? 0.9 : 1) : 1) *
-          (currentWeapon === "rifle" ? (1 + state.upgrades.riflePower * 0.18) * (state.upgrades.rifleFreeze ? 0.9 : 1) * (state.upgrades.rifleOverclock ? 0.91 : 1) : 1) *
-          (currentWeapon === "shotgun" ? (state.upgrades.shotgunChoke ? 0.88 : 1) * (state.upgrades.shotgunSlow ? 0.9 : 1) : 1);
+          stats.damage * (1 + state.gear.barrel * 0.06) *
+          (currentWeapon === "sniper" ? (aimed ? 1 + state.upgrades.sniperFocus * 0.2 : 1) : 1) *
+          (currentWeapon === "rifle" ? 1 + state.upgrades.riflePower * 0.18 : 1);
 
         if (currentWeapon === "shotgun") {
           const fullDamageDistance = 4.5;
@@ -521,7 +510,6 @@ export function CombatSystem() {
           );
           damage *= falloff;
           if (first.distance < 6) damage *= 1 + state.upgrades.shotgunClose * 0.25;
-          else if (state.upgrades.shotgunClose) damage *= 0.9;
         }
 
         const previous = hits.get(targetId);
@@ -543,7 +531,7 @@ export function CombatSystem() {
         piercingRay.far = config.maxRange;
         piercingRay.setFromCamera(new THREE.Vector2(0, 0), camera);
         const seen = new Set(hits.keys());
-        for (const intersection of piercingRay.intersectObjects(scene.children, true)) {
+        for (const intersection of piercingRay.intersectObjects(candidates, false)) {
           if (ignoresProjectile(intersection.object)) continue;
           const id = inheritedUserData(intersection.object, "targetId");
           if (!id) break;

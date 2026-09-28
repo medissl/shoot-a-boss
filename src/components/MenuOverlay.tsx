@@ -8,6 +8,9 @@ export function MenuOverlay() {
   const screen = useGameStore((state) => state.screen);
   const resume = useGameStore((state) => state.resume);
   const restart = useGameStore((state) => state.restart);
+  const hearts = useGameStore((state) => state.hearts);
+  const champion = useGameStore((state) => state.champion);
+  const startNewGamePlus = useGameStore((state) => state.startNewGamePlus);
   const goToMenu = useGameStore((state) => state.goToMenu);
   const sensitivity = useGameStore((state) => state.sensitivity);
   const bgmVolume = useGameStore((state) => state.bgmVolume);
@@ -19,10 +22,12 @@ export function MenuOverlay() {
   const [panel, setPanel] = useState<"settings" | "cards" | "controls">("settings");
   const [selectedCard, setSelectedCard] = useState<UpgradeId | null>(null);
 
-  if (!["paused", "won", "lost"].includes(screen)) return null;
+  if (!["paused", "purged"].includes(screen)) return null;
 
   const title =
-    screen === "won"
+    screen === "purged"
+      ? "the dream was purged."
+      : screen === "won"
       ? "deadline cleared."
       : screen === "lost"
         ? "you woke up."
@@ -33,6 +38,7 @@ export function MenuOverlay() {
       <div className={`pause-card ${panel === "cards" ? "pause-card--inventory" : ""}`}>
         <p>SHOOT A BOSS</p>
         <h2>{title}</h2>
+        <p className="campaign-hearts">{screen === "purged" ? "NO HEARTS LEFT · BACK TO LEVEL 1" : `HEARTS ${"♥".repeat(hearts)}${"♡".repeat(5 - hearts)}`}</p>
 
         <div className="pause-actions">
           {screen === "paused" && (
@@ -42,8 +48,12 @@ export function MenuOverlay() {
           )}
 
           <button type="button" onClick={restart}>
-            <RotateCcw size={15} /> RESTART
+            <RotateCcw size={15} /> {screen === "purged" ? "START AGAIN · LEVEL 1" : screen === "lost" ? "RETRY · ONE HEART SPENT" : "RESTART"}
           </button>
+
+          {screen === "won" && champion && <button type="button" onClick={startNewGamePlus}>
+            NG+ · CONTINUE WITH YOUR CARDS →
+          </button>}
 
           <button type="button" onClick={goToMenu}>
             <Home size={15} /> MAIN MENU
@@ -113,7 +123,7 @@ export function MenuOverlay() {
             </div>}
           </div>}
         </div>
-        <small className="creator-credit creator-credit--pause">made by medianto susilo</small>
+        <small className="creator-credit creator-credit--pause">Made by Medianto Susilo</small>
       </div>
     </div>
   );

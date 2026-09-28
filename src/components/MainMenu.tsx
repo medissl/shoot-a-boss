@@ -6,14 +6,18 @@ import {
   LockKeyhole,
   Play,
   SlidersHorizontal,
+  ShoppingBag,
 } from "lucide-react";
 import { LEVELS } from "../game/levels";
-import { useGameStore } from "../game/store";
+import { GEAR, gearCost, useGameStore } from "../game/store";
 import { ControlsList } from "./ControlsList";
 
 export function MainMenu() {
   const startLevel = useGameStore((state) => state.startLevel);
   const unlockedLevel = useGameStore((state) => state.unlockedLevel);
+  const hearts = useGameStore((state) => state.hearts);
+  const champion = useGameStore((state) => state.champion);
+  const startNewGamePlus = useGameStore((state) => state.startNewGamePlus);
   const readComic = useGameStore((state) => state.readComic);
   const sensitivity = useGameStore((state) => state.sensitivity);
   const bgmVolume = useGameStore((state) => state.bgmVolume);
@@ -24,13 +28,20 @@ export function MainMenu() {
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [levelSelectOpen, setLevelSelectOpen] = useState(false);
   const [controlsOpen, setControlsOpen] = useState(false);
+  const [shopOpen, setShopOpen] = useState(false);
+  const coins = useGameStore((state) => state.coins);
+  const gear = useGameStore((state) => state.gear);
+  const buyGear = useGameStore((state) => state.buyGear);
 
   return (
     <main className="main-menu-shell">
       <div className="main-menu-speed-lines" aria-hidden="true" />
+      {!levelSelectOpen && <div className="github-comic-bubble"><a href="https://github.com/medissl" target="_blank" rel="noreferrer">Checkout my github for more games!</a></div>}
       <section
         className={`main-menu-card ${levelSelectOpen ? "is-level-select" : ""}`}
       >
+        <div className="main-menu-heartbar">HEARTS {"♥".repeat(hearts)}{"♡".repeat(5 - hearts)}</div>
+        <div className="main-menu-wallet">◉ {coins} COINS</div>
         {!levelSelectOpen ? (
           <>
             <p className="main-menu-kicker">AFTER HOURS // DREAM TERMINAL</p>
@@ -44,15 +55,22 @@ export function MainMenu() {
                 type="button"
                 onClick={() => {
                   setOptionsOpen(false);
+                  setShopOpen(false);
                   setLevelSelectOpen(true);
                 }}
               >
                 <Play size={17} /> PLAY DREAM
               </button>
 
+              {unlockedLevel >= 10 && champion && <button className="ng-plus-button" type="button" onClick={startNewGamePlus}>
+                NG+ (surprised u made it this far) · {champion.ready ? `LOOP ${champion.cycle + 1}` : `CONTINUE LOOP ${champion.cycle}`}
+              </button>}
+
+              <button type="button" onClick={() => { setShopOpen((value) => !value); setOptionsOpen(false); }}><ShoppingBag size={17} /> GEAR SHOP</button>
+
               <button
                 type="button"
-                onClick={() => setOptionsOpen((value) => !value)}
+                onClick={() => { setOptionsOpen((value) => !value); setShopOpen(false); }}
               >
                 <SlidersHorizontal size={17} /> OPTIONS
               </button>
@@ -65,6 +83,16 @@ export function MainMenu() {
                 <Github size={17} /> CREATOR ↗
               </a>
             </div>
+
+            {shopOpen && <div className="gear-shop">
+              <h3>GEAR SHOP <small>PERMANENT ARTIFACTS · CARRY INTO EVERY RUN</small></h3>
+              {GEAR.map((item) => <div className="gear-shop__row" key={item.id}>
+                <div><strong>{item.name} · {gear[item.id]}/5</strong><small>{item.detail}</small></div>
+                <button type="button" disabled={gear[item.id] >= 5 || coins < gearCost(item.id, gear[item.id])} onClick={() => buyGear(item.id)}>
+                  {gear[item.id] >= 5 ? "MAXED" : `◉ ${gearCost(item.id, gear[item.id])}`}
+                </button>
+              </div>)}
+            </div>}
 
             {optionsOpen && (
               <div className="main-menu-options">
@@ -136,7 +164,8 @@ export function MainMenu() {
             <h2>CHOOSE<br />A STAGE</h2>
             <p className="stage-select__copy">
               Clear stages to unlock the next deadline. Upgrades only carry
-              forward when you continue a run.
+              forward when you continue a run. A lost round spends a heart;
+              losing all five resets the dream to Level 1.
             </p>
 
             <div className="stage-road">
@@ -166,7 +195,7 @@ export function MainMenu() {
           </div>
         )}
       </section>
-      <small className="creator-credit creator-credit--menu">made by medianto susilo</small>
+      <small className="creator-credit creator-credit--menu">Made by Medianto Susilo</small>
     </main>
   );
 }

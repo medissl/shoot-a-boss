@@ -53,10 +53,11 @@ export function HellHazards() {
   const markerRefs = useRef<(THREE.Group | null)[]>([]);
   const burstRefs = useRef<(THREE.Mesh | null)[]>([]);
   const lastDamage = useRef(0);
+  const notice = useRef("");
   const gameTime = useRef(0);
   const playerPosition = useGameStore((state) => state.playerPosition);
   const screen = useGameStore((state) => state.screen);
-  const impacts = useMemo(() => Array.from({ length: 200 }, () => ({ x: 0, z: 0, radius: 0 } as Impact)), []);
+  const impacts = useMemo(() => Array.from({ length: 5 }, () => ({ x: 0, z: 0, radius: 0 } as Impact)), []);
   useFrame((_, delta) => {
     if (screen !== "playing" || useGameStore.getState().tutorialOpen) {
       markerRefs.current.forEach((marker) => { if (marker) marker.visible = false; });
@@ -67,6 +68,14 @@ export function HellHazards() {
     const t = gameTime.current;
     const cycle = Math.max(0, Math.floor((t - 10) / 10));
     const phase = t < 10 ? -1 : (t - 10) % 10;
+    const message = phase < 0 ? `VOLCANO WARNING IN ${Math.ceil(10 - t)}S · USE STONE BRIDGES`
+      : phase < 4 ? `LAVA STRIKES IN ${Math.ceil(4 - phase)}S · DODGE RED CIRCLES`
+        : phase < 7.1 ? `LAVA STRIKES ACTIVE · ${Math.ceil(7.1 - phase)}S LEFT`
+          : `NEXT ERUPTION IN ${Math.ceil(10 - phase)}S · RIVERS BURN`;
+    if (message !== notice.current) {
+      notice.current = message;
+      window.dispatchEvent(new CustomEvent("map-hazard-notice", { detail: { message } }));
+    }
     const positions = impactsFor(cycle);
     for (let i = 0; i < 5; i++) {
       const marker = markerRefs.current[i];
@@ -91,7 +100,8 @@ export function HellHazards() {
     const inRiver = lavaX.some((x) => Math.abs(px - (x + Math.sin(pz * 0.11) * 0.65)) < 2.45 && py < 1.9 && !bridgeZ.some((z, i) => bridgeX[i] === x && Math.abs(pz - z) < 2.65));
     const inImpact = phase >= 4 && phase < 7.1 && positions.some(({ x, z, radius }) => Math.hypot(px - x, pz - z) < radius && py < 4);
     if (inRiver || inImpact) {
-      useGameStore.getState().damagePlayer(inImpact ? 14 : 7);
+      const source = inImpact ? positions.find(({ x, z, radius }) => Math.hypot(px - x, pz - z) < radius) : null;
+      useGameStore.getState().damagePlayer(inImpact ? 14 : 7, [source?.x ?? lavaX.reduce((a, b) => Math.abs(px - a) < Math.abs(px - b) ? a : b), 0, source?.z ?? pz]);
       lastDamage.current = t;
     }
   });

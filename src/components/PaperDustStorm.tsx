@@ -44,7 +44,7 @@ export function PaperDustStorm() {
     if (screen !== "playing" || useGameStore.getState().tutorialOpen || phase < 8 || phase >= 13 || elapsed - hitAt.current < 0.8) return;
     const [x, y, z] = useGameStore.getState().playerPosition;
     if (Math.abs(x - region.x) < region.w / 2 && Math.abs(z - region.z) < region.d / 2 && y < 8) {
-      useGameStore.getState().damagePlayer(11);
+      useGameStore.getState().damagePlayer(11, [region.x, 0, region.z]);
       hitAt.current = elapsed;
     }
   });

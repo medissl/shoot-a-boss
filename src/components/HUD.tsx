@@ -2,7 +2,7 @@ import type { CSSProperties } from "react";
 import { useEffect, useRef, useState } from "react";
 import { WEAPONS, type WeaponId } from "../game/config";
 import { getLevelDefinition } from "../game/levels";
-import { getUpgradeCard, type UpgradeId } from "../game/progression";
+import { UPGRADE_CARDS } from "../game/progression";
 import { useGameStore } from "../game/store";
 
 const WEAPON_ORDER: WeaponId[] = ["sniper", "rifle", "shotgun", "knife"];
@@ -28,14 +28,19 @@ export function HUD() {
   const reloading = useGameStore((state) => state.reloading);
   const reloadingWeapon = useGameStore((state) => state.reloadingWeapon);
   const reloadDurationMs = useGameStore((state) => state.reloadDurationMs);
-  const upgrades = useGameStore((state) => state.upgrades);
+  const hearts = useGameStore((state) => state.hearts);
+  const ngPlusCycle = useGameStore((state) => state.ngPlusCycle);
   const scanTargets = useGameStore((state) => state.scanTargets);
   const scanCooldownUntil = useGameStore((state) => state.scanCooldownUntil);
+  const upgrades = useGameStore((state) => state.upgrades);
+  const coins = useGameStore((state) => state.coins);
   const [now, setNow] = useState(() => performance.now());
   const [pickupNotice, setPickupNotice] = useState("");
   const [emptyAlert, setEmptyAlert] = useState(false);
   const [hazardNotice, setHazardNotice] = useState("");
   const [damageFlashKey, setDamageFlashKey] = useState(0);
+  const [damageDirection, setDamageDirection] = useState("front");
+  const [scanDirections, setScanDirections] = useState<{ id: string; edge: string; offset: number }[]>([]);
   const [killPulseKey, setKillPulseKey] = useState(0);
   const emptyTimer = useRef<number | null>(null);
   const level = getLevelDefinition(currentLevel);
@@ -57,7 +62,19 @@ export function HUD() {
       emptyTimer.current = window.setTimeout(() => setEmptyAlert(false), 1450);
     };
 
-    const damageHandler = () => setDamageFlashKey((current) => current + 1);
+    const damageHandler = (event: Event) => {
+      const source = (event as CustomEvent<{ source?: [number, number, number] }>).detail.source;
+      if (source) {
+        const { playerPosition: [px, , pz], playerYaw: yaw } = useGameStore.getState();
+        const dx = source[0] - px;
+        const dz = source[2] - pz;
+        const forward = -dx * Math.sin(yaw) - dz * Math.cos(yaw);
+        const right = dx * Math.cos(yaw) - dz * Math.sin(yaw);
+        setDamageDirection(Math.abs(right) > Math.abs(forward) ? right > 0 ? "right" : "left" : forward > 0 ? "front" : "back");
+      } else setDamageDirection("front");
+      setDamageFlashKey((current) => current + 1);
+    };
+    const scanHandler = (event: Event) => setScanDirections((event as CustomEvent<{ id: string; edge: string; offset: number }[]>).detail);
     const killHandler = () => setKillPulseKey((current) => current + 1);
     const hazardHandler = (event: Event) => setHazardNotice((event as CustomEvent<{ message: string }>).detail.message);
 
@@ -66,6 +83,7 @@ export function HUD() {
     window.addEventListener("player-damaged", damageHandler);
     window.addEventListener("boss-killed", killHandler);
     window.addEventListener("map-hazard-notice", hazardHandler);
+    window.addEventListener("scan-directions", scanHandler);
 
     return () => {
       if (emptyTimer.current) window.clearTimeout(emptyTimer.current);
@@ -74,6 +92,7 @@ export function HUD() {
       window.removeEventListener("player-damaged", damageHandler);
       window.removeEventListener("boss-killed", killHandler);
       window.removeEventListener("map-hazard-notice", hazardHandler);
+      window.removeEventListener("scan-directions", scanHandler);
     };
   }, []);
 
@@ -84,8 +103,11 @@ export function HUD() {
   return (
     <div className="hud" aria-hidden="true">
       <div className="hud-level">
-        <span>LEVEL {currentLevel}/10</span>
+        <span>{ngPlusCycle ? `NG+ ${ngPlusCycle} · ` : ""}LEVEL {currentLevel}/10</span>
         <strong>{level.name}</strong>
+        <span className="hud-hearts" aria-label={`${hearts} hearts remaining`}>
+          {Array.from({ length: 5 }, (_, index) => <b key={index} className={index < hearts ? "is-full" : ""}>{index < hearts ? "♥" : "♡"}</b>)}
+        </span>
       </div>
 
       {eliminated > 0 && (
@@ -144,13 +166,16 @@ export function HUD() {
         ))}
       </div>
       <div className="hud-owned-cards">
-        <span>CARDS · ESC TO INSPECT</span>
-        <div>{(Object.entries(upgrades) as [UpgradeId, number][]).filter(([, count]) => count > 0).map(([id, count]) => {
-          const card = getUpgradeCard(id);
-          return <span title={`${card.name} ×${count}`} className={`hud-card rarity--${card.rarity}`} key={id}>{card.glyph}{count > 1 && <small>×{count}</small>}</span>;
-        })}</div>
+        <span>YOUR CARDS · {UPGRADE_CARDS.reduce((sum, card) => sum + upgrades[card.id], 0)}</span>
+        <div className="hud-owned-cards__list">{UPGRADE_CARDS.filter((card) => upgrades[card.id] > 0).map((card) =>
+          <div key={card.id} className={`hud-card rarity--${card.rarity}`} title={card.description}>
+            <b>{card.glyph}</b><span>{card.name}</span>{upgrades[card.id] > 1 && <small>×{upgrades[card.id]}</small>}
+          </div>)}</div>
+        <small>ESC · CARD INVENTORY FOR DETAILS</small>
       </div>
-      <div className="hud-scan">Q · {scanTargets.length ? `REVEALING ${scanTargets.length}` : scanCooldownUntil > now ? `RECHARGE ${Math.ceil((scanCooldownUntil - now) / 1000)}S` : "REVEAL ENEMY"}</div>
+      <div className="hud-scan">Q · {scanTargets.length ? `MARKED ${scanTargets.length}` : scanCooldownUntil > now ? `RECHARGE ${Math.ceil((scanCooldownUntil - now) / 1000)}S` : "MARK ENEMY"}</div>
+      <div className="hud-coins">◉ {coins} COINS</div>
+      {scanDirections.map((mark) => <div key={mark.id} className={`scan-edge scan-edge--${mark.edge}`} style={{ "--edge-offset": `${mark.offset}px` } as CSSProperties}>◆<small>TARGET</small></div>)}
 
       {!scoped && (
         <div className="doodle-crosshair">
@@ -199,7 +224,7 @@ export function HUD() {
       )}
 
       {damageFlashKey > 0 && (
-        <div key={damageFlashKey} className="player-damage-vignette" />
+        <div key={damageFlashKey} className={`player-damage-vignette damage-from--${damageDirection}`}><span>{damageDirection.toUpperCase()} · HIT</span></div>
       )}
     </div>
   );

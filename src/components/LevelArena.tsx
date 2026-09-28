@@ -31,12 +31,12 @@ function WorldBase({
   return (
     <>
       <color attach="background" args={[background]} />
-      <fog attach="fog" args={[background, dark ? 25 : 84, dark ? 82 : 155]} />
-      <hemisphereLight intensity={dark ? 0.055 : 1.7} color={dark ? "#8889cc" : "#ffffff"} groundColor={wall} />
+      <fog attach="fog" args={[background, dark ? 36 : 84, dark ? 115 : 155]} />
+      <hemisphereLight intensity={dark ? 0.85 : 1.7} color={dark ? "#b9c6ff" : "#ffffff"} groundColor={wall} />
       <directionalLight
         castShadow
         position={[18, 27, 12]}
-        intensity={dark ? 0.11 : 1.85}
+        intensity={dark ? 0.95 : 1.85}
         color={dark ? "#6e80c0" : "#ffffff"}
         shadow-mapSize={[2048, 2048]}
       />
@@ -161,7 +161,7 @@ function GemArena({ hell = false }: { hell?: boolean }) {
   return (
     <>
       <WorldBase
-        floor={hell ? "#4b2322" : "#151324"}
+        floor={hell ? "#4b2322" : "#25243b"}
         wall={hell ? "#602522" : "#25283e"}
         background={hell ? "#210d15" : "#101423"}
         grid={hell ? "#ff6048" : BLUE}

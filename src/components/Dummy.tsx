@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { BOSS_MAX_HP } from "../game/config";
 import { enemyMotionFactor } from "../game/effects";
-import { getLevelDefinition } from "../game/levels";
+import { getEnemyTuning } from "../game/levels";
 import {
   hasEnemyLineOfSight,
   moveWithAvoidance,
@@ -328,7 +328,7 @@ export function Dummy({
   const group = useRef<THREE.Group>(null);
   const warningRef = useRef<THREE.Mesh>(null);
   const shotRef = useRef<THREE.Mesh>(null);
-  const maxHp = Math.round(BOSS_MAX_HP * (1 + (useGameStore.getState().currentLevel - 1) * 0.085));
+  const maxHp = Math.round(BOSS_MAX_HP * (1 + (useGameStore.getState().currentLevel + useGameStore.getState().ngPlusCycle * 10 - 1) * 0.085));
   const [hp, setHp] = useState(maxHp);
   const hpRef = useRef(maxHp);
   const [pose, setPose] = useState<Pose>("idle");
@@ -372,7 +372,9 @@ export function Dummy({
   const screen = useGameStore((state) => state.screen);
   const drift = Number(id.split("-")[1]) % 2 === 0 ? 1 : -1;
   const currentLevel = useGameStore((state) => state.currentLevel);
-  const tuning = getLevelDefinition(currentLevel).enemy;
+  const ngPlusCycle = useGameStore((state) => state.ngPlusCycle);
+  const effectiveLevel = currentLevel + ngPlusCycle * 10;
+  const tuning = getEnemyTuning(currentLevel, ngPlusCycle);
   const safeSpawn = useMemo(
     () => safeEnemySpawn(spawn, ENEMY_RADIUS, currentLevel),
     [currentLevel, spawn],
@@ -482,6 +484,7 @@ export function Dummy({
 
   useFrame((state, delta) => {
     const root = group.current;
+    if (root && !dead) useGameStore.getState().setEnemyPosition(id, [root.position.x, root.position.y + 1.9, root.position.z]);
     const warning = warningRef.current;
     const shot = shotRef.current;
 
@@ -608,11 +611,11 @@ export function Dummy({
         } else if (
           seesPlayer &&
           playerDistance < 2.0 &&
-          now - lastPunch.current > Math.max(0.73, 1.08 - (currentLevel - 1) * 0.04)
+          now - lastPunch.current > Math.max(0.73, 1.08 - (effectiveLevel - 1) * 0.04)
         ) {
           lastPunch.current = now;
           punchUntil.current = now + 0.36;
-          damagePlayer(Math.round(10 * tuning.damage));
+          damagePlayer(Math.round(10 * tuning.damage), [here.x, here.y + 2, here.z]);
         }
 
         if (now < punchUntil.current) desiredPose = "punch";
@@ -641,11 +644,12 @@ export function Dummy({
             if (player.distanceTo(telegraphTarget.current) < 1.65) {
               damagePlayer(
                 Math.round((rangedWeapon === "bow" ? 14 : 12) * tuning.damage),
+                [here.x, here.y + 2, here.z],
               );
             }
 
             aimingUntil.current = 0;
-            nextRangedShot.current = now + Math.max(1.45, 2.35 - (currentLevel - 1) * 0.1) + (number % 3) * 0.18;
+            nextRangedShot.current = now + Math.max(1.45, 2.35 - (effectiveLevel - 1) * 0.1) + (number % 3) * 0.18;
 
             if (shot) {
               setBeam(shot, muzzle, shotTarget.current, 0.034);
@@ -671,10 +675,10 @@ export function Dummy({
 
             if (seesPlayer && now >= nextRangedShot.current) {
               telegraphTarget.current.copy(player).addScaledVector(
-                playerVelocity, Math.min(0.32, playerDistance / 75) * (currentLevel - 1) / 9,
+                playerVelocity, Math.min(0.32, playerDistance / 75) * (effectiveLevel - 1) / 9,
               );
               telegraphTarget.current.y += 0.35;
-              aimingUntil.current = now + Math.max(0.55, 0.78 - (currentLevel - 1) * 0.026);
+              aimingUntil.current = now + Math.max(0.55, 0.78 - (effectiveLevel - 1) * 0.026);
               desiredPose = "aim";
             }
           }

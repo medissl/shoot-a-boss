@@ -4,6 +4,7 @@ import {
   PICKUP_SPAWNS,
   type LadderZone,
 } from "./config";
+import { isEnemyPositionBlocked } from "./navigation";
 
 export type MapTheme = "playground" | "jungle" | "gems" | "hell";
 
@@ -14,6 +15,8 @@ export type EnemyTuning = {
   bosses: number;
   paperwork: number;
   pens: number;
+  flying?: number;
+  statues?: number;
 };
 
 export type LevelDefinition = {
@@ -78,7 +81,7 @@ export const LEVELS: LevelDefinition[] = [
     subtitle: "shiny deadlines",
     theme: "gems",
     difficulty: "EASY +",
-    enemy: { speed: 1.06, vision: 1.04, damage: 0.93, bosses: 6, paperwork: 2, pens: 1 },
+    enemy: { speed: 1.06, vision: 1.04, damage: 0.93, bosses: 6, paperwork: 2, pens: 1, flying: 1 },
   },
   {
     level: 4,
@@ -86,7 +89,7 @@ export const LEVELS: LevelDefinition[] = [
     subtitle: "back to the office",
     theme: "playground",
     difficulty: "NORMAL",
-    enemy: { speed: 1.15, vision: 1.1, damage: 1.02, bosses: 7, paperwork: 2, pens: 1 },
+    enemy: { speed: 1.15, vision: 1.1, damage: 1.02, bosses: 7, paperwork: 2, pens: 1, statues: 1 },
   },
   {
     level: 5,
@@ -94,7 +97,7 @@ export const LEVELS: LevelDefinition[] = [
     subtitle: "the jungle noticed you",
     theme: "jungle",
     difficulty: "NORMAL +",
-    enemy: { speed: 1.25, vision: 1.16, damage: 1.14, bosses: 7, paperwork: 2, pens: 2 },
+    enemy: { speed: 1.25, vision: 1.16, damage: 1.14, bosses: 7, paperwork: 2, pens: 2, flying: 1, statues: 1 },
   },
   {
     level: 6,
@@ -102,7 +105,7 @@ export const LEVELS: LevelDefinition[] = [
     subtitle: "nothing stays calm",
     theme: "gems",
     difficulty: "HARD",
-    enemy: { speed: 1.36, vision: 1.22, damage: 1.26, bosses: 8, paperwork: 2, pens: 2 },
+    enemy: { speed: 1.36, vision: 1.22, damage: 1.26, bosses: 8, paperwork: 2, pens: 2, flying: 2, statues: 1 },
   },
   {
     level: 7,
@@ -110,7 +113,7 @@ export const LEVELS: LevelDefinition[] = [
     subtitle: "the shift fights back",
     theme: "playground",
     difficulty: "HARD +",
-    enemy: { speed: 1.47, vision: 1.28, damage: 1.39, bosses: 8, paperwork: 3, pens: 2 },
+    enemy: { speed: 1.47, vision: 1.28, damage: 1.39, bosses: 8, paperwork: 3, pens: 2, flying: 2, statues: 2 },
   },
   {
     level: 8,
@@ -118,7 +121,7 @@ export const LEVELS: LevelDefinition[] = [
     subtitle: "no quiet path left",
     theme: "jungle",
     difficulty: "VERY HARD",
-    enemy: { speed: 1.59, vision: 1.35, damage: 1.52, bosses: 9, paperwork: 3, pens: 2 },
+    enemy: { speed: 1.59, vision: 1.35, damage: 1.52, bosses: 9, paperwork: 3, pens: 2, flying: 2, statues: 2 },
   },
   {
     level: 9,
@@ -126,7 +129,7 @@ export const LEVELS: LevelDefinition[] = [
     subtitle: "everything is hunting",
     theme: "gems",
     difficulty: "BRUTAL",
-    enemy: { speed: 1.74, vision: 1.42, damage: 1.68, bosses: 9, paperwork: 3, pens: 3 },
+    enemy: { speed: 1.74, vision: 1.42, damage: 1.68, bosses: 9, paperwork: 3, pens: 3, flying: 3, statues: 2 },
   },
   {
     level: 10,
@@ -134,7 +137,7 @@ export const LEVELS: LevelDefinition[] = [
     subtitle: "final deadline",
     theme: "hell",
     difficulty: "ALMOST IMPOSSIBLE",
-    enemy: { speed: 1.95, vision: 1.55, damage: 1.88, bosses: 10, paperwork: 4, pens: 3 },
+    enemy: { speed: 1.95, vision: 1.55, damage: 1.88, bosses: 10, paperwork: 4, pens: 3, flying: 3, statues: 3 },
   },
 ];
 
@@ -142,9 +145,26 @@ export function getLevelDefinition(level: number) {
   return LEVELS[Math.min(10, Math.max(1, level)) - 1];
 }
 
-export function getTargetCount(level: number) {
+export function getEnemyTuning(level: number, cycle = 0): EnemyTuning {
   const enemy = getLevelDefinition(level).enemy;
-  return enemy.bosses + enemy.paperwork + enemy.pens + (getLevelDefinition(level).theme === "gems" ? 3 : 0);
+  if (cycle === 0) return enemy;
+  const previousFinal = LEVELS[9].enemy;
+  const difficulty = 1 + 0.035 * ((cycle - 1) * 10 + level);
+  return {
+    speed: previousFinal.speed * difficulty,
+    vision: previousFinal.vision * difficulty,
+    damage: previousFinal.damage * difficulty,
+    bosses: Math.max(enemy.bosses, previousFinal.bosses),
+    paperwork: Math.max(enemy.paperwork, previousFinal.paperwork),
+    pens: Math.max(enemy.pens, previousFinal.pens),
+    flying: Math.max(enemy.flying ?? 0, previousFinal.flying ?? 0),
+    statues: Math.max(enemy.statues ?? 0, previousFinal.statues ?? 0),
+  };
+}
+
+export function getTargetCount(level: number, cycle = 0) {
+  const enemy = getEnemyTuning(level, cycle);
+  return enemy.bosses + enemy.paperwork + enemy.pens + (enemy.flying ?? 0) + (enemy.statues ?? 0) + (getLevelDefinition(level).theme === "gems" ? 3 : 0);
 }
 
 const JUNGLE_BLOCKERS: NavBlocker[] = [
@@ -231,7 +251,22 @@ const SPAWN_POOL: [number, number, number][] = [
   [-31, 0, 3],
 ];
 
-export function getEnemySpawnPool(level: number) {
-  const shift = ((level * 7) % SPAWN_POOL.length);
-  return [...SPAWN_POOL.slice(shift), ...SPAWN_POOL.slice(0, shift)];
+export function getEnemySpawnPool(level: number, runId = 0, cycle = 0): [number, number, number][] {
+  // A run gets its own reproducible layout. All candidates stay on the floor,
+  // avoid the world's blockers and keep enemies spread across the arena.
+  let seed = (Math.imul(level + 29, 838347) ^ Math.imul(runId + 3, 624059) ^ Math.imul(cycle + 11, 149989)) >>> 0;
+  const random = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
+  const selected: [number, number, number][] = [];
+  const pool = [...SPAWN_POOL].sort(() => random() - 0.5);
+  const valid = (x: number, z: number) =>
+    Math.abs(x) < 44 && Math.abs(z) < 44 &&
+    Math.hypot(x, z - getPlayerSpawn(level)[2]) > 12 &&
+    !isEnemyPositionBlocked(x, z, getLevelDefinition(level).theme === "gems" || getLevelDefinition(level).theme === "hell" ? 4.6 : 1.4, level) &&
+    selected.every(([sx, , sz]) => Math.hypot(x - sx, z - sz) >= 8);
+  for (let attempt = 0; attempt < 5000 && selected.length < 34; attempt++) {
+    const candidate = attempt < pool.length ? pool[attempt] : [(random() - 0.5) * 86, 0, (random() - 0.5) * 86];
+    const [x, , z] = candidate;
+    if (valid(x, z)) selected.push([x, 0, z]);
+  }
+  return selected;
 }

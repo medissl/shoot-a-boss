@@ -2006,14 +2006,76 @@ button {
 .rarity--legendary { --rarity: #c06b09; color: #c06b09; }
 .upgrade-option[class*="rarity--"] { border-color: var(--rarity); }
 .upgrade-option__rarity { color: var(--rarity); opacity: 1 !important; }
-.hud-owned-cards { position: absolute; right: 3.8vw; bottom: calc(4.5vh + 172px); width: min(250px,27vw); padding: 6px; background: rgba(250,250,240,.89); border: 2px solid #2548b8; color: #2548b8; text-shadow: none; }
-.hud-owned-cards > span { font: 900 9px ui-monospace,monospace; }
-.hud-owned-cards > div { display: flex; gap: 4px; flex-wrap: wrap; max-height: 75px; overflow: hidden; margin-top: 4px; }
-.hud-card { min-width: 26px; padding: 3px; border: 1px solid currentColor; background: white; font-size: 17px; text-align: center; }
-.hud-card small { font: 700 9px ui-monospace,monospace; }
 .hud-scan { position: absolute; left: 20px; bottom: 26vh; padding: 5px 8px; border: 2px solid #2548b8; background: rgba(250,250,240,.87); color: #2548b8; font: 900 10px ui-monospace,monospace; text-shadow: none; }
-@media(max-width:620px) { .hud-owned-cards { right: 12px; width: 170px; bottom: calc(4.5vh + 172px); } .hud-scan { bottom: 20vh; } .controls-list { max-height: 32vh; } }
+@media(max-width:620px) { .hud-scan { bottom: 20vh; } .controls-list { max-height: 32vh; } }
 .hazard-notice { position: absolute; top: 19vh; left: 50%; transform: translateX(-50%); border: 3px solid #db4536; padding: 10px 16px; color: #8b2020; background: #fff2d6; font: 1000 14px ui-monospace,monospace; text-shadow: none; white-space: nowrap; animation: danger-pulse .7s ease-in-out infinite alternate; }
 @keyframes danger-pulse { from { opacity: .67; } to { opacity: 1; } }
 .controls-popup.is-closing { animation: tutorial-out .26s ease forwards; pointer-events: none; }
 @keyframes tutorial-out { from { opacity: 1; } to { opacity: 0; } }
+
+/* Campaign hearts and map events */
+.hud-hearts { display: flex; justify-content: center; gap: 4px; margin-top: 2px; font: 1000 17px/1 ui-rounded,sans-serif !important; color: #9d8190; letter-spacing: 0 !important; }
+.hud-hearts .is-full { color: #df4262; filter: drop-shadow(0 1px 0 #ffffff); }
+.boost-status { top: 124px; background: rgba(250,250,242,.88); text-shadow: none; }
+.pickup-notice { top: 178px; }
+.hazard-notice { top: auto; bottom: 62px; width: min(530px, calc(100vw - 600px)); min-width: 230px; white-space: normal; text-align: center; line-height: 1.25; padding: 7px 10px; font-size: 12px; }
+.campaign-hearts { color: #d74b66; font: 900 14px ui-monospace,monospace; letter-spacing: .13em; }
+.main-menu-actions .ng-plus-button { grid-column: 1 / -1; border-color: #773ba0; background: #f4e9fc; color: #63318c; font-size: 13px; }
+.main-menu-actions .ng-plus-button:hover { background: #e5cdf7; }
+.github-comic-bubble { position: fixed; z-index: 4; right: 30px; top: 26px; display: grid; place-items: center; width: min(365px, 32vw); min-height: 138px; padding: 20px 28px; border: 5px solid #2548b8; border-radius: 52% 47% 55% 44%; background: #fff5c9; box-shadow: 8px 8px 0 #2447a6; transform: rotate(6deg); animation: bubble-float 2.6s ease-in-out infinite alternate; text-align: center; }
+.github-comic-bubble::after { content: ""; position: absolute; left: 36px; bottom: -25px; width: 34px; height: 33px; border-right: 5px solid #2548b8; border-bottom: 5px solid #2548b8; background: #fff5c9; transform: skew(-26deg) rotate(30deg); }
+.github-comic-bubble a { position: relative; z-index: 1; color: #2447a6; font: 1000 clamp(16px,2.1vw,24px)/1.12 "Comic Sans MS",ui-rounded,sans-serif; text-decoration: none; }
+.github-comic-bubble a:hover { text-decoration: underline; }
+@keyframes bubble-float { from { transform: translateY(0) rotate(5deg) scale(1); } to { transform: translateY(12px) rotate(8deg) scale(1.04); } }
+@media (max-width: 850px) { .github-comic-bubble { width: 185px; min-height: 95px; top: 8px; right: 10px; padding: 10px; } .github-comic-bubble a { font-size: 14px; } }
+@media (max-width: 620px) { .hud-level { top: 20px; } .boost-status { top: 92px; } .hazard-notice { bottom: 14vh; min-width: 0; width: min(94vw,500px); } .github-comic-bubble { width: 145px; min-height: 64px; border-width: 3px; } .github-comic-bubble a { font-size: 11px; } .github-comic-bubble::after { display: none; } }
+.main-menu-heartbar { position: relative; z-index: 1; margin-bottom: 10px; color: #d54464; font: 900 13px ui-monospace,monospace; letter-spacing: .13em; }
+
+/* Perks remain readable above the weapon list without covering the sights. */
+.hud-owned-cards { position: absolute; right: 3.8vw; bottom: calc(4.5vh + 158px); width: min(250px, 27vw); max-height: min(33vh, 248px); padding: 9px 11px; border: 1.5px solid rgba(240,244,255,.44); border-radius: 13px; background: rgba(22,29,54,.47); color: #fffefa; box-shadow: 0 5px 20px rgba(9,11,32,.13); backdrop-filter: blur(5px); text-shadow: 0 1px 3px #171829; }
+.hud-owned-cards > span { display: block; font: 900 10px ui-monospace,monospace; letter-spacing: .12em; }
+.hud-owned-cards > small { display: block; margin-top: 6px; opacity: .75; font: 700 9px ui-monospace,monospace; }
+.hud-owned-cards__list { display: grid; gap: 4px; max-height: min(25vh, 180px); overflow: hidden auto; margin-top: 6px; scrollbar-width: thin; }
+.hud-card { display: flex; align-items: center; gap: 7px; padding: 3px 6px; border-radius: 6px; background: rgba(249,249,255,.82); color: var(--rarity); font: 900 10px ui-monospace,monospace; text-shadow: none; }
+.hud-card b { width: 17px; text-align: center; font-size: 14px; }
+.hud-card > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hud-card small { margin-left: auto; }
+.hud-coins { position: absolute; left: 20px; bottom: calc(26vh + 36px); padding: 4px 8px; border-radius: 5px; color: #a65a10; background: rgba(255,249,221,.88); font: 900 12px ui-monospace,monospace; text-shadow: none; }
+.scan-edge { position: absolute; display: flex; flex-direction: column; align-items: center; z-index: 16; color: #ffed58; font: 1000 28px/1 ui-rounded,sans-serif; text-shadow: 0 0 11px #ffc400, 0 2px 3px #3f3013; filter: drop-shadow(0 0 6px #ffe150); animation: scan-beacon .64s ease-in-out infinite alternate; }
+.scan-edge small { font: 900 8px ui-monospace,monospace; letter-spacing: .08em; }
+.scan-edge--left { left: 21px; top: calc(50% + var(--edge-offset)); }
+.scan-edge--right { right: 21px; top: calc(50% + var(--edge-offset)); }
+.scan-edge--top { top: 15px; left: calc(50% + var(--edge-offset)); }
+.scan-edge--bottom { bottom: 20px; left: calc(50% + var(--edge-offset)); }
+@keyframes scan-beacon { to { transform: scale(1.3); opacity: .65; } }
+.player-damage-vignette span { position: absolute; top: 23%; left: 50%; transform: translateX(-50%); color: #fff6ef; border-radius: 6px; padding: 5px 10px; background: rgba(167,22,42,.83); font: 900 12px ui-monospace,monospace; }
+.player-damage-vignette.damage-from--left { background: linear-gradient(90deg,rgba(249,40,59,.48),transparent 45%); }
+.player-damage-vignette.damage-from--right { background: linear-gradient(270deg,rgba(249,40,59,.48),transparent 45%); }
+.player-damage-vignette.damage-from--front { background: linear-gradient(180deg,rgba(249,40,59,.4),transparent 40%); }
+.player-damage-vignette.damage-from--back { background: linear-gradient(0deg,rgba(249,40,59,.48),transparent 45%); }
+.round-result { position: fixed; z-index: 55; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; background: rgba(11,15,38,.91); color: #fff8e9; text-align: center; overflow: hidden; }
+.round-result--loss { background: rgba(53,10,29,.94); }
+.round-result__sparks { font-size: clamp(35px,8vw,90px); letter-spacing: .22em; color: #ffd963; animation: result-pop 1.3s ease-in-out infinite alternate; }
+.round-result p { margin: 0; font: 900 13px ui-monospace,monospace; letter-spacing: .16em; }
+.round-result h2 { margin: 0; font: 1000 clamp(70px,15vw,190px)/.9 ui-rounded,sans-serif; letter-spacing: -.06em; color: #ffe070; text-shadow: 7px 8px 0 #9e3b75; animation: result-pop .9s cubic-bezier(.2,1.6,.4,1) both; }
+.round-result--loss h2 { color: #ff7181; text-shadow: 7px 8px 0 #842b46; }
+.round-result > strong { font: 900 20px ui-monospace,monospace; }
+.round-result__actions { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: 20px; opacity: 0; pointer-events: none; transition: opacity .35s; }
+.round-result__actions.is-ready { opacity: 1; pointer-events: auto; }
+.round-result__actions button { padding: 13px 23px; border: 3px solid #fff3dc; background: #fceec9; color: #263671; font: 1000 15px ui-rounded,sans-serif; cursor: pointer; }
+.round-result__actions button:hover { transform: translateY(-3px); background: #ffe070; }
+@keyframes result-pop { from { transform: scale(.7) rotate(-3deg); opacity: .3; } to { transform: scale(1) rotate(1deg); opacity: 1; } }
+.main-menu-wallet { color: #a65a10; font: 900 13px ui-monospace,monospace; }
+.gear-shop { margin-top: 18px; max-height: 32vh; overflow: auto; padding: 12px; background: rgba(255,249,222,.93); border: 3px solid #264cad; box-shadow: 5px 5px 0 rgba(38,76,173,.17); }
+.gear-shop h3 { margin: 0 0 8px; color: #2548b8; font: 1000 16px ui-rounded,sans-serif; }
+.gear-shop h3 small { display: block; font: 800 9px ui-monospace,monospace; }
+.gear-shop__row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 7px 0; border-top: 1px solid rgba(38,76,173,.2); }
+.gear-shop__row div { display: grid; gap: 2px; }
+.gear-shop__row strong { font-size: 12px; }
+.gear-shop__row small { font-size: 10px; }
+.gear-shop__row button { min-width: 83px; padding: 6px; border: 2px solid #2548b8; color: #2548b8; background: #fff; cursor: pointer; font-weight: 900; }
+.gear-shop__row button:disabled { opacity: .45; cursor: default; }
+@media(max-width:620px) { .hud-owned-cards { right: 12px; width: 170px; bottom: calc(4.5vh + 160px); max-height: 20vh; } .hud-coins { bottom: calc(20vh + 36px); } .boost-status { top: 141px; } .gear-shop { max-height: 25vh; } }
+.main-menu-card { max-height: calc(100dvh - 42px); overflow-y: auto; scrollbar-width: thin; }
+@media(max-width:620px) { .main-menu-card { max-height: calc(100dvh - 28px); } }
+@media (min-width:851px) and (max-width:1200px) { .github-comic-bubble { width: 205px; min-height: 94px; top: 10px; right: 10px; padding: 9px 14px; } .github-comic-bubble a { font-size: 15px; } }

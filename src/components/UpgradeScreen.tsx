@@ -5,11 +5,14 @@ import { useGameStore } from "../game/store";
 
 export function UpgradeScreen() {
   const currentLevel = useGameStore((state) => state.currentLevel);
+  const hearts = useGameStore((state) => state.hearts);
+  const ngPlusCycle = useGameStore((state) => state.ngPlusCycle);
   const upgrades = useGameStore((state) => state.upgrades);
   const choices = useGameStore((state) => state.upgradeChoices);
   const rerolls = useGameStore((state) => state.upgradeRerollsLeft);
   const selected = useGameStore((state) => state.selectedUpgrade);
   const chooseUpgrade = useGameStore((state) => state.chooseUpgrade);
+  const undoUpgrade = useGameStore((state) => state.undoUpgrade);
   const rerollUpgrades = useGameStore((state) => state.rerollUpgrades);
   const nextLevel = useGameStore((state) => state.nextLevel);
   const goToMenu = useGameStore((state) => state.goToMenu);
@@ -21,8 +24,9 @@ export function UpgradeScreen() {
       <div className="upgrade-speed-lines" aria-hidden="true" />
       <section className="upgrade-card">
         <p className="main-menu-kicker">
-          LEVEL {currentLevel} CLEARED // {level.name}
+          {ngPlusCycle ? `NG+ ${ngPlusCycle} // ` : ""}LEVEL {currentLevel} CLEARED // {level.name}
         </p>
+        <p className="campaign-hearts">HEARTS {"♥".repeat(hearts)}{"♡".repeat(5 - hearts)}</p>
         <h1>PICK YOUR<br />DREAM PERK</h1>
         <p className="upgrade-copy">
           Choose one card. Common 50% · rare 30% · epic 15% · legendary 5%.
@@ -30,6 +34,7 @@ export function UpgradeScreen() {
         </p>
 
         <div className="upgrade-grid">
+          {choices.length === 0 && <p>Every card is maxed out. Continue with your full deck.</p>}
           {choices.map((id) => {
             const card = getUpgradeCard(id);
             const isSelected = selected === id;
@@ -54,7 +59,7 @@ export function UpgradeScreen() {
         </div>
 
         <div className="upgrade-actions">
-          {!selected ? (
+          {!selected && choices.length > 0 ? (
             <button
               type="button"
               onClick={rerollUpgrades}
@@ -64,9 +69,10 @@ export function UpgradeScreen() {
               {rerolls > 0 ? "REROLL ONCE" : "REROLL USED"}
             </button>
           ) : (
-            <button type="button" className="is-primary" onClick={nextLevel}>
-              NEXT: LEVEL {next.level} · {next.name} →
-            </button>
+            <>
+              {selected && <button type="button" onClick={undoUpgrade}>↶ CHANGE MY CARD</button>}
+              <button type="button" className="is-primary" onClick={nextLevel}>NEXT: LEVEL {next.level} · {next.name} →</button>
+            </>
           )}
 
           <button type="button" onClick={goToMenu}>

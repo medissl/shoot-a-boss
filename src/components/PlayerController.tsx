@@ -13,10 +13,10 @@ import { useGameStore } from "../game/store";
 const WALK_SPEED = 6.6;
 const RUN_SPEED = 10.4;
 const CROUCH_SPEED = 3.7;
-const JUMP_SPEED = 5.4;
-const BOOST_JUMP_SPEED = 6.4;
-const SLIDE_SPEED = 13.2;
-const SLIDE_MS = 620;
+const JUMP_SPEED = 6.15;
+const BOOST_JUMP_SPEED = 7.15;
+const SLIDE_SPEED = 15.25;
+const SLIDE_MS = 690;
 const CROUCH_BOOST_WINDOW_MS = 420;
 const CLIMB_SPEED = 4.55;
 const LOOK_RADIANS_PER_PIXEL = 0.00215;
@@ -102,6 +102,7 @@ export function PlayerController() {
       );
 
       activeCamera.rotation.set(pitch.current, yaw.current, 0, "YXZ");
+      useGameStore.getState().setPlayerYaw(yaw.current);
     };
 
     const preventMenu = (event: Event) => event.preventDefault();
@@ -283,8 +284,7 @@ export function PlayerController() {
       now < useGameStore.getState().speedBoostUntil ? 1.62 : 1;
     const knifeSpeed = weapon === "knife" ? 1.2 : 1;
     const speedMultiplier =
-      pickupSpeed * upgradeStats.movement * knifeSpeed *
-      (weapon === "sniper" && upgrades.sniperFocus ? 0.88 : 1);
+      pickupSpeed * upgradeStats.movement * knifeSpeed * (1 + useGameStore.getState().gear.boots * 0.05);
 
     const nearGround =
       position.y <= 1.52 ||

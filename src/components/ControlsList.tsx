@@ -11,7 +11,7 @@ export function ControlsList() {
     <div><b>MOUSE</b><span>Look · left shoot · right aim</span></div>
     <div><b>R / G</b><span>Reload / paper bomb</span></div>
     <div><b>E / SHIFT+E</b><span>Jungle zipline forward / back</span></div>
-    <div><b>Q</b><span>Reveal an enemy (30s cooldown)</span></div>
+    <div><b>Q</b><span>Mark an enemy with a yellow diamond (30s cooldown)</span></div>
     <div><b>ESC</b><span>Pause / see card inventory</span></div>
   </div>;
 }

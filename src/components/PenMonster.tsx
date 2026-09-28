@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { PEN_MONSTER_MAX_HP } from "../game/config";
 import { enemyMotionFactor } from "../game/effects";
-import { getLevelDefinition } from "../game/levels";
+import { getEnemyTuning } from "../game/levels";
 import {
   hasEnemyLineOfSight,
   moveWithAvoidance,
@@ -68,7 +68,7 @@ function InkProjectile({
     const player = new THREE.Vector3(...useGameStore.getState().playerPosition);
     if (root.position.distanceTo(player) < 0.78) {
       done.current = true;
-      useGameStore.getState().damagePlayer(projectile.damage);
+      useGameStore.getState().damagePlayer(projectile.damage, projectile.position);
       onDone(projectile.id);
       return;
     }
@@ -102,7 +102,7 @@ export function PenMonster({
 }) {
   const root = useRef<THREE.Group>(null);
   const warning = useRef<THREE.Mesh>(null);
-  const maxHp = Math.round(PEN_MONSTER_MAX_HP * (1 + (useGameStore.getState().currentLevel - 1) * 0.085));
+  const maxHp = Math.round(PEN_MONSTER_MAX_HP * (1 + (useGameStore.getState().currentLevel + useGameStore.getState().ngPlusCycle * 10 - 1) * 0.085));
   const hpRef = useRef(maxHp);
   const rechargeUntil = useRef(0);
   const shotsLeft = useRef(0);
@@ -123,7 +123,9 @@ export function PenMonster({
   const screen = useGameStore((state) => state.screen);
   const eliminate = useGameStore((state) => state.eliminate);
   const eliminated = useGameStore((state) => state.eliminated.includes(id));
-  const tuning = getLevelDefinition(currentLevel).enemy;
+  const ngPlusCycle = useGameStore((state) => state.ngPlusCycle);
+  const effectiveLevel = currentLevel + ngPlusCycle * 10;
+  const tuning = getEnemyTuning(currentLevel, ngPlusCycle);
   const penIndex = Number(id.split("-")[1]) || 0;
   const sideBias = penIndex % 2 === 0 ? 1 : -1;
   const safeSpawn = useMemo(
@@ -175,6 +177,7 @@ export function PenMonster({
 
   useFrame((state, delta) => {
     const group = root.current;
+    if (group && !dead) useGameStore.getState().setEnemyPosition(id, [group.position.x, group.position.y + 1.5, group.position.z]);
     const beam = warning.current;
     if (!group || (screen !== "playing" || useGameStore.getState().tutorialOpen)) return;
 
@@ -284,7 +287,7 @@ export function PenMonster({
             telegraphUntil.current = now + 0.34;
             nextCycleAt.current = now + 0.36;
           } else {
-            rechargeUntil.current = now + Math.max(13, 20 - (currentLevel - 1) * 0.75);
+            rechargeUntil.current = now + Math.max(13, 20 - (effectiveLevel - 1) * 0.75);
             if (beam) beam.visible = false;
           }
         }

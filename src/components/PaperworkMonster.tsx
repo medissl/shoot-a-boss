@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { PAPER_MONSTER_MAX_HP } from "../game/config";
 import { enemyMotionFactor } from "../game/effects";
-import { getLevelDefinition } from "../game/levels";
+import { getEnemyTuning } from "../game/levels";
 import {
   hasEnemyLineOfSight,
   moveWithAvoidance,
@@ -33,7 +33,7 @@ export function PaperworkMonster({
 }) {
   const root = useRef<THREE.Group>(null);
   const material = useRef<THREE.MeshStandardMaterial>(null);
-  const maxHp = Math.round(PAPER_MONSTER_MAX_HP * (1 + (useGameStore.getState().currentLevel - 1) * 0.085));
+  const maxHp = Math.round(PAPER_MONSTER_MAX_HP * (1 + (useGameStore.getState().currentLevel + useGameStore.getState().ngPlusCycle * 10 - 1) * 0.085));
   const hpRef = useRef(maxHp);
   const nextAttackAt = useRef(0);
   const deadAt = useRef(0);
@@ -52,7 +52,9 @@ export function PaperworkMonster({
   const screen = useGameStore((state) => state.screen);
   const sideBias = Number(id.split("-")[1]) % 2 === 0 ? 1 : -1;
   const currentLevel = useGameStore((state) => state.currentLevel);
-  const tuning = getLevelDefinition(currentLevel).enemy;
+  const ngPlusCycle = useGameStore((state) => state.ngPlusCycle);
+  const effectiveLevel = currentLevel + ngPlusCycle * 10;
+  const tuning = getEnemyTuning(currentLevel, ngPlusCycle);
   const safeSpawn = useMemo(
     () => safeEnemySpawn(spawn, MONSTER_RADIUS, currentLevel),
     [currentLevel, spawn],
@@ -101,6 +103,7 @@ export function PaperworkMonster({
 
   useFrame((state, delta) => {
     const group = root.current;
+    if (group && !dead) useGameStore.getState().setEnemyPosition(id, [group.position.x, group.position.y + 1.1, group.position.z]);
     if (!group || (screen !== "playing" || useGameStore.getState().tutorialOpen)) return;
 
     if (dead) {
@@ -174,8 +177,8 @@ export function PaperworkMonster({
         playerDistance < 1.45 &&
         now >= nextAttackAt.current
       ) {
-        nextAttackAt.current = now + Math.max(0.54, 0.78 - (currentLevel - 1) * 0.027);
-        damagePlayer(Math.round(10 * tuning.damage));
+        nextAttackAt.current = now + Math.max(0.54, 0.78 - (effectiveLevel - 1) * 0.027);
+        damagePlayer(Math.round(10 * tuning.damage), [here.x, here.y + 1.1, here.z]);
       }
     } else {
       if (
