@@ -2558,3 +2558,8 @@ button {
 @keyframes skin-channel-flow{to{stroke-dashoffset:-240}}
 @keyframes skin-channel-twitch{90%,100%{opacity:.65}94%{opacity:1}}
 @media(prefers-reduced-motion:reduce){.skin-impulse,.skin-geometry--eye .skin-channel,.skin-geometry--redacted .skin-channel{animation:none}}
+
+.weapon-view.has-skin .muzzle-spark{stroke:var(--skin-color);filter:drop-shadow(0 0 5px var(--skin-color))}
+.skin-geometry--circuit .skin-impulse,.skin-geometry--stormbound .skin-impulse{animation-duration:1.2s}
+.skin-geometry--toxic .skin-receiver-inlay{fill:#d8f8dc}
+.skin-geometry--redacted .skin-receiver-inlay{fill:#f9f8ef}

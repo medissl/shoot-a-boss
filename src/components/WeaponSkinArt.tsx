@@ -1,7 +1,7 @@
 import type { WeaponId } from "../game/config";
 import { getSkin, type SkinId, type SkinTheme } from "../game/skins";
 
-/** Compact sketch assets. The same ornament is mounted at each weapon's attachment points. */
+/** Shared surface kit that follows each weapon silhouette. */
 function ThemePlating({theme,weapon}:{theme:SkinTheme;weapon:WeaponId}){
   const {id,color,accent,motif,rarity}=theme;
   const knife=weapon==="knife";
@@ -27,12 +27,12 @@ function ThemePlating({theme,weapon}:{theme:SkinTheme;weapon:WeaponId}){
     {motif==="fold"&&<><path d="M364 277 412 280 399 310Zm79 56 29-20 10 47Zm211 187 52-20-14 42Z" fill="#d4ebff" stroke={accent} strokeWidth="3"/><path d="M372 284 400 310m44 25 38 25m173 163 37 19" stroke={accent} strokeWidth="2"/></>}
     {motif==="pixel"&&<><rect x="510" y="355" width="56" height="30" rx="3" fill="#1d3153" stroke={color} strokeWidth="3"/><text x="518" y="376" fill="#73f4ff" stroke="none" fontFamily="monospace" fontWeight="bold" fontSize="17">1999</text><path d="M687 528h10v10h-10Zm30 12h9v8h-9Z" fill={accent}/></>}
     {motif==="clip"&&<><path d="M675 516q-9-24 7-27 13-1 12 16l-2 28m42-7q-9-21 5-22 11-1 10 13" fill="none" stroke={accent} strokeWidth="4"/><rect x="517" y="352" width="43" height="19" fill="#fff9e4" stroke={color} strokeWidth="2"/></>}
-    {motif==="graffiti"&&<><path d="m688 529 13-17 10 17 24-11-12 26 18 17-32-2-13 15-5-26-22-4Z" fill="#fa9dce" stroke={accent} strokeWidth="3"/><text x="696" y="549" fill="#392d87" stroke="none" fontFamily="sans-serif" fontSize="15" fontWeight="bold">NO!</text><path d="m485 350 18-12-4 18 17-4" stroke={color} strokeWidth="4" fill="none"/></>}
+    {motif==="graffiti"&&<><path d="M651 523q30 13 52 9l29 20 44 12M660 539l48 11 32 10m-71-41 25 29 23-24 12 38" fill="none" stroke={color} strokeWidth="5" strokeLinecap="round"/><path d="M692 536q24-13 46 9m-25 6 18-6" fill="none" stroke={accent} strokeWidth="3"/><path d="M488 354q17-8 25 2" fill="none" stroke={color} strokeWidth="3"/></>}
     {motif==="circuit"&&<><path d="m660 527 27 8 9-10 32 11v15l28 6m-92-13 30 12 14-3 32 15" stroke={color} strokeWidth="3.5" fill="none"/>{[[696,525],[727,551],[757,557],[708,553]].map(([x,y],i)=><circle key={i} cx={x} cy={y} r="4" fill={i%2?accent:color}/>)}</>}
     {motif==="ice"&&<><path d="M377 273 403 247 397 288Zm53 42 22-20-8 40Zm71 48 19-29 7 50Zm190 161 25-26 3 43Z" fill="#c4f5ff" stroke={accent} strokeWidth="3"/></>}
     {motif==="flame"&&<><path d="M364 266Q403 289 456 341M481 358Q533 380 608 443M654 520Q726 544 801 579" fill="none" stroke="#a82e3e" strokeWidth="12" opacity=".75"/><path className="skin-pulse-line" d="M364 266Q403 289 456 341M481 358Q533 380 608 443M654 520Q726 544 801 579" fill="none" stroke="#ffbf6a" strokeWidth="3" strokeDasharray="19 23"/></>}
-    {motif==="vial"&&<><path d="M502 320q44-15 52 19" stroke={accent} strokeWidth="6" fill="none"/><rect x="514" y="333" width="57" height="29" rx="8" fill="#d6f9dc" stroke="#276b79" strokeWidth="3"/><path d="M516 351q24-10 53-4v10h-53Z" fill={color}/><circle cx="540" cy="342" r="4" fill="#fff"/></>}
-    {motif==="storm"&&<><path d="m651 524 25-23-5 24 33-10-26 32 7-26-34 22Z" fill="#e5e4ff" stroke={accent} strokeWidth="3"/><path d="m427 307 15-15-2 15 21-8-18 22 2-15Z" fill="#fff3b3" stroke={color} strokeWidth="2"/></>}
+    {motif==="vial"&&<><path d="M487 348Q521 327 565 373L549 394Q516 379 487 348Z" fill="#d6f9dc" stroke="#276b79" strokeWidth="3"/><path className="skin-pulse-line" d="M501 351Q529 341 559 374L547 385Q522 370 501 351Z" fill={color} stroke="none" opacity=".58"/><path d="M497 354Q532 367 543 387" stroke="#edfff0" strokeWidth="2" fill="none"/><circle cx="531" cy="362" r="2.5" fill="#fff"/></>}
+    {motif==="storm"&&<><path d="M642 513 675 523 668 534 713 546 698 556 771 579" fill="none" stroke={accent} strokeWidth="8" strokeLinejoin="round"/><path className="skin-pulse-line" d="M645 516 672 526 665 534 711 548 699 555 771 577" fill="none" stroke="#fff5aa" strokeWidth="3" strokeLinejoin="round"/><path d="M385 281 421 307 430 300 453 325" fill="none" stroke={color} strokeWidth="4"/></>}
     {motif==="eye"&&<><path d="M657 527Q692 512 724 539M659 537Q690 526 720 548" fill="none" stroke={accent} strokeWidth="3"/><path className="skin-pulse-line" d="M662 550Q735 538 791 594" stroke={color} strokeWidth="4" strokeDasharray="12 10" fill="none"/></>}
     {motif==="stars"&&<><ellipse cx="704" cy="550" rx="74" ry="17" transform="rotate(17 704 550)" fill="none" stroke={color} strokeWidth="3"/><circle cx="688" cy="535" r="5" fill="#fff"/><circle cx="752" cy="572" r="4" fill={color}/><circle cx="557" cy="380" r="8" fill="#f4f2ff"/><path d="m674 545 27-8 28 20 24-4" stroke="#d4caff" strokeWidth="2" fill="none"/></>}
     {motif==="redaction"&&<><path d="M648 520 775 559M671 544 810 586" stroke="#191a29" strokeWidth="11" fill="none"/><rect x="503" y="355" width="58" height="29" rx="2" fill="#fffaf1" stroke="#e7434c" strokeWidth="3"/><text x="507" y="373" fontFamily="monospace" fontWeight="bold" fontSize="12" fill="#c8243b" stroke="none">SECRET</text><path className="skin-moving-redaction" d="M371 275 444 329" stroke="#171723" strokeWidth="9"/></>}
@@ -44,7 +44,6 @@ export function WeaponSkinArt({weapon,id,firing=false,reloading=false}:{weapon:W
   const theme=getSkin(id);if(!theme)return null;
   const {color,accent,rarity,motif}=theme;
   const isKnife=weapon==="knife";
-  const anchors=isKnife?[[392,291,1.32,-15],[514,395,1.25,35],[604,460,.82,30]]:weapon==="sniper"?[[376,276,1.28,-4],[546,383,1.23,35],[683,536,1.1,19]]:weapon==="shotgun"?[[403,304,1.45,-4],[538,398,1.37,28],[680,537,1.1,18]]:[[391,297,1.28,-4],[528,385,1.23,30],[680,537,1.07,18]];
   const ink=motif==="nib"||motif==="eye";
   return <g className={`skin-geometry skin-geometry--${id} skin-geometry--${rarity} ${reloading?"skin-geometry--reload":""}`} stroke={accent} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round">
     <defs>
