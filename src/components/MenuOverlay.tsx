@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Home, RotateCcw } from "lucide-react";
 import { ControlsList } from "./ControlsList";
+import { FullscreenToggle } from "./FullscreenToggle";
 import { getUpgradeCard, type UpgradeId } from "../game/progression";
 import { useGameStore } from "../game/store";
 
@@ -65,6 +66,7 @@ export function MenuOverlay() {
           </div>
 
           {panel === "settings" && <>
+          <FullscreenToggle />
           <label className="sensitivity-control">
             <span>SENSITIVITY</span>
             <b>{sensitivity.toFixed(2)}×</b>

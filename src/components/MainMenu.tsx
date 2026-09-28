@@ -12,6 +12,7 @@ import { LEVELS } from "../game/levels";
 import { useGameStore } from "../game/store";
 import { ControlsList } from "./ControlsList";
 import { GearShopScene } from "./GearShopScene";
+import { FullscreenToggle } from "./FullscreenToggle";
 
 export function MainMenu() {
   const startLevel = useGameStore((state) => state.startLevel);
@@ -84,6 +85,7 @@ export function MainMenu() {
 
             {optionsOpen && (
               <div className="main-menu-options">
+                <FullscreenToggle />
                 <button type="button" className="controls-toggle" onClick={() => setControlsOpen((value) => !value)}>
                   CONTROLS {controlsOpen ? "−" : "+"}
                 </button>

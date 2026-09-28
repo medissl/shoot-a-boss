@@ -9,6 +9,7 @@ import * as THREE from "three";
 import { getLevelDefinition, getLevelLadders, getPlayerSpawn, ZIPLINES } from "../game/levels";
 import { getUpgradeStats } from "../game/progression";
 import { useGameStore } from "../game/store";
+import { isTouchMode, touchInput } from "../game/touch";
 
 const WALK_SPEED = 6.6;
 const RUN_SPEED = 10.4;
@@ -62,6 +63,7 @@ export function PlayerController() {
 
     const requestLock = () => {
       if (
+        !isTouchMode() &&
         useGameStore.getState().screen === "playing" &&
         !useGameStore.getState().tutorialOpen &&
         document.pointerLockElement !== canvas
@@ -74,9 +76,17 @@ export function PlayerController() {
       const locked = document.pointerLockElement === canvas;
       pointerLocked.current = locked;
 
-      if (!locked && useGameStore.getState().screen === "playing") {
+      if (!locked && !isTouchMode() && useGameStore.getState().screen === "playing") {
         pause();
       }
+    };
+
+    const rotateView = (dx: number, dy: number, multiplier = 1) => {
+      const speed = LOOK_RADIANS_PER_PIXEL * useGameStore.getState().sensitivity * multiplier;
+      yaw.current -= THREE.MathUtils.clamp(dx, -44, 44) * speed;
+      pitch.current = THREE.MathUtils.clamp(pitch.current - THREE.MathUtils.clamp(dy, -44, 44) * speed, -1.42, 1.42);
+      activeCamera.rotation.set(pitch.current, yaw.current, 0, "YXZ");
+      useGameStore.getState().setPlayerYaw(yaw.current);
     };
 
     const mouseMove = (event: MouseEvent) => {
@@ -89,20 +99,13 @@ export function PlayerController() {
 
       // Browsers can occasionally report huge movement deltas when pointer lock
       // engages/disengages. Capping a single event prevents instant 180°/sky snaps.
-      const dx = THREE.MathUtils.clamp(event.movementX, -44, 44);
-      const dy = THREE.MathUtils.clamp(event.movementY, -44, 44);
-      const speed =
-        LOOK_RADIANS_PER_PIXEL * useGameStore.getState().sensitivity;
+      rotateView(event.movementX, event.movementY);
+    };
 
-      yaw.current -= dx * speed;
-      pitch.current = THREE.MathUtils.clamp(
-        pitch.current - dy * speed,
-        -1.42,
-        1.42,
-      );
-
-      activeCamera.rotation.set(pitch.current, yaw.current, 0, "YXZ");
-      useGameStore.getState().setPlayerYaw(yaw.current);
+    const touchLook = (event: Event) => {
+      if (useGameStore.getState().screen !== "playing") return;
+      const { dx, dy } = (event as CustomEvent<{ dx: number; dy: number }>).detail;
+      rotateView(dx, dy, 1.35);
     };
 
     const preventMenu = (event: Event) => event.preventDefault();
@@ -111,12 +114,14 @@ export function PlayerController() {
     canvas.addEventListener("contextmenu", preventMenu);
     document.addEventListener("pointerlockchange", pointerChange);
     document.addEventListener("mousemove", mouseMove);
+    window.addEventListener("touch-look", touchLook);
 
     return () => {
       canvas.removeEventListener("pointerdown", requestLock);
       canvas.removeEventListener("contextmenu", preventMenu);
       document.removeEventListener("pointerlockchange", pointerChange);
       document.removeEventListener("mousemove", mouseMove);
+      window.removeEventListener("touch-look", touchLook);
     };
   }, [gl, pause]);
 
@@ -145,8 +150,9 @@ export function PlayerController() {
       if (keys.current.KeyS) input.sub(forward);
       if (keys.current.KeyD) input.add(right);
       if (keys.current.KeyA) input.sub(right);
-
-      return input.lengthSq() > 0 ? input.normalize() : input;
+      if (isTouchMode()) input.addScaledVector(forward, -touchInput.y).addScaledVector(right, touchInput.x);
+      if (input.lengthSq() > 1) input.normalize();
+      return input;
     }
 
     const down = (event: KeyboardEvent) => {
@@ -233,7 +239,8 @@ export function PlayerController() {
     if (keys.current.KeyS) input.sub(forward);
     if (keys.current.KeyD) input.add(right);
     if (keys.current.KeyA) input.sub(right);
-    if (input.lengthSq() > 0) input.normalize();
+    if (isTouchMode()) input.addScaledVector(forward, -touchInput.y).addScaledVector(right, touchInput.x);
+    if (input.lengthSq() > 1) input.normalize();
 
     const now = performance.now();
     const position = rigid.translation();
@@ -266,9 +273,9 @@ export function PlayerController() {
     );
 
     const climbingUp = Boolean(
-      ladder && (keys.current.KeyW || keys.current.Space),
+      ladder && (keys.current.KeyW || keys.current.Space || (isTouchMode() && touchInput.y < -0.35)),
     );
-    const climbingDown = Boolean(ladder && keys.current.KeyS);
+    const climbingDown = Boolean(ladder && (keys.current.KeyS || (isTouchMode() && touchInput.y > 0.35)));
     const climbing = Boolean(ladder && (climbingUp || climbingDown));
 
     const sliding = !climbing && now < slideUntil.current;

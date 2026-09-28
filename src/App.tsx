@@ -2,6 +2,7 @@ import { AudioManager } from "./components/AudioManager";
 import { ComicIntro } from "./components/ComicIntro";
 import { GameCanvas } from "./components/GameCanvas";
 import { MainMenu } from "./components/MainMenu";
+import { SceneCurtain } from "./components/SceneCurtain";
 import { UpgradeScreen } from "./components/UpgradeScreen";
 import { useGameStore } from "./game/store";
 
@@ -20,6 +21,7 @@ export default function App() {
     <>
       <AudioManager />
       {content}
+      <SceneCurtain />
     </>
   );
 }

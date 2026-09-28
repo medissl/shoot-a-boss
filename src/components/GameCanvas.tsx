@@ -18,6 +18,7 @@ import { JungleThorns } from "./JungleThorns";
 import { ExtraMonster } from "./ExtraMonsters";
 import { CombatAura } from "./CombatAura";
 import { RoundResult } from "./RoundResult";
+import { MobileControls } from "./MobileControls";
 import { ControlsPopup } from "./ControlsList";
 import { WeaponView } from "./WeaponView";
 import {
@@ -26,8 +27,10 @@ import {
   getLevelDefinition,
 } from "../game/levels";
 import { useGameStore } from "../game/store";
+import { useTouchMode } from "../game/touch";
 
 export function GameCanvas() {
+  const touch = useTouchMode();
   const currentLevel = useGameStore((state) => state.currentLevel);
   const ngPlusCycle = useGameStore((state) => state.ngPlusCycle);
   const runId = useGameStore((state) => state.runId);
@@ -55,9 +58,9 @@ export function GameCanvas() {
   return (
     <div className={`game-shell game-shell--${definition.theme}`}>
       <Canvas
-        shadows
+        shadows={!touch}
         camera={{ fov: 70, near: 0.05, far: 180, position: [0, 2, 12] }}
-        dpr={[1, 1.6]}
+        dpr={touch ? [1, 1.2] : [1, 1.6]}
       >
         <Suspense fallback={null}>
           <Physics gravity={[0, -15, 0]}>
@@ -113,11 +116,12 @@ export function GameCanvas() {
       </Canvas>
 
       <HUD />
+      <MobileControls />
       <WeaponView />
       <MenuOverlay />
       <RoundResult />
       {currentLevel === 1 && <ControlsPopup />}
-      <div className="click-hint">click to lock mouse · ESC pause</div>
+      {!touch && <div className="click-hint">click to lock mouse · ESC pause</div>}
       {definition.theme === "jungle" && <div className="map-hint">THORNS SPREAD EVERY 30S · E ZIPLINE FORWARD · SHIFT+E BACK</div>}
       {definition.theme === "gems" && <div className="map-hint">LEAVE THE MARKED GEMS BEFORE THEIR LASERS FIRE · CLIMB THE INNER SPIRAL</div>}
       {definition.theme === "hell" && <div className="map-hint">FIVE STONE BRIDGES CROSS THE LAVA · DODGE THE RED CIRCLES EVERY 10 SECONDS</div>}

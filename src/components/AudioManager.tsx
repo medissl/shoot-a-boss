@@ -76,7 +76,9 @@ export function AudioManager() {
   const sfxVolume = useGameStore((state) => state.sfxVolume);
 
   const unlocked = useRef(false);
-  const previousScreen = useRef(screen);
+  const menuAudio = useRef<{ open: HTMLAudioElement; select: HTMLAudioElement; confirm: HTMLAudioElement } | null>(null);
+  const lastConfirmAt = useRef(-Infinity);
+  const openTimer = useRef<number | null>(null);
 
   // One persistent music player only. Keeping a single HTMLAudioElement means
   // IntroMenuBGM and ShootingBGM can never overlap, even during rapid state changes.
@@ -113,6 +115,32 @@ export function AudioManager() {
     },
     [sfxLevel],
   );
+
+  const playMenuSound = useCallback((kind: "open" | "select" | "confirm") => {
+    if (!unlocked.current || !menuAudio.current) return;
+    const audio = menuAudio.current[kind];
+    audio.pause();
+    audio.volume = sfxLevel(kind === "select" ? 1.12 : kind === "confirm" ? 0.9 : 0.58);
+    audio.playbackRate = kind === "confirm" ? 1.12 : 1;
+    // The supplied recordings begin with a short silent lead-in.
+    if (audio.readyState >= HTMLMediaElement.HAVE_METADATA) audio.currentTime = kind === "open" ? 0.11 : 0.045;
+    else audio.currentTime = 0;
+    void audio.play().catch(() => undefined);
+  }, [sfxLevel]);
+
+  useEffect(() => {
+    const audio = {
+      open: new Audio(A.uiOpen),
+      select: new Audio(A.uiSelect),
+      confirm: new Audio(A.uiConfirm),
+    };
+    Object.values(audio).forEach((clip) => { clip.preload = "auto"; clip.load(); });
+    menuAudio.current = audio;
+    return () => {
+      Object.values(audio).forEach((clip) => clip.pause());
+      menuAudio.current = null;
+    };
+  }, []);
 
   const ensureBgmAudio = useCallback(() => {
     if (!bgmAudio.current) {
@@ -224,38 +252,59 @@ export function AudioManager() {
   }, [requestBgm, screen, currentLevel]);
 
   useEffect(() => {
-    if (screen !== previousScreen.current) {
-      previousScreen.current = screen;
-      playOne(A.uiOpen, 0.48);
-    }
-  }, [screen, playOne]);
-
-  useEffect(() => {
     let hovered: Element | null = null;
-    const sceneOpen = () => playOne(A.uiOpen, 0.48);
-    const confirm = () => playOne(A.uiConfirm, 0.66);
-    const hover = (event: PointerEvent) => {
+    const recentHover = new WeakMap<Element, number>();
+    const sceneOpen = () => {
+      if (openTimer.current !== null) window.clearTimeout(openTimer.current);
+      const delay = Math.max(0, 550 - (performance.now() - lastConfirmAt.current));
+      openTimer.current = window.setTimeout(() => {
+        playMenuSound("open");
+        openTimer.current = null;
+      }, delay);
+    };
+    const confirm = () => {
+      const now = performance.now();
+      if (now - lastConfirmAt.current < 110) return;
+      lastConfirmAt.current = now;
+      menuAudio.current?.select.pause();
+      playMenuSound("confirm");
+    };
+    const click = (event: MouseEvent) => {
       const target = event.target;
       if (!(target instanceof Element)) return;
-      const choice = target.closest("button, a");
+      const choice = target.closest("button, a, [role='button']");
+      if (!choice || choice.matches(":disabled") || !choice.closest(".main-menu-shell, .gear-scene, .upgrade-shell, .pause-layer, .round-result, .story-shell")) return;
+      confirm();
+    };
+    const hover = (event: PointerEvent) => {
+      if (event.pointerType !== "mouse") return;
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const choice = target.closest("button, a, [role='button']");
       if (!choice || choice === hovered || choice.matches(":disabled")) return;
       hovered = choice;
-      playOne(A.uiSelect, 0.27);
+      const now = performance.now();
+      if (now - (recentHover.get(choice) ?? -Infinity) < 170) return;
+      recentHover.set(choice, now);
+      playMenuSound("select");
     };
     const leave = (event: PointerEvent) => {
       if (hovered && !hovered.contains(event.relatedTarget as Node | null)) hovered = null;
     };
     window.addEventListener("ui-scene-open", sceneOpen);
     window.addEventListener("ui-confirm", confirm);
+    document.addEventListener("click", click, true);
     document.addEventListener("pointerover", hover);
     document.addEventListener("pointerout", leave);
     return () => {
       window.removeEventListener("ui-scene-open", sceneOpen);
       window.removeEventListener("ui-confirm", confirm);
+      document.removeEventListener("click", click, true);
       document.removeEventListener("pointerover", hover);
       document.removeEventListener("pointerout", leave);
+      if (openTimer.current !== null) window.clearTimeout(openTimer.current);
     };
-  }, [playOne]);
+  }, [playMenuSound]);
 
   useEffect(() => {
     const retry = () => {
