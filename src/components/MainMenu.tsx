@@ -13,6 +13,8 @@ import { useGameStore } from "../game/store";
 import { ControlsList } from "./ControlsList";
 import { GearShopScene } from "./GearShopScene";
 import { FullscreenToggle } from "./FullscreenToggle";
+import { MonsterEncyclopedia } from "./MonsterEncyclopedia";
+import { enterStageAfterCurtain } from "../game/sceneTransition";
 
 export function MainMenu() {
   const startLevel = useGameStore((state) => state.startLevel);
@@ -31,9 +33,11 @@ export function MainMenu() {
   const [levelSelectOpen, setLevelSelectOpen] = useState(false);
   const [controlsOpen, setControlsOpen] = useState(false);
   const [shopOpen, setShopOpen] = useState(false);
+  const [encyclopediaOpen, setEncyclopediaOpen] = useState(false);
   const coins = useGameStore((state) => state.coins);
 
   if (shopOpen) return <GearShopScene onBack={() => { setShopOpen(false); window.dispatchEvent(new Event("ui-scene-open")); }} />;
+  if (encyclopediaOpen) return <MonsterEncyclopedia onBack={() => setEncyclopediaOpen(false)} />;
 
   return (
     <main className="main-menu-shell">
@@ -57,25 +61,28 @@ export function MainMenu() {
                   setOptionsOpen(false);
                   setShopOpen(false);
                   setLevelSelectOpen(true);
-                  window.dispatchEvent(new Event("ui-scene-open"));
                 }}
               >
                 <Play size={17} /> PLAY DREAM
               </button>
 
-              {unlockedLevel >= 10 && champion && <button className="ng-plus-button" type="button" onClick={startNewGamePlus}>
+              {unlockedLevel >= 10 && champion && <button className="ng-plus-button" type="button" onClick={() => enterStageAfterCurtain(startNewGamePlus)}>
                 NG+ (surprised u made it this far) · {champion.ready ? `LOOP ${champion.cycle + 1}` : `CONTINUE LOOP ${champion.cycle}`}
               </button>}
 
               <button
                 type="button"
-                onClick={() => { setOptionsOpen((value) => !value); window.dispatchEvent(new Event("ui-scene-open")); }}
+                onClick={() => setOptionsOpen((value) => !value)}
               >
                 <SlidersHorizontal size={17} /> OPTIONS
               </button>
 
               <button type="button" onClick={readComic}>
                 <BookOpen size={17} /> READ COMIC AGAIN
+              </button>
+
+              <button type="button" onClick={() => setEncyclopediaOpen(true)}>
+                <BookOpen size={17} /> MONSTER ENCYCLOPEDIA
               </button>
 
               <a href="https://github.com/medissl" target="_blank" rel="noreferrer">
@@ -146,7 +153,7 @@ export function MainMenu() {
             <button
               type="button"
               className="stage-select__back"
-              onClick={() => { setLevelSelectOpen(false); window.dispatchEvent(new Event("ui-scene-open")); }}
+              onClick={() => setLevelSelectOpen(false)}
             >
               <ChevronLeft size={16} /> BACK
             </button>
@@ -173,7 +180,7 @@ export function MainMenu() {
                     className={`stage-node stage-node--${level.theme} ${unlocked ? "is-unlocked" : "is-locked"}`}
                     style={{ "--stage-index": index } as React.CSSProperties}
                     disabled={!unlocked}
-                    onClick={() => startLevel(level.level)}
+                    onClick={() => enterStageAfterCurtain(() => startLevel(level.level))}
                   >
                     <span className="stage-node__number">
                       {unlocked ? level.level : <LockKeyhole size={16} />}

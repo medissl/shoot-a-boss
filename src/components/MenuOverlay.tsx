@@ -4,6 +4,7 @@ import { ControlsList } from "./ControlsList";
 import { FullscreenToggle } from "./FullscreenToggle";
 import { getUpgradeCard, type UpgradeId } from "../game/progression";
 import { useGameStore } from "../game/store";
+import { restorePreferredFullscreen } from "../game/fullscreen";
 
 export function MenuOverlay() {
   const screen = useGameStore((state) => state.screen);
@@ -43,7 +44,7 @@ export function MenuOverlay() {
 
         <div className="pause-actions">
           {screen === "paused" && (
-            <button type="button" onClick={resume}>
+            <button type="button" onClick={() => { void restorePreferredFullscreen().then(resume); }}>
               RESUME
             </button>
           )}

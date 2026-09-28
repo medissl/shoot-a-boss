@@ -39,7 +39,9 @@ const RED = "#ef476f";
 const PINK = "#ff91b8";
 const ENEMY_RADIUS = 1.05;
 
-function drawBoss(
+// Shared by the enemy and its encyclopedia portrait.
+// eslint-disable-next-line react-refresh/only-export-components
+export function drawBoss(
   canvas: HTMLCanvasElement,
   pose: Pose,
   hit: boolean,

@@ -22,6 +22,8 @@ export function ExtraMonster({ id, spawn, kind }: { id: string; spawn: [number, 
   const lastAttack = useRef(0);
   const lastDamage = useRef(0);
   const lastPosition = useRef(0);
+  const dive = useRef<"cruise" | "dive" | "recover">("cruise");
+  const recoveryUntil = useRef(0);
   const lastSeen = useRef(new THREE.Vector3());
   const level = useGameStore((s) => s.currentLevel);
   const cycle = useGameStore((s) => s.ngPlusCycle);
@@ -90,12 +92,16 @@ export function ExtraMonster({ id, spawn, kind }: { id: string; spawn: [number, 
       if (hunting) {
         const direction = new THREE.Vector3(target.x - mesh.position.x, 0, target.z - mesh.position.z);
         const distance = direction.length();
-        if (distance > 1.8) {
-          const stride = direction.normalize().multiplyScalar(Math.min(distance - 1.7, (3.4 + effectiveLevel * 0.16) * tuning.speed * motion * delta));
-          moveWithAvoidance(mesh.position, stride, 1.7, index % 2 ? -1 : 1, level);
+        if (dive.current === "recover" && now >= recoveryUntil.current && mesh.position.y > py + 4.3) dive.current = "cruise";
+        if (dive.current === "cruise" && seesPlayer && distance < 8 && now - lastAttack.current > Math.max(2.1, 3.9 - effectiveLevel * 0.09)) dive.current = "dive";
+        const desiredDistance = dive.current === "dive" ? 1.6 : 3.8;
+        if (distance > desiredDistance) {
+          const stride = direction.normalize().multiplyScalar(Math.min(distance - desiredDistance, (3.4 + effectiveLevel * 0.16) * tuning.speed * motion * delta));
+          moveWithAvoidance(mesh.position, stride, 1.7, index % 2 ? -1 : 1, level, true);
         }
-        const desiredHeight = THREE.MathUtils.clamp(target.y + (distance < 7 ? 1.65 : 3.4), 3.1, 22);
-        mesh.position.y = THREE.MathUtils.damp(mesh.position.y, desiredHeight, 3.2 * motion, delta);
+        const cruiseHeight = THREE.MathUtils.clamp(target.y + 5.3, 5.3, 22);
+        const attackHeight = target.y + 1.5;
+        mesh.position.y = THREE.MathUtils.damp(mesh.position.y, dive.current === "dive" ? attackHeight : cruiseHeight + Math.sin(now * 3 + index) * 0.22, (dive.current === "dive" ? 4.2 : 2.5) * motion, delta);
       } else {
         mesh.position.y = THREE.MathUtils.damp(mesh.position.y, 5.2 + Math.sin(now * 2 + index) * 0.5, 1.4, delta);
       }
@@ -105,9 +111,11 @@ export function ExtraMonster({ id, spawn, kind }: { id: string; spawn: [number, 
         lastPosition.current = now;
         live.setEnemyPosition(id, [mesh.position.x, mesh.position.y, mesh.position.z]);
       }
-      if (seesPlayer && flatDistance < 2.65 && Math.abs(py - mesh.position.y) < 3.3 && now - lastAttack.current > Math.max(0.58, 1.48 - effectiveLevel * 0.045)) {
+      if (dive.current === "dive" && seesPlayer && flatDistance < 2.8 && Math.abs(py + 1.5 - mesh.position.y) < 0.8) {
         lastAttack.current = now;
-        live.damagePlayer(Math.round(8 * tuning.damage), [mesh.position.x, mesh.position.y, mesh.position.z]);
+        dive.current = "recover";
+        recoveryUntil.current = now + 1.1;
+        live.damagePlayer(Math.round(11 * tuning.damage), [mesh.position.x, mesh.position.y, mesh.position.z]);
       }
       return;
     }

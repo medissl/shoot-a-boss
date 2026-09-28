@@ -10,6 +10,7 @@ import { getLevelDefinition, getLevelLadders, getPlayerSpawn, ZIPLINES } from ".
 import { getUpgradeStats } from "../game/progression";
 import { useGameStore } from "../game/store";
 import { isTouchMode, touchInput } from "../game/touch";
+import { prefersFullscreen, restorePreferredFullscreen } from "../game/fullscreen";
 
 const WALK_SPEED = 6.6;
 const RUN_SPEED = 10.4;
@@ -156,13 +157,20 @@ export function PlayerController() {
     }
 
     const down = (event: KeyboardEvent) => {
-      if (event.code === "Escape") {
+      if (event.code === "Escape" || event.code === "KeyP") {
+        if (event.repeat) return;
         const state = useGameStore.getState();
         if (state.tutorialOpen) return;
         if (state.screen === "playing") {
           if (document.pointerLockElement) document.exitPointerLock();
           state.pause();
-        } else if (state.screen === "paused") state.resume();
+        } else if (state.screen === "paused") {
+          if (prefersFullscreen() && !document.fullscreenElement) {
+            void restorePreferredFullscreen().then((restored) => {
+              if (restored) useGameStore.getState().resume();
+            });
+          } else state.resume();
+        }
         return;
       }
       if (event.repeat && ["Space", "KeyC"].includes(event.code)) return;
@@ -281,7 +289,7 @@ export function PlayerController() {
     const sliding = !climbing && now < slideUntil.current;
     const crouching = Boolean(keys.current.KeyC) && !sliding && !climbing;
     const sprinting =
-      Boolean(keys.current.ShiftLeft || keys.current.ShiftRight) &&
+      Boolean(keys.current.ShiftLeft || keys.current.ShiftRight || (isTouchMode() && touchInput.sprint)) &&
       !crouching &&
       !sliding &&
       !climbing;

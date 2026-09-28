@@ -1,4 +1,4 @@
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { CuboidCollider, RigidBody, TrimeshCollider } from "@react-three/rapier";
 import * as THREE from "three";
@@ -7,12 +7,43 @@ import { hazardDamage } from "../game/hazards";
 import { useGameStore } from "../game/store";
 
 const colors = ["#00f9ee", "#ea3aff", "#ffe254", "#55ff8e", "#528bff"];
-const gems: [number, number, number][] = [
+const LASER_RADIUS = 12;
+const landmarkGems: [number, number, number][] = [
   [-42, 1, 5], [43, 1, -18], [-12, 1, 38], [18, 1, 37], [-38, 1, -30],
   [-23, 1, -5], [-13, 1, -15], [8, 1, -6], [18, 1, 11], [2, 1, -28],
   [25, 4, -16], [-24, 11, -12], [21, 4, 4], [-18, 13, 13], [4, 17, 18],
   [31, 4, -20], [-8, 15, 20], [12, 7, -26], [-36, 1, 24], [37, 1, 24],
 ];
+// Small floor crystals fill the otherwise empty lanes; the larger originals stay in place.
+const floorGems: [number, number, number][] = [-46, -30, -14, 2, 18, 34, 50].flatMap((x) =>
+  [-46, -30, -14, 2, 18, 34, 50].map((z): [number, number, number] => [x, 1, z]),
+);
+const tierGems: [number, number, number][] = Array.from({ length: 12 }, (_, index) => {
+  const angle = index * Math.PI / 6;
+  return [Math.sin(angle) * 23, 5 + index * 0.95, CAVE_CENTER_Z + Math.cos(angle) * 23];
+});
+const gems = [...landmarkGems, ...floorGems, ...tierGems];
+const smallGems = [...floorGems, ...tierGems];
+
+function SmallCrystals() {
+  const mesh = useRef<THREE.InstancedMesh>(null);
+  useEffect(() => {
+    if (!mesh.current) return;
+    const node = new THREE.Object3D();
+    smallGems.forEach(([x, y, z], index) => {
+      node.position.set(x, y + 0.25, z);
+      node.rotation.set(0.14, index * 1.9, 0.1);
+      node.updateMatrix();
+      mesh.current!.setMatrixAt(index, node.matrix);
+      mesh.current!.setColorAt(index, new THREE.Color(colors[index % colors.length]));
+    });
+    mesh.current.instanceMatrix.needsUpdate = true;
+    if (mesh.current.instanceColor) mesh.current.instanceColor.needsUpdate = true;
+  }, []);
+  return <instancedMesh ref={mesh} args={[undefined, undefined, smallGems.length]} userData={{ ignoreProjectile: true }}>
+    <octahedronGeometry args={[0.75, 0]} /><meshStandardMaterial color="white" emissive="#4962ad" emissiveIntensity={0.45} />
+  </instancedMesh>;
+}
 
 function Crystal({ id, position }: { id: number; position: [number, number, number] }) {
   const color = colors[id % colors.length];
@@ -26,16 +57,25 @@ function Crystal({ id, position }: { id: number; position: [number, number, numb
   </group>;
 }
 
-function selectedGems(cycle: number) {
+function selectedGems(cycle: number, target: [number, number, number]) {
   const count = 3 + ((cycle * 7 + 11) % 5);
   const indices = gems.map((_, index) => index);
+  // The first crystal threatens the player's predicted position. The others
+  // still vary by cycle, so the warning tells them where to dodge.
+  const nearest = indices.reduce((best, index) => {
+    const [x, y, z] = gems[index];
+    const [bx, by, bz] = gems[best];
+    return Math.hypot(target[0] - x, target[2] - z) + Math.abs(target[1] - y) * 1.4 <
+      Math.hypot(target[0] - bx, target[2] - bz) + Math.abs(target[1] - by) * 1.4 ? index : best;
+  }, 0);
+  indices.splice(indices.indexOf(nearest), 1);
   let seed = (Math.imul(cycle + 1, 1664525) + 1013904223) >>> 0;
   for (let i = indices.length - 1; i > 0; i--) {
     seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
     const j = seed % (i + 1);
     [indices[i], indices[j]] = [indices[j], indices[i]];
   }
-  return indices.slice(0, count);
+  return [nearest, ...indices.slice(0, count - 1)];
 }
 
 function GemLasers() {
@@ -45,6 +85,7 @@ function GemLasers() {
   const lastHit = useRef(0);
   const notice = useRef("");
   const cycleCache = useRef({ cycle: -1, indices: [] as number[] });
+  const lastPlayer = useRef<[number, number, number] | null>(null);
   const screen = useGameStore((state) => state.screen);
   useFrame((_, delta) => {
     if (screen !== "playing" || useGameStore.getState().tutorialOpen) {
@@ -56,9 +97,14 @@ function GemLasers() {
     const time = elapsed.current;
     const cycle = Math.floor(time / 10);
     const phase = time % 10;
+    const position = useGameStore.getState().playerPosition;
     if (cycleCache.current.cycle !== cycle) {
-      cycleCache.current = { cycle, indices: selectedGems(cycle) };
+      const previous = lastPlayer.current ?? position;
+      const lead = 1.6;
+      const predict = (axis: 0 | 2) => THREE.MathUtils.clamp(position[axis] + THREE.MathUtils.clamp((position[axis] - previous[axis]) / Math.max(delta, 0.016), -9, 9) * lead, -49, 49);
+      cycleCache.current = { cycle, indices: selectedGems(cycle, [predict(0), position[1], predict(2)]) };
     }
+    lastPlayer.current = [...position];
     const warning = cycle > 0 && phase < 2;
     const active = cycle > 0 && phase >= 2 && phase < 5;
     const message = warning ? `GEM LASERS IN ${Math.ceil(2 - phase)}S · LEAVE THE MARKED AREAS`
@@ -78,14 +124,14 @@ function GemLasers() {
       }
       if (beam) {
         beam.visible = Boolean(point && active);
-        if (point) beam.position.set(point[0], point[1] + 5, point[2]);
+        if (point) beam.position.set(point[0], point[1] + 8, point[2]);
       }
     }
     if (!active || time - lastHit.current < 0.72) return;
     const [x, y, z] = useGameStore.getState().playerPosition;
     if (cycleCache.current.indices.some((index) => {
       const gem = gems[index];
-      return Math.hypot(x - gem[0], z - gem[2]) < 4.3 && Math.abs(y - gem[1]) < 4.1;
+      return Math.hypot(x - gem[0], z - gem[2]) < LASER_RADIUS && Math.abs(y - gem[1]) < 8;
     })) {
       const closest = cycleCache.current.indices.map((index) => gems[index]).sort((a, b) => Math.hypot(x - a[0], z - a[2]) - Math.hypot(x - b[0], z - b[2]))[0];
       const live = useGameStore.getState();
@@ -95,12 +141,12 @@ function GemLasers() {
   });
   return <group userData={{ ignoreProjectile: true }}>
     {Array.from({ length: 7 }, (_, slot) => <group key={`warning-${slot}`} ref={(node) => { warnings.current[slot] = node; }} visible={false}>
-      <mesh rotation={[-Math.PI / 2, 0, 0]}><circleGeometry args={[4.3, 24]} /><meshBasicMaterial color="#f9d34a" transparent opacity={0.3} depthWrite={false} side={THREE.DoubleSide} /></mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}><ringGeometry args={[3.8, 4.3, 24]} /><meshBasicMaterial color="#fff4a0" side={THREE.DoubleSide} /></mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]}><circleGeometry args={[LASER_RADIUS, 32]} /><meshBasicMaterial color="#f9d34a" transparent opacity={0.24} depthWrite={false} side={THREE.DoubleSide} /></mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}><ringGeometry args={[LASER_RADIUS - 0.45, LASER_RADIUS, 32]} /><meshBasicMaterial color="#fff4a0" side={THREE.DoubleSide} /></mesh>
     </group>)}
     {Array.from({ length: 7 }, (_, slot) => <group key={`laser-${slot}`} ref={(node) => { beams.current[slot] = node; }} visible={false}>
-      <mesh><cylinderGeometry args={[4.3, 4.3, 10, 16, 1, true]} /><meshBasicMaterial color={colors[slot % colors.length]} transparent opacity={0.24} side={THREE.DoubleSide} depthWrite={false} /></mesh>
-      <mesh><cylinderGeometry args={[0.35, 0.35, 10, 8]} /><meshBasicMaterial color="#fffaf0" transparent opacity={0.85} depthWrite={false} /></mesh>
+      <mesh><cylinderGeometry args={[LASER_RADIUS, LASER_RADIUS, 16, 24, 1, true]} /><meshBasicMaterial color={colors[slot % colors.length]} transparent opacity={0.3} side={THREE.DoubleSide} depthWrite={false} /></mesh>
+      <mesh><cylinderGeometry args={[0.35, 0.35, 16, 8]} /><meshBasicMaterial color="#fffaf0" transparent opacity={0.85} depthWrite={false} /></mesh>
     </group>)}
   </group>;
 }
@@ -168,7 +214,8 @@ export function GemCavern() {
       </mesh>)}
     </RigidBody>)}
     <SpiralRamp />
-    {gems.map((position, id) => <Crystal key={id} id={id} position={position} />)}
+    {landmarkGems.map((position, id) => <Crystal key={id} id={id} position={position} />)}
+    <SmallCrystals />
     <GemLasers />
     <Minecart x={-12} z={-7} rotation={0.45} />
     <Minecart x={38} z={25} rotation={-0.3} />

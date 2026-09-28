@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-export const touchInput = { x: 0, y: 0 };
+export const touchInput = { x: 0, y: 0, sprint: false };
 
 export function isTouchMode() {
   return typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches;

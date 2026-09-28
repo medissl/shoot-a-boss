@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Expand, Minimize } from "lucide-react";
+import { setFullscreenPreference } from "../game/fullscreen";
 
 export function FullscreenToggle() {
   const [fullscreen, setFullscreen] = useState(() => Boolean(document.fullscreenElement));
@@ -13,8 +14,13 @@ export function FullscreenToggle() {
 
   const toggle = async () => {
     try {
-      if (document.fullscreenElement) await document.exitFullscreen();
-      else await document.documentElement.requestFullscreen();
+      if (document.fullscreenElement) {
+        setFullscreenPreference(false);
+        await document.exitFullscreen();
+      } else {
+        await document.documentElement.requestFullscreen();
+        setFullscreenPreference(true);
+      }
     } catch {
       setError(true);
     }

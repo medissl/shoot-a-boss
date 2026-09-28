@@ -273,7 +273,7 @@ export function AudioManager() {
       const target = event.target;
       if (!(target instanceof Element)) return;
       const choice = target.closest("button, a, [role='button']");
-      if (!choice || choice.matches(":disabled") || !choice.closest(".main-menu-shell, .gear-scene, .upgrade-shell, .pause-layer, .round-result, .story-shell")) return;
+      if (!choice || choice.matches(":disabled") || !choice.closest(".main-menu-shell, .gear-scene, .encyclopedia-scene, .upgrade-shell, .pause-layer, .round-result, .story-shell")) return;
       confirm();
     };
     const hover = (event: PointerEvent) => {

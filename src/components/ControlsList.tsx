@@ -7,8 +7,9 @@ export function ControlsList() {
   if (touch) return <div className="controls-list">
     <div><b>LEFT PAD</b><span>Analog movement and climb</span></div>
     <div><b>RIGHT SIDE</b><span>Swipe to look around</span></div>
-    <div><b>FIRE / AIM</b><span>Hold to shoot / use scope</span></div>
-    <div><b>JUMP / SLIDE / RUN</b><span>Movement actions</span></div>
+    <div><b>FIRE / AIM</b><span>Drag FIRE to aim · tap SCOPE to toggle · sniper fires on release</span></div>
+    <div><b>RUN LOCK</b><span>Swipe up past the left pad after holding, tap the pad to stop</span></div>
+    <div><b>JUMP / SLIDE</b><span>Circle buttons near fire</span></div>
     <div><b>WEAPON BAR</b><span>Pick sniper, rifle, shotgun, or knife</span></div>
     <div><b>BOMB / RELOAD / MARK / ZIP</b><span>Grenade, reload, Q mark, or jungle zipline</span></div>
     <div><b>Ⅱ</b><span>Pause and check cards</span></div>
@@ -23,7 +24,7 @@ export function ControlsList() {
     <div><b>R / G</b><span>Reload / paper bomb</span></div>
     <div><b>E / SHIFT+E</b><span>Jungle zipline forward / back</span></div>
     <div><b>Q</b><span>Mark an enemy with a yellow diamond (30s cooldown)</span></div>
-    <div><b>ESC</b><span>Pause / see card inventory</span></div>
+    <div><b>ESC / P</b><span>Pause / see cards · P keeps Chrome fullscreen open</span></div>
   </div>;
 }
 

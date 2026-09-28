@@ -136,6 +136,7 @@ export function moveWithAvoidance(
   radius: number,
   sideBias: number,
   level: number,
+  preserveHeight = false,
 ) {
   if (motion.lengthSq() <= 0.0000001) return;
 
@@ -195,10 +196,10 @@ export function moveWithAvoidance(
     ) {
       position.x = nextX;
       position.z = nextZ;
-      position.y = 0;
+      if (!preserveHeight) position.y = 0;
       return;
     }
   }
 
-  position.y = 0;
+  if (!preserveHeight) position.y = 0;
 }

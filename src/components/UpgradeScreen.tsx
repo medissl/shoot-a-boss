@@ -2,6 +2,7 @@ import { Home, RefreshCw } from "lucide-react";
 import { getLevelDefinition } from "../game/levels";
 import { getUpgradeCard, upgradeDescription } from "../game/progression";
 import { useGameStore } from "../game/store";
+import { enterStageAfterCurtain } from "../game/sceneTransition";
 
 export function UpgradeScreen() {
   const currentLevel = useGameStore((state) => state.currentLevel);
@@ -71,7 +72,10 @@ export function UpgradeScreen() {
           ) : (
             <>
               {selected && <button type="button" onClick={undoUpgrade}>↶ CHANGE MY CARD</button>}
-              <button type="button" className="is-primary" onClick={nextLevel}>{currentLevel === 10 ? "FINISH RUN · NG+ UNLOCKED →" : `NEXT: LEVEL ${next.level} · ${next.name} →`}</button>
+              <button type="button" className="is-primary" onClick={() => {
+                if (currentLevel === 10) nextLevel();
+                else enterStageAfterCurtain(nextLevel);
+              }}>{currentLevel === 10 ? "FINISH RUN · NG+ UNLOCKED →" : `NEXT: LEVEL ${next.level} · ${next.name} →`}</button>
             </>
           )}
 

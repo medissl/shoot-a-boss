@@ -2237,5 +2237,100 @@ button {
   .hud-targets { top: 50px; }
   .hazard-notice { top: 130px; }
 }
+
+.encyclopedia-scene { min-height: 100dvh; display: grid; place-items: center; padding: 26px; overflow: auto; background: repeating-linear-gradient(0deg,transparent 0 37px,#b5c7f26b 38px 39px),#e9efff; color: #2548b8; font-family: "Comic Sans MS",ui-rounded,sans-serif; }
+.encyclopedia-paper { width: min(1050px,100%); padding: clamp(16px,2.5vw,30px); border: 4px solid #2548b8; border-radius: 11px 17px 10px 14px; background: #fffef6; box-shadow: 10px 12px 0 #a8bce7; transform: rotate(-.25deg); }
+.encyclopedia-paper header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-bottom: 15px; border-bottom: 3px dashed #a8bce7; font: 900 11px ui-monospace,monospace; }
+.encyclopedia-paper header button,.encyclopedia-nav button { border: 2px solid #2548b8; border-radius: 8px; padding: 7px 11px; color: #2548b8; background: #fff; font-weight: 900; cursor: pointer; }
+.encyclopedia-paper header button { display: flex; align-items: center; gap: 6px; }
+.encyclopedia-paper button:hover { background: #dce8ff; }
+.encyclopedia-body { display: grid; grid-template-columns: minmax(0,1.1fr) minmax(270px,.9fr); gap: clamp(15px,4vw,48px); padding: 24px 0; }
+.encyclopedia-copy h1 { margin: 0 0 4px; font: 1000 clamp(34px,5vw,58px)/.96 "Comic Sans MS",ui-rounded,sans-serif; letter-spacing: -.045em; }
+.encyclopedia-copy blockquote { margin: 0 0 16px; color: #c84765; font: italic 900 18px ui-rounded,sans-serif; }
+.encyclopedia-copy > p { max-width: 54ch; font: 700 14px/1.55 ui-rounded,sans-serif; }
+.encyclopedia-level { display: flex; align-items: center; flex-wrap: wrap; gap: 9px; margin: 20px 0; padding: 9px 12px; border: 2px dashed #7793ce; border-radius: 9px; background: #edf3ff; font: 900 11px ui-monospace,monospace; }
+.encyclopedia-level strong { font-size: 18px; }
+.encyclopedia-level input { flex: 1; min-width: 110px; accent-color: #2548b8; }
+.encyclopedia-stats { display: grid; grid-template-columns: 1fr 1.5fr; gap: 9px; }
+.encyclopedia-stats div { display: grid; align-content: start; gap: 5px; padding: 12px; border: 2px solid #2548b8; border-radius: 9px; background: #eaf0ff; }
+.encyclopedia-stats small,.encyclopedia-hitboxes small { font: 900 10px ui-monospace,monospace; letter-spacing: .09em; }
+.encyclopedia-stats strong { font-size: 17px; line-height: 1.15; }
+.encyclopedia-stats span { font: 700 11px ui-rounded,sans-serif; }
+.encyclopedia-hitboxes { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; padding: 14px 0; }
+.encyclopedia-hitboxes span { padding: 4px 6px; border: 1px solid #2548b8; border-radius: 7px; font: 800 10px ui-monospace,monospace; }
+.encyclopedia-hitboxes b { color: #c84765; }
+.encyclopedia-copy .encyclopedia-footnote { margin: 0; font-size: 11px; opacity: .75; }
+.encyclopedia-portrait { min-height: 390px; display: flex; flex-direction: column; align-items: center; justify-content: space-between; overflow: hidden; border: 4px solid #2548b8; border-radius: 12px 16px 11px 10px; background: repeating-linear-gradient(0deg,transparent 0 32px,#a9bde74b 33px 34px),#dce7ff; box-shadow: inset 0 0 30px #a0b4e46b; transform: rotate(1deg); }
+.encyclopedia-portrait > span { align-self: flex-start; padding: 12px; font: 900 10px ui-monospace,monospace; }
+.encyclopedia-portrait strong { width: 100%; padding: 9px; border-top: 2px solid #2548b8; background: #fffef6; text-align: center; font: 900 14px ui-monospace,monospace; }
+.encyclopedia-model { flex: 1; width: 100%; min-height: 270px; }
+.encyclopedia-nav { display: flex; align-items: center; justify-content: center; gap: 7px; flex-wrap: wrap; padding-top: 15px; border-top: 3px dashed #a8bce7; }
+.encyclopedia-nav button { font-size: 11px; }
+.encyclopedia-nav button.is-active { background: #2548b8; color: white; }
+@media (max-width: 700px) {
+  .encyclopedia-scene { padding: 8px; place-items: start center; }
+  .encyclopedia-paper { padding: 14px; box-shadow: 4px 5px 0 #a8bce7; }
+  .encyclopedia-paper header span { display: none; }
+  .encyclopedia-body { grid-template-columns: 1fr; padding: 15px 0; }
+  .encyclopedia-portrait { grid-row: 1; min-height: 220px; }
+  .encyclopedia-model { min-height: 170px; height: 170px; }
+  .encyclopedia-nav button { font-size: 10px; padding: 5px 7px; }
+}
 @media(max-width:620px) { .hud-coins { bottom: calc(20vh + 39px); } .hud-shield { bottom: calc(20vh + 78px); } .hud-owned-cards { max-height: 23vh; } }
 @media (pointer: coarse) and (max-width: 620px) { .hud-shield { bottom: auto; } }
+
+/* Touch HUD: leave the center clear, and give aiming gestures their own space. */
+@media (pointer: coarse) {
+  .mobile-controls { --fire-size: clamp(70px, 18vh, 94px); --fire-edge: clamp(14px, 6vw, 72px); }
+  .touch-look-pad { top: 18%; right: 0; width: 58%; height: 66%; }
+  .touch-button { position: absolute; width: 54px; height: 54px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; border-radius: 50%; border-width: 2px; font-size: 8px; box-shadow: 2px 3px 0 #2448a0a6, 0 3px 14px #08194270; }
+  .touch-button span { font: 900 8px/1 ui-rounded, sans-serif; letter-spacing: .02em; }
+  .touch-button:disabled { opacity: .4; }
+  .touch-fire { width: var(--fire-size); height: var(--fire-size); right: var(--fire-edge); bottom: 27%; border: 3px solid #ce4260; background: #fff0f2dc; color: #a02742; font-size: inherit; }
+  .touch-fire span { font-size: 10px; }
+  .touch-scope { right: calc(var(--fire-edge) + var(--fire-size) + 9px); bottom: calc(27% + 18px); }
+  .touch-scope.is-active { background: #2548b8; color: white; border-color: white; }
+  .touch-jump { right: calc(var(--fire-edge) - 2px); bottom: calc(27% + var(--fire-size) + 12px); }
+  .touch-slide { right: calc(var(--fire-edge) + var(--fire-size) + 8px); bottom: calc(27% - 54px); }
+  .touch-joystick { bottom: max(13%, env(safe-area-inset-bottom)); left: max(20px,env(safe-area-inset-left)); width: clamp(105px, 24vh, 148px); background: #eef3ffd6; border-style: solid; border-color: #2548b8aa; box-shadow: 0 4px 18px #071d3a55, inset 0 0 0 5px #fff8; }
+  .touch-joystick.is-running { border-color: #df4760; background: #fff0f2eb; }
+  .touch-run-lock { position: absolute; bottom: calc(100% + 4px); left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 4px; padding: 3px 6px; border-radius: 8px; background: #fffdf0e6; border: 1.5px solid #2548b8; white-space: nowrap; font: 800 8px ui-rounded,sans-serif; }
+  .touch-utility { position: absolute; right: max(10px,env(safe-area-inset-right)); bottom: max(8px,env(safe-area-inset-bottom)); display: flex; gap: 6px; pointer-events: none; }
+  .touch-utility .touch-button { position: relative; width: clamp(37px, 10vh, 46px); height: clamp(37px, 10vh, 46px); }
+  .touch-utility .touch-button span { font-size: 7px; }
+  .touch-weapons { bottom: max(9px,env(safe-area-inset-bottom)); left: 49%; border: 2px solid #2548b8; border-radius: 12px; padding: 3px; background: #f8f9f4e8; box-shadow: 2px 3px 0 #2548b884; }
+  .touch-weapons button { min-width: clamp(42px, 7vw, 53px); min-height: clamp(33px, 9vh, 40px); border-radius: 9px; box-shadow: none; }
+  .touch-pause { top: max(8px,env(safe-area-inset-top)); right: max(8px,env(safe-area-inset-right)); width: 37px; height: 37px; border-radius: 50%; }
+  .game-shell--gems .hud, .game-shell--hell .hud { --ink: #2548b8; text-shadow: 0 1px 1px #fff; }
+  .hud-level { top: 5px; border: 2px solid #2548b8; border-radius: 9px; background: #fffdf0d9; }
+  .hud-targets { top: 6px; right: 54px; padding: 3px 5px; border-radius: 6px; background: #fffdf0cc; }
+  .hud-targets strong { font-size: 21px; }
+  .hud-health { top: 8px; left: 8px; bottom: auto; width: clamp(120px, 23vw, 180px); min-width: 0; padding: 5px; gap: 4px; border-radius: 7px; background: #fffdf0d9; }
+  .hud-health > span, .hud-health > strong { font-size: 11px; }
+  .health-track { height: 12px; border-width: 2px; }
+  .hud-ammo-main { top: 51px; left: 9px; bottom: auto; transform: none; padding: 2px 5px; border-radius: 6px; background: #fffdf0ce; }
+  .hud-ammo-main strong { font-size: 18px; }
+  .hud-ammo-main span { font-size: 10px; }
+  .hud-shield { top: 82px; bottom: auto; left: 8px; background: #fffdf0d9; }
+  .hazard-notice { top: 58px; bottom: auto; left: 50%; max-width: 44vw; min-width: 0; font-size: 9px; padding: 3px 6px; }
+  .boost-status { top: 81px; font-size: 8px; }
+  .pickup-notice { top: 114px; font-size: 11px; }
+  .map-hint { display: none; }
+  .weapon-view.is-hip { right: 22%; bottom: -14vh; width: min(31vw,200px); }
+}
+@media (pointer: coarse) and (orientation: portrait) {
+  .mobile-controls { --fire-size: clamp(67px, 17vw, 82px); --fire-edge: 9vw; }
+  .touch-joystick { width: clamp(102px, 29vw, 130px); bottom: 15%; left: 12px; }
+  .touch-fire { bottom: 25%; }
+  .touch-scope { bottom: calc(25% + 18px); }
+  .touch-jump { bottom: calc(25% + var(--fire-size) + 10px); }
+  .touch-slide { bottom: calc(25% - 55px); }
+  .touch-weapons { top: 99px; bottom: auto; left: 50%; }
+  .touch-weapons button { min-width: 43px; min-height: 34px; }
+  .touch-utility { right: 5px; bottom: 9px; gap: 3px; }
+  .touch-utility .touch-button { width: 40px; height: 40px; }
+  .touch-rotate-hint { top: 142px; }
+  .hud-targets { top: 53px; right: 8px; }
+  .hazard-notice { top: 151px; max-width: 65vw; }
+  .boost-status { top: 178px; }
+}
