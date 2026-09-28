@@ -8,6 +8,7 @@ import { useGameStore } from "../game/store";
 
 type Trace = {
   id: number;
+  color: string;
   from: [number, number, number];
   to: [number, number, number];
   hit: boolean;
@@ -15,6 +16,7 @@ type Trace = {
 
 type Impact = {
   id: number;
+  color: string;
   position: [number, number, number];
   sparks: [number, number, number][];
 };
@@ -54,7 +56,7 @@ function TraceLine({ trace }: { trace: Trace }) {
       <mesh>
         <cylinderGeometry args={[0.005, 0.01, length, 5]} />
         <meshBasicMaterial
-          color={trace.hit ? "#ff6ea8" : "#5978e8"}
+          color={trace.color}
           transparent
           opacity={trace.hit ? 0.9 : 0.52}
           depthWrite={false}
@@ -63,7 +65,7 @@ function TraceLine({ trace }: { trace: Trace }) {
       <mesh position={[0, length / 2, 0]}>
         <octahedronGeometry args={[trace.hit ? 0.05 : 0.03, 0]} />
         <meshBasicMaterial
-          color={trace.hit ? "#ff8fbd" : "#eef2ff"}
+          color={trace.color}
           depthWrite={false}
         />
       </mesh>
@@ -78,7 +80,7 @@ function ImpactBurst({ impact }: { impact: Impact }) {
         <mesh position={offset} key={index}>
           <octahedronGeometry args={[index % 2 ? 0.05 : 0.075, 0]} />
           <meshBasicMaterial
-            color={index % 3 === 0 ? "#ffffff" : "#ff5f9d"}
+            color={index % 3 === 0 ? "#ffffff" : impact.color}
             transparent
             opacity={0.95}
             depthWrite={false}
@@ -88,7 +90,7 @@ function ImpactBurst({ impact }: { impact: Impact }) {
       <mesh>
         <ringGeometry args={[0.075, 0.125, 9]} />
         <meshBasicMaterial
-          color="#ff5f9d"
+          color={impact.color}
           side={THREE.DoubleSide}
           transparent
           opacity={0.8}
@@ -173,10 +175,12 @@ export function CombatSystem() {
   useEffect(() => {
     function addTrace(from: THREE.Vector3, to: THREE.Vector3, hit: boolean) {
       const id = nextTraceId.current++;
+      const color = useGameStore.getState().equippedSkins[useGameStore.getState().weapon];
       setTraces((current) => [
         ...current.slice(-10),
         {
           id,
+          color: color === "default" ? hit ? "#ff6ea8" : "#5978e8" : color,
           from: [from.x, from.y, from.z],
           to: [to.x, to.y, to.z],
           hit,
@@ -190,6 +194,7 @@ export function CombatSystem() {
 
     function addImpact(position: THREE.Vector3) {
       const id = nextImpactId.current++;
+      const color = useGameStore.getState().equippedSkins[useGameStore.getState().weapon];
       const sparks: [number, number, number][] = Array.from(
         { length: 8 },
         () => [
@@ -203,6 +208,7 @@ export function CombatSystem() {
         ...current.slice(-14),
         {
           id,
+          color: color === "default" ? "#ff5f9d" : color,
           position: [position.x, position.y, position.z],
           sparks,
         },
@@ -655,6 +661,7 @@ export function CombatSystem() {
     const keyDown = (event: KeyboardEvent) => {
       if (useGameStore.getState().screen !== "playing" || useGameStore.getState().tutorialOpen) return;
       if (event.code === "KeyQ" && !event.repeat) useGameStore.getState().triggerScan();
+      if (event.code === "KeyF" && !event.repeat) useGameStore.getState().castMagic();
       if (event.code === "Digit1") setWeapon("sniper");
       if (event.code === "Digit2") setWeapon("rifle");
       if (event.code === "Digit3") setWeapon("shotgun");

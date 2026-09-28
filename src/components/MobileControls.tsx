@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
-import { Crosshair, Eye, Footprints, Pause, PersonStanding, RotateCcw, ScanSearch, Target, Zap } from "lucide-react";
+import { Crosshair, Eye, Footprints, Pause, PersonStanding, RotateCcw, ScanSearch, Target, Zap, Sparkles } from "lucide-react";
 import { touchInput, useTouchMode } from "../game/touch";
 import { useGameStore } from "../game/store";
 import type { WeaponId } from "../game/config";
@@ -161,12 +161,14 @@ export function MobileControls() {
   const scoped = useGameStore((s) => s.scoped);
   const setWeapon = useGameStore((s) => s.setWeapon);
   const pause = useGameStore((s) => s.pause);
+  const magic = useGameStore((s) => s.selectedMagic);
   if (!touch || screen !== "playing" || tutorialOpen) return null;
 
   return <div className="mobile-controls">
     <LookPad />
     <MovementPad />
     <FireButton weapon={weapon} />
+    <ActionButton kind="KeyF" label={`Cast ${magic ?? "magic"}`} className="touch-magic"><Sparkles size={20}/><span>MAGIC</span></ActionButton>
     <ScopeButton scoped={scoped} weapon={weapon} />
     <ActionButton kind="Space" label="Jump" className="touch-jump"><PersonStanding size={23} /><span>JUMP</span></ActionButton>
     <ActionButton kind="KeyC" label="Slide and crouch" className="touch-slide"><Footprints size={21} /><span>SLIDE</span></ActionButton>

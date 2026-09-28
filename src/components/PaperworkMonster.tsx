@@ -1,4 +1,5 @@
 import { ScanHalo } from "./ScanHalo";
+import { EnemyFeedback } from "./EnemyFeedback";
 import { Edges, Html } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -238,6 +239,7 @@ export function PaperworkMonster({
 
   return (
     <group ref={root} position={safeSpawn}>
+        <EnemyFeedback id={id} root={root} />
         <ScanHalo id={id} size={1.3} />
       <mesh
         position={[0, 1.05, 0]}

@@ -3,8 +3,11 @@ import { getLevelDefinition } from "../game/levels";
 import { getUpgradeCard, upgradeDescription } from "../game/progression";
 import { useGameStore } from "../game/store";
 import { enterStageAfterCurtain } from "../game/sceneTransition";
+import { useState } from "react";
+import { SkillTree } from "./SkillTree";
 
 export function UpgradeScreen() {
+  const [treeOpen, setTreeOpen] = useState(false);
   const currentLevel = useGameStore((state) => state.currentLevel);
   const hearts = useGameStore((state) => state.hearts);
   const ngPlusCycle = useGameStore((state) => state.ngPlusCycle);
@@ -19,6 +22,10 @@ export function UpgradeScreen() {
   const goToMenu = useGameStore((state) => state.goToMenu);
   const level = getLevelDefinition(currentLevel);
   const next = getLevelDefinition(Math.min(10, currentLevel + 1));
+  const playerLevel = useGameStore((s) => s.playerLevel);
+  const skillPoints = useGameStore((s) => s.skillPoints);
+  const lastXpReward = useGameStore((s) => s.lastXpReward);
+  if (treeOpen) return <SkillTree onBack={() => setTreeOpen(false)} />;
 
   return (
     <main className="upgrade-shell">
@@ -28,6 +35,7 @@ export function UpgradeScreen() {
           {ngPlusCycle ? `NG+ ${ngPlusCycle} // ` : ""}LEVEL {currentLevel} CLEARED // {level.name}
         </p>
         <p className="campaign-hearts">HEARTS {"♥".repeat(hearts)}{"♡".repeat(5 - hearts)}</p>
+        <p className="campaign-hearts">+{lastXpReward} XP · PLAYER LEVEL {playerLevel} · {skillPoints} SKILL POINTS</p>
         <h1>PICK YOUR<br />DREAM PERK</h1>
         <p className="upgrade-copy">
           Choose one card. Common 50% · rare 30% · epic 15% · legendary 5%.
@@ -60,6 +68,7 @@ export function UpgradeScreen() {
         </div>
 
         <div className="upgrade-actions">
+          <button type="button" onClick={() => setTreeOpen(true)}>✦ OPEN MAGIC TREE · {skillPoints} POINTS</button>
           {!selected && choices.length > 0 ? (
             <button
               type="button"

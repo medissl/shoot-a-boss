@@ -1,4 +1,5 @@
 import { ScanHalo } from "./ScanHalo";
+import { EnemyFeedback } from "./EnemyFeedback";
 import { Html } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -83,13 +84,14 @@ function InkProjectile({
   return (
     <group ref={ref} position={projectile.position}>
       <mesh>
-        <icosahedronGeometry args={[0.16, 0]} />
+        <icosahedronGeometry args={[0.2, 0]} />
         <meshBasicMaterial color={INK} />
       </mesh>
       <mesh scale={1.8}>
         <icosahedronGeometry args={[0.12, 0]} />
         <meshBasicMaterial color="#6e65d8" transparent opacity={0.42} />
       </mesh>
+      {[0,1,2,3].map((i) => <mesh key={i} position={[Math.sin(i*2.1)*.26,Math.cos(i*2.1)*.25,-i*.17]} rotation={[i,i*.4,0]}><octahedronGeometry args={[.055,0]}/><meshBasicMaterial color={i%2 ? "#fff1a9" : "#b69cff"} /></mesh>)}
     </group>
   );
 }
@@ -352,6 +354,7 @@ export function PenMonster({
   return (
     <>
       <group ref={root} position={safeSpawn}>
+        <EnemyFeedback id={id} root={root} />
         <ScanHalo id={id} size={1.4} />
         {/* The decorative drawing stays clear of the three separate hit zones. */}
         <group userData={{ ignoreProjectile: true }}>

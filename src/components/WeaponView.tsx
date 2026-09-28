@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import type { WeaponId } from "../game/config";
 import { useGameStore } from "../game/store";
 
@@ -160,6 +160,7 @@ function ScopedWeaponArt({ weapon }: { weapon: WeaponId }) {
 
 export function WeaponView() {
   const weapon = useGameStore((state) => state.weapon);
+  const skin = useGameStore((state) => state.equippedSkins[state.weapon]);
   const scoped = useGameStore((state) => state.scoped);
   const movementMode = useGameStore((state) => state.movementMode);
   const reloading = useGameStore((state) => state.reloading);
@@ -185,12 +186,14 @@ export function WeaponView() {
 
   return (
     <div
-      className={`weapon-view weapon-view--${weapon} movement-${movementMode} ${scoped ? "is-scoped" : "is-hip"} ${kick ? "is-kicking" : ""} ${reloading ? "is-reloading" : ""}`}
+      className={`weapon-view weapon-view--${weapon} movement-${movementMode} ${scoped ? "is-scoped" : "is-hip"} ${kick ? "is-kicking" : ""} ${reloading ? "is-reloading" : ""} ${skin !== "default" ? "has-skin" : ""}`}
+      style={{"--skin-color":skin} as CSSProperties}
       aria-hidden="true"
     >
       <div className="weapon-view__motion">
         <div className="weapon-view__perspective">
           <div className="weapon-view__kick">
+            {skin !== "default" && <span className="weapon-skin-sparkles">✦ ◇ ✧</span>}
             {scoped && weapon !== "knife" ? (
               <ScopedWeaponArt weapon={weapon} />
             ) : (

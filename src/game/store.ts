@@ -12,6 +12,18 @@ import {
 
 type AmmoState = Record<WeaponId, { mag: number; reserve: number }>;
 type Champion = { cycle: number; level: number; hearts: number; upgrades: UpgradeLevels; ready: boolean };
+export const MAGIC_TYPES = ["fire", "crystal", "ice", "water", "thunder"] as const;
+export type MagicType = typeof MAGIC_TYPES[number];
+export type SkinColor = "default" | "blue" | "yellow" | "green" | "pink" | "red" | "orange";
+export const SKIN_COLORS: Exclude<SkinColor, "default">[] = ["blue", "yellow", "green", "pink", "red", "orange"];
+export type Skins = Record<WeaponId, SkinColor[]>;
+export type EquippedSkins = Record<WeaponId, SkinColor>;
+const emptySkins = (): Skins => ({ sniper: ["default"], rifle: ["default"], shotgun: ["default"], knife: ["default"] });
+const defaultSkins = (): EquippedSkins => ({ sniper: "default", rifle: "default", shotgun: "default", knife: "default" });
+const emptyMagic = (): Record<MagicType, number> => ({ fire: 0, crystal: 0, ice: 0, water: 0, thunder: 0 });
+export const xpToNextLevel = (level: number) => Math.round((120 + level * 42 + Math.floor(level / 10) * 160) * (1 + level * 0.035));
+export const magicDamage = (rank: number) => 300 + (rank - 1) * 65;
+export const magicCooldown = (rank: number) => Math.max(12, 45 - (rank - 1) * 1.5);
 export type GearId = "vest" | "boots" | "barrel" | "medallion" | "skates" | "aegis" | "lens" | "satchel";
 export const GEAR: { id: GearId; name: string; detail: string; cost: number }[] = [
   { id: "vest", name: "IRON VEST", detail: "+15 maximum HP per rank", cost: 100 },
@@ -28,6 +40,33 @@ export const gearCap = (id: GearId) => id === "aegis" ? 3 : 5;
 export const MAX_HEARTS = 5;
 const CHAMPION_KEY = "shoot-a-boss:champion";
 const HEARTS_KEY = "shoot-a-boss:hearts";
+const SAVE_KEY = "shoot-a-boss:campaign";
+const readSave = (): Record<string, unknown> => { try { return JSON.parse(localStorage.getItem(SAVE_KEY) || "{}") ?? {}; } catch { return {}; } };
+const saved = typeof window === "undefined" ? {} : readSave();
+function persist(state: GameStore) {
+  const level = ["stageClear", "upgrade"].includes(state.screen) && state.currentLevel < 10 ? state.currentLevel + 1 : state.currentLevel;
+  localStorage.setItem(SAVE_KEY, JSON.stringify({ level, cycle: state.ngPlusCycle, upgrades: state.upgrades,
+    xp: state.xp, playerLevel: state.playerLevel, skillPoints: state.skillPoints, magic: state.magic, selectedMagic: state.selectedMagic,
+    skins: state.skins, equippedSkins: state.equippedSkins }));
+}
+function restoredUpgrades(): UpgradeLevels {
+  const upgrades = emptyUpgrades();
+  const raw = saved.upgrades as Record<string, number> | undefined;
+  for (const id of Object.keys(upgrades) as UpgradeId[]) upgrades[id] = Math.min(getUpgradeCard(id).maxStacks, Math.max(0, Math.floor(Number(raw?.[id]) || 0)));
+  return upgrades;
+}
+function restoredMagic(): Record<MagicType, number> {
+  const magic = emptyMagic();
+  const raw = saved.magic as Record<string, number> | undefined;
+  for (const kind of MAGIC_TYPES) magic[kind] = Math.min(20, Math.max(0, Math.floor(Number(raw?.[kind]) || 0)));
+  return magic;
+}
+function restoredSkins(): Skins {
+  const result = emptySkins();
+  const raw = saved.skins as Partial<Record<WeaponId, string[]>> | undefined;
+  for (const weapon of weaponOrder) result[weapon] = ["default", ...new Set((raw?.[weapon] ?? []).filter((color): color is SkinColor => SKIN_COLORS.includes(color as Exclude<SkinColor,"default">)))];
+  return result;
+}
 
 export type GameScreen =
   | "story"
@@ -60,6 +99,15 @@ type GameStore = {
   coins: number;
   gear: GearLevels;
   lastReward: number;
+  lastXpReward: number;
+  xp: number;
+  playerLevel: number;
+  skillPoints: number;
+  magic: Record<MagicType, number>;
+  selectedMagic: MagicType | null;
+  magicReadyAt: number;
+  skins: Skins;
+  equippedSkins: EquippedSkins;
   targetCount: number;
   hp: number;
   maxHp: number;
@@ -100,6 +148,13 @@ type GameStore = {
   undoUpgrade: () => void;
   continueAfterVictory: () => void;
   buyGear: (id: GearId) => void;
+  buyHeart: () => void;
+  buyCrate: (weapon: WeaponId) => SkinColor | null;
+  equipSkin: (weapon: WeaponId, color: SkinColor) => void;
+  unlockMagic: (kind: MagicType) => void;
+  selectMagic: (kind: MagicType) => void;
+  castMagic: () => boolean;
+  resetData: () => void;
   rerollUpgrades: () => void;
   closeTutorial: () => void;
   triggerScan: () => void;
@@ -285,30 +340,39 @@ function announceRifle() {
 }
 
 export const useGameStore = create<GameStore>((set, get) => {
-  const initialUpgrades = emptyUpgrades();
+  const initialUpgrades = restoredUpgrades();
 
   return {
     screen: "story",
     runId: 0,
     unlockedLevel: readUnlockedLevel(),
     hearts: readHearts(),
-    ngPlusCycle: 0,
+    ngPlusCycle: Math.max(0, Math.floor(Number(saved.cycle) || 0)),
     champion: readChampion(),
     coins: typeof window === "undefined" ? 0 : readCoins(),
     gear: typeof window === "undefined" ? { vest: 0, boots: 0, barrel: 0, medallion: 0, skates: 0, aegis: 0, lens: 0, satchel: 0 } : readGear(),
     lastReward: 0,
+    lastXpReward: 0,
+    xp: Math.max(0, Number(saved.xp) || 0),
+    playerLevel: Math.max(1, Math.floor(Number(saved.playerLevel) || 1)),
+    skillPoints: Math.max(0, Math.floor(Number(saved.skillPoints) || 0)),
+    magic: restoredMagic(),
+    selectedMagic: MAGIC_TYPES.includes(saved.selectedMagic as MagicType) ? saved.selectedMagic as MagicType : null,
+    magicReadyAt: 0,
+    skins: restoredSkins(),
+    equippedSkins: { ...defaultSkins(), ...(saved.equippedSkins as EquippedSkins | undefined) },
     upgrades: initialUpgrades,
     upgradeChoices: [],
     upgradeRerollsLeft: 1,
     selectedUpgrade: null,
     tutorialOpen: false,
-    ...freshRun(1, initialUpgrades),
+    ...freshRun(Math.min(readUnlockedLevel(), Math.max(1, Number(saved.level) || readUnlockedLevel())), initialUpgrades, Math.max(0, Number(saved.cycle) || 0)),
     sensitivity: 0.85,
     bgmVolume: readStoredVolume("shoot-a-boss:bgm-volume", 0.34),
     sfxVolume: readStoredVolume("shoot-a-boss:sfx-volume", 0.42),
 
     startGame: () => {
-      const upgrades = emptyUpgrades();
+      const upgrades = get().upgrades;
       const hearts = get().hearts || MAX_HEARTS;
       writeHearts(hearts);
       set((state) => ({
@@ -316,12 +380,12 @@ export const useGameStore = create<GameStore>((set, get) => {
         runId: state.runId + 1,
         upgrades,
         hearts,
-        ngPlusCycle: 0,
+        ngPlusCycle: state.ngPlusCycle,
         upgradeChoices: [],
         upgradeRerollsLeft: 1,
         selectedUpgrade: null,
         tutorialOpen: true,
-        ...freshRun(1, upgrades, 0, state.gear),
+        ...freshRun(state.currentLevel, upgrades, state.ngPlusCycle, state.gear),
       }));
       announceRifle();
       window.dispatchEvent(new Event("stage-selected"));
@@ -329,7 +393,9 @@ export const useGameStore = create<GameStore>((set, get) => {
 
     startLevel: (level) => {
       const safeLevel = Math.min(10, Math.max(1, level));
-      const upgrades = emptyUpgrades();
+      const state = get();
+      if (safeLevel !== state.currentLevel || state.ngPlusCycle > 0 || safeLevel > state.unlockedLevel) return;
+      const upgrades = state.upgrades;
       const hearts = get().hearts || MAX_HEARTS;
       writeHearts(hearts);
       set((state) => ({
@@ -337,12 +403,12 @@ export const useGameStore = create<GameStore>((set, get) => {
         runId: state.runId + 1,
         upgrades,
         hearts,
-        ngPlusCycle: 0,
+        ngPlusCycle: state.ngPlusCycle,
         upgradeChoices: [],
         upgradeRerollsLeft: 1,
         selectedUpgrade: null,
         tutorialOpen: safeLevel === 1,
-        ...freshRun(safeLevel, upgrades, 0, state.gear),
+        ...freshRun(safeLevel, upgrades, state.ngPlusCycle, state.gear),
       }));
       announceRifle();
       window.dispatchEvent(new Event("stage-selected"));
@@ -363,6 +429,7 @@ export const useGameStore = create<GameStore>((set, get) => {
         selectedUpgrade: null, tutorialOpen: false,
         ...freshRun(level, champion.upgrades, cycle, state.gear),
       }));
+      persist(get());
       announceRifle();
       window.dispatchEvent(new Event("stage-selected"));
     },
@@ -392,6 +459,7 @@ export const useGameStore = create<GameStore>((set, get) => {
         tutorialOpen: false,
         ...freshRun(next, state.upgrades, state.ngPlusCycle, current.gear),
       }));
+      persist(get());
       announceRifle();
       window.dispatchEvent(new Event("stage-selected"));
     },
@@ -417,6 +485,7 @@ export const useGameStore = create<GameStore>((set, get) => {
         grenades: id === "bombBelt" ? Math.min(getUpgradeStats(newUpgrades).grenadeCapacity + state.gear.satchel, state.grenades + 1) : state.grenades,
         selectedUpgrade: id,
       });
+      persist(get());
       window.dispatchEvent(new Event("ui-confirm"));
     },
 
@@ -429,6 +498,7 @@ export const useGameStore = create<GameStore>((set, get) => {
       const champion = state.ngPlusCycle > 0 || state.currentLevel === 10 ? { cycle: state.ngPlusCycle, level: Math.min(10, state.currentLevel + 1), hearts: state.hearts, upgrades, ready: state.currentLevel === 10 } : state.champion;
       if (state.ngPlusCycle > 0 || state.currentLevel === 10) writeChampion(champion);
       set({ upgrades, champion, maxHp, hp: Math.min(maxHp, state.hp), grenades: Math.min(state.grenades, getUpgradeStats(upgrades).grenadeCapacity + state.gear.satchel), selectedUpgrade: null });
+      persist(get());
     },
 
     continueAfterVictory: () => {
@@ -447,6 +517,62 @@ export const useGameStore = create<GameStore>((set, get) => {
       window.localStorage.setItem("shoot-a-boss:gear", JSON.stringify(gear));
       set({ coins, gear });
       window.dispatchEvent(new Event("ui-confirm"));
+    },
+
+    buyHeart: () => {
+      const state = get();
+      if (state.screen !== "menu" || state.hearts >= MAX_HEARTS || state.coins < 1000) return;
+      const coins = state.coins - 1000;
+      localStorage.setItem("shoot-a-boss:coins", String(coins));
+      writeHearts(state.hearts + 1);
+      const champion = state.champion ? { ...state.champion, hearts: state.hearts + 1 } : null;
+      writeChampion(champion);
+      set({ hearts: state.hearts + 1, coins, champion });
+      window.dispatchEvent(new Event("ui-confirm"));
+    },
+    buyCrate: (weapon) => {
+      const state = get();
+      if (state.screen !== "menu" || state.coins < 300) return null;
+      const unowned = SKIN_COLORS.filter((color) => !state.skins[weapon].includes(color));
+      const color = (unowned.length ? unowned : SKIN_COLORS)[Math.floor(Math.random() * (unowned.length || SKIN_COLORS.length))];
+      const coins = state.coins - 300;
+      const skins = { ...state.skins, [weapon]: [...new Set([...state.skins[weapon], color])] };
+      localStorage.setItem("shoot-a-boss:coins", String(coins));
+      set({ coins, skins }); persist(get());
+      window.dispatchEvent(new Event("ui-confirm"));
+      return color;
+    },
+    equipSkin: (weapon, color) => {
+      if (!get().skins[weapon].includes(color)) return;
+      set({ equippedSkins: { ...get().equippedSkins, [weapon]: color } }); persist(get());
+    },
+    unlockMagic: (kind) => {
+      const state = get();
+      if (state.skillPoints < 1 || state.magic[kind] >= 20) return;
+      const magic = { ...state.magic, [kind]: state.magic[kind] + 1 };
+      set({ magic, skillPoints: state.skillPoints - 1, selectedMagic: state.selectedMagic ?? kind }); persist(get());
+      window.dispatchEvent(new Event("ui-confirm"));
+    },
+    selectMagic: (kind) => {
+      if (!get().magic[kind]) return;
+      set({ selectedMagic: kind }); persist(get());
+    },
+    castMagic: () => {
+      const state = get();
+      const kind = state.selectedMagic;
+      const now = performance.now();
+      if (state.screen !== "playing" || state.tutorialOpen || !kind || !state.magic[kind] || now < state.magicReadyAt) return false;
+      set({ magicReadyAt: now + magicCooldown(state.magic[kind]) * 1000 });
+      window.dispatchEvent(new CustomEvent("magic-cast", { detail: { kind, rank: state.magic[kind] } }));
+      return true;
+    },
+    resetData: () => {
+      for (const key of [SAVE_KEY, CHAMPION_KEY, HEARTS_KEY, "shoot-a-boss:unlocked-level", "shoot-a-boss:gear", "shoot-a-boss:coins"]) localStorage.removeItem(key);
+      const upgrades = emptyUpgrades(); const gear = Object.fromEntries(GEAR.map(({ id }) => [id, 0])) as GearLevels;
+      set((state) => ({ screen: "story", runId: state.runId + 1, unlockedLevel: 1, hearts: MAX_HEARTS,
+        ngPlusCycle: 0, champion: null, coins: 0, gear, lastReward: 0, lastXpReward: 0, xp: 0, playerLevel: 1, skillPoints: 0,
+        magic: emptyMagic(), selectedMagic: null, magicReadyAt: 0, skins: emptySkins(), equippedSkins: defaultSkins(),
+        upgrades, upgradeChoices: [], selectedUpgrade: null, ...freshRun(1, upgrades, 0, gear) }));
     },
 
     closeTutorial: () => set({ tutorialOpen: false }),
@@ -469,6 +595,7 @@ export const useGameStore = create<GameStore>((set, get) => {
       const duration = (all ? 10000 : 5000) + state.gear.lens * 2000;
       const until = now + duration;
       set({ scanTargets: selected, scanUntil: until, scanCooldownUntil: now + 30000 });
+      window.dispatchEvent(new Event("scan-started"));
       window.setTimeout(() => {
         if (get().scanUntil === until) set({ scanTargets: [] });
       }, duration);
@@ -509,16 +636,7 @@ export const useGameStore = create<GameStore>((set, get) => {
     restart: () => {
       const state = get();
       if (state.screen === "purged") {
-        const upgrades = emptyUpgrades();
-        writeHearts(MAX_HEARTS);
-        set((current) => ({
-          screen: "playing", runId: current.runId + 1,
-          hearts: MAX_HEARTS, ngPlusCycle: 0, champion: null,
-          upgrades, tutorialOpen: true,
-          ...freshRun(1, upgrades, 0, current.gear),
-        }));
-        announceRifle();
-        window.dispatchEvent(new Event("stage-selected"));
+        get().resetData();
         return;
       }
       set((current) => ({
@@ -532,7 +650,9 @@ export const useGameStore = create<GameStore>((set, get) => {
 
     goToMenu: () => {
       const state = get();
-      if (state.ngPlusCycle > 0 && state.screen !== "purged" && state.screen !== "won" && !(state.screen === "stageClear" && state.currentLevel === 10)) {
+      if (state.screen === "purged") { get().resetData(); set({ screen: "menu" }); return; }
+      const checkpointLevel = ["stageClear", "upgrade"].includes(state.screen) && state.currentLevel < 10 ? state.currentLevel + 1 : state.currentLevel;
+      if (state.ngPlusCycle > 0 && state.screen !== "won" && !(state.screen === "stageClear" && state.currentLevel === 10)) {
         const champion = {
           cycle: state.ngPlusCycle,
           level: state.screen === "upgrade" ? Math.min(10, state.currentLevel + 1) : state.currentLevel,
@@ -545,11 +665,13 @@ export const useGameStore = create<GameStore>((set, get) => {
       cancelReload(set, get);
       set({
         screen: "menu",
+        currentLevel: checkpointLevel,
         scoped: false,
         movementMode: "idle",
         speedBoostActive: false,
         speedBoostUntil: 0,
       });
+      persist(get());
     },
 
     readComic: () => {
@@ -704,15 +826,8 @@ export const useGameStore = create<GameStore>((set, get) => {
       const hearts = state.hearts - 1;
       writeHearts(hearts);
       if (hearts <= 0) {
-        const upgrades = emptyUpgrades();
-        writeUnlockedLevel(1);
-        writeChampion(null);
-        set({
-          ...freshRun(1, upgrades, 0, state.gear),
-          screen: "purged", runId: state.runId + 1, hp: 0,
-          unlockedLevel: 1, hearts: 0, ngPlusCycle: 0, champion: null,
-          upgrades, upgradeChoices: [], selectedUpgrade: null, tutorialOpen: false,
-        });
+        get().resetData();
+        set({ screen: "purged", hearts: 0, hp: 0, tutorialOpen: false });
         return;
       }
       const champion = state.ngPlusCycle > 0 ? {
@@ -721,6 +836,7 @@ export const useGameStore = create<GameStore>((set, get) => {
       } : state.champion ? { ...state.champion, hearts } : null;
       if (champion) writeChampion(champion);
       set({ hp: 0, hearts, champion, screen: "lost", scoped: false, movementMode: "idle" });
+      persist(get());
     },
 
     eliminate: (id) => {
@@ -745,8 +861,14 @@ export const useGameStore = create<GameStore>((set, get) => {
       );
 
       if (killCount >= state.targetCount) {
-        const lastReward = 40 + state.currentLevel * 15 + state.ngPlusCycle * 25;
+        const effectiveLevel = state.currentLevel + state.ngPlusCycle * 10;
+        const lastReward = 55 + effectiveLevel * 22;
         const coins = state.coins + lastReward;
+        const lastXpReward = Math.round(95 + effectiveLevel * 37 + state.targetCount * 8);
+        let xp = state.xp + lastXpReward;
+        let playerLevel = state.playerLevel;
+        let skillPoints = state.skillPoints;
+        while (xp >= xpToNextLevel(playerLevel)) { xp -= xpToNextLevel(playerLevel++); skillPoints++; }
         window.localStorage.setItem("shoot-a-boss:coins", String(coins));
         const unlockedLevel = Math.min(
           10,
@@ -765,7 +887,7 @@ export const useGameStore = create<GameStore>((set, get) => {
             hp: nextHp,
             unlockedLevel,
             champion,
-            screen: "stageClear", coins, lastReward, ammo, enemyPositions,
+            screen: "stageClear", coins, lastReward, xp, playerLevel, skillPoints, lastXpReward, ammo, enemyPositions,
             scoped: false,
             movementMode: "idle",
             upgradeChoices: rollUpgradeChoices(
@@ -776,6 +898,7 @@ export const useGameStore = create<GameStore>((set, get) => {
             upgradeRerollsLeft: 1,
             selectedUpgrade: null,
           });
+          persist(get());
           return;
         }
 
@@ -783,7 +906,7 @@ export const useGameStore = create<GameStore>((set, get) => {
           eliminated,
           hp: nextHp,
           unlockedLevel,
-          screen: "stageClear", coins, lastReward, ammo, enemyPositions,
+          screen: "stageClear", coins, lastReward, xp, playerLevel, skillPoints, lastXpReward, ammo, enemyPositions,
           scoped: false,
           movementMode: "idle",
           upgradeChoices: rollUpgradeChoices(
@@ -794,6 +917,7 @@ export const useGameStore = create<GameStore>((set, get) => {
           upgradeRerollsLeft: 1,
           selectedUpgrade: null,
         });
+        persist(get());
         return;
       }
 

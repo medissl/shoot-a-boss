@@ -14,6 +14,9 @@ import { ControlsList } from "./ControlsList";
 import { GearShopScene } from "./GearShopScene";
 import { FullscreenToggle } from "./FullscreenToggle";
 import { MonsterEncyclopedia } from "./MonsterEncyclopedia";
+import { EquipmentHub } from "./EquipmentHub";
+import { SkillTree } from "./SkillTree";
+import { ResetDataButton } from "./ResetDataButton";
 import { enterStageAfterCurtain } from "../game/sceneTransition";
 
 export function MainMenu() {
@@ -21,6 +24,8 @@ export function MainMenu() {
   const unlockedLevel = useGameStore((state) => state.unlockedLevel);
   const hearts = useGameStore((state) => state.hearts);
   const champion = useGameStore((state) => state.champion);
+  const ngPlusCycle = useGameStore((state) => state.ngPlusCycle);
+  const currentLevel = useGameStore((state) => state.currentLevel);
   const startNewGamePlus = useGameStore((state) => state.startNewGamePlus);
   const readComic = useGameStore((state) => state.readComic);
   const sensitivity = useGameStore((state) => state.sensitivity);
@@ -34,9 +39,13 @@ export function MainMenu() {
   const [controlsOpen, setControlsOpen] = useState(false);
   const [shopOpen, setShopOpen] = useState(false);
   const [encyclopediaOpen, setEncyclopediaOpen] = useState(false);
+  const [equipmentOpen, setEquipmentOpen] = useState(false);
+  const [treeOpen, setTreeOpen] = useState(false);
   const coins = useGameStore((state) => state.coins);
 
   if (shopOpen) return <GearShopScene onBack={() => { setShopOpen(false); window.dispatchEvent(new Event("ui-scene-open")); }} />;
+  if (treeOpen) return <SkillTree onBack={() => setTreeOpen(false)} />;
+  if (equipmentOpen) return <EquipmentHub onBack={() => setEquipmentOpen(false)} onShop={() => setShopOpen(true)} onStages={() => {setEquipmentOpen(false);setLevelSelectOpen(true);}} onTree={() => setTreeOpen(true)} />;
   if (encyclopediaOpen) return <MonsterEncyclopedia onBack={() => setEncyclopediaOpen(false)} />;
 
   return (
@@ -84,6 +93,7 @@ export function MainMenu() {
               <button type="button" onClick={() => setEncyclopediaOpen(true)}>
                 <BookOpen size={17} /> MONSTER ENCYCLOPEDIA
               </button>
+              <button type="button" onClick={() => setEquipmentOpen(true)}>✦ PLAYER EQUIPMENT</button>
 
               <a href="https://github.com/medissl" target="_blank" rel="noreferrer">
                 <Github size={17} /> CREATOR ↗
@@ -141,11 +151,12 @@ export function MainMenu() {
                     }
                   />
                 </label>
+                <ResetDataButton />
               </div>
             )}
 
             <div className="main-menu-note">
-              <span>WASD</span> move · <span>1–4</span> weapons · <span>LMB</span> attack · <span>RMB</span> aim · <span>G</span> paper bomb
+              <span>WASD</span> move · <span>1–4</span> weapons · <span>LMB</span> attack · <span>RMB</span> aim · <span>G</span> paper bomb · <span>F</span> magic
             </div>
           </>
         ) : (
@@ -161,33 +172,33 @@ export function MainMenu() {
             <div className="stage-select__wallet">
               <span>HEARTS {"♥".repeat(hearts)}{"♡".repeat(5 - hearts)}</span>
               <span><b className="doodle-coin" aria-hidden="true">◉</b> {coins} COINS</span>
-              <button type="button" onClick={() => { setShopOpen(true); window.dispatchEvent(new Event("ui-scene-open")); }}><ShoppingBag size={17} /> GEAR SHOP →</button>
+              <button type="button" onClick={() => { setShopOpen(true); window.dispatchEvent(new Event("ui-scene-open")); }}><ShoppingBag size={17} /> SHOP →</button>
             </div>
             <h2>CHOOSE<br />A STAGE</h2>
             <p className="stage-select__copy">
-              Clear stages to unlock the next deadline. Upgrades only carry
-              forward when you continue a run. A lost round spends a heart;
+              Clear stages in order. Your cards and checkpoint carry forward when you return to the menu. A lost round spends a heart;
               losing all five resets the dream to Level 1.
             </p>
 
             <div className="stage-road">
               {LEVELS.map((level, index) => {
-                const unlocked = level.level <= unlockedLevel;
+                const unlocked = ngPlusCycle === 0 && level.level === currentLevel && level.level <= unlockedLevel && !champion?.ready;
+                const completed = level.level < currentLevel || (champion?.ready && level.level <= 10);
                 return (
                   <button
                     key={level.level}
                     type="button"
-                    className={`stage-node stage-node--${level.theme} ${unlocked ? "is-unlocked" : "is-locked"}`}
+                    className={`stage-node stage-node--${level.theme} ${unlocked ? "is-unlocked" : completed ? "is-completed" : "is-locked"}`}
                     style={{ "--stage-index": index } as React.CSSProperties}
                     disabled={!unlocked}
                     onClick={() => enterStageAfterCurtain(() => startLevel(level.level))}
                   >
                     <span className="stage-node__number">
-                      {unlocked ? level.level : <LockKeyhole size={16} />}
+                      {completed ? "✓" : unlocked ? level.level : <LockKeyhole size={16} />}
                     </span>
                     <span className="stage-node__text">
                       <strong>{level.name}</strong>
-                      <small>{level.difficulty}</small>
+                      <small>{completed ? "COMPLETED" : level.difficulty}</small>
                     </span>
                   </button>
                 );

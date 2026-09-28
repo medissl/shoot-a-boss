@@ -1,4 +1,5 @@
 import { ScanHalo } from "./ScanHalo";
+import { EnemyFeedback } from "./EnemyFeedback";
 import { Html } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -718,6 +719,7 @@ export function Dummy({
   return (
     <>
       <group ref={group} position={safeSpawn}>
+        <EnemyFeedback id={id} root={group} />
         <ScanHalo id={id} size={2.1} />
         <mesh
           position={[0, 1.8, 0]}
@@ -850,6 +852,7 @@ export function Dummy({
           opacity={0.9}
           depthWrite={false}
         />
+        {[0,1,2,3].map((i) => <mesh key={i} position={[Math.sin(i*2)*4,(i-1.5)*.19,Math.cos(i*2)*4]}><octahedronGeometry args={[3,.0]}/><meshBasicMaterial color={i%2 ? "#fff2aa" : "#ffb2d0"}/></mesh>)}
       </mesh>
     </>
   );

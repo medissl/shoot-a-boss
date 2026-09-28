@@ -5,6 +5,7 @@ import { FullscreenToggle } from "./FullscreenToggle";
 import { getUpgradeCard, type UpgradeId } from "../game/progression";
 import { useGameStore } from "../game/store";
 import { restorePreferredFullscreen } from "../game/fullscreen";
+import { ResetDataButton } from "./ResetDataButton";
 
 export function MenuOverlay() {
   const screen = useGameStore((state) => state.screen);
@@ -50,7 +51,7 @@ export function MenuOverlay() {
           )}
 
           <button type="button" onClick={restart}>
-            <RotateCcw size={15} /> {screen === "purged" ? "START AGAIN · LEVEL 1" : screen === "lost" ? "RETRY · ONE HEART SPENT" : "RESTART"}
+            <RotateCcw size={15} /> {screen === "purged" ? "START AGAIN · OPENING COMIC" : "RESTART THIS ROUND"}
           </button>
 
           {screen === "won" && champion && <button type="button" onClick={startNewGamePlus}>
@@ -106,6 +107,7 @@ export function MenuOverlay() {
               onChange={(event) => setSfxVolume(Number(event.target.value))}
             />
           </label>
+          <ResetDataButton />
           </>}
           {panel === "controls" && <ControlsList />}
           {panel === "cards" && <div className="inventory-panel">

@@ -5,8 +5,15 @@ import { MainMenu } from "./components/MainMenu";
 import { SceneCurtain } from "./components/SceneCurtain";
 import { UpgradeScreen } from "./components/UpgradeScreen";
 import { useGameStore } from "./game/store";
+import { useEffect } from "react";
 
 export default function App() {
+  useEffect(() => {
+    if (!window.matchMedia("(pointer: coarse)").matches) return;
+    const tryLandscape = () => { const orientation = window.screen.orientation as ScreenOrientation & {lock?: (value:string)=>Promise<void>}; void orientation?.lock?.("landscape").catch(() => undefined); };
+    window.addEventListener("pointerdown", tryLandscape, {once:true});
+    return () => window.removeEventListener("pointerdown", tryLandscape);
+  }, []);
   const screen = useGameStore((state) => state.screen);
   const runId = useGameStore((state) => state.runId);
 

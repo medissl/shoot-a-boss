@@ -36,6 +36,9 @@ export function HUD() {
   const coins = useGameStore((state) => state.coins);
   const shieldCharges = useGameStore((state) => state.shieldCharges);
   const shieldReadyAt = useGameStore((state) => state.shieldReadyAt);
+  const selectedMagic = useGameStore((state) => state.selectedMagic);
+  const magicReadyAt = useGameStore((state) => state.magicReadyAt);
+  const magic = useGameStore((state) => state.magic);
   const [now, setNow] = useState(() => performance.now());
   const [pickupNotice, setPickupNotice] = useState("");
   const [emptyAlert, setEmptyAlert] = useState(false);
@@ -126,6 +129,7 @@ export function HUD() {
         <span>targets left</span>
         <strong>{Math.max(0, targetCount - eliminated)}</strong>
       </div>
+      {selectedMagic && <div className="hud-magic"><span>F · {selectedMagic.toUpperCase()} LV {magic[selectedMagic]}</span><strong>{now < magicReadyAt ? `${Math.ceil((magicReadyAt - now)/1000)}s` : "READY ✦"}</strong></div>}
 
       <div className="hud-health">
         <span>HP</span>

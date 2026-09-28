@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from "react";
-import { useGameStore, type GameScreen } from "../game/store";
+import { useGameStore, type GameScreen, type MagicType } from "../game/store";
 import type { WeaponId } from "../game/config";
 import { getLevelDefinition } from "../game/levels";
 
@@ -28,6 +28,8 @@ const A = {
   sniperCock: "/audio/SniperCocking.mp3",
   sniperReload: "/audio/SniperReload.mp3",
   sniperShoot: "/audio/SniperShoot.mp3",
+  magic: {fire:"/audio/FireBall.mp3",crystal:"/audio/CrystalBall.mp3",ice:"/audio/IceBall.mp3",water:"/audio/WaterBall.mp3",thunder:"/audio/ThunderBall.mp3"},
+  reveal:"/audio/RevealSFX.mp3", crateDrop:"/audio/CaseDrop.mp3",crateUnlock:"/audio/CaseLockOpen.mp3",crateSpin:"/audio/CaseSpinRoulette.mp3",crateReveal:"/audio/CaseRevealItem.mp3",
   kills: [
     "/audio/Kill1.mp3",
     "/audio/Kill2.mp3",
@@ -50,9 +52,9 @@ const reloads: Partial<Record<WeaponId, string>> = {
 };
 
 const reloadGain: Partial<Record<WeaponId, number>> = {
-  sniper: 0.34,
-  rifle: 0.24,
-  shotgun: 0.17,
+  sniper: 0.9,
+  rifle: 0.8,
+  shotgun: 0.75,
 };
 
 function bgmFor(screen: GameScreen, level: number) {
@@ -192,7 +194,7 @@ export function AudioManager() {
 
       const audio = new Audio(A.rifleBurst);
       audio.preload = "auto";
-      audio.volume = sfxLevel(0.2);
+      audio.volume = sfxLevel(0.8);
       rifleBursts.current.add(audio);
 
       const scheduleNext = () => {
@@ -230,7 +232,7 @@ export function AudioManager() {
 
       if (state.screen === "playing") {
         const path = cocking[state.weapon];
-        if (path) playOne(path, 0.3);
+        if (path) playOne(path, 0.72);
       }
     };
 
@@ -385,20 +387,20 @@ export function AudioManager() {
       const selected = (event as CustomEvent<{ weapon: WeaponId }>).detail.weapon;
       if (useGameStore.getState().screen === "playing") {
         const path = cocking[selected];
-        if (path) playOne(path, 0.3);
+        if (path) playOne(path, 0.72);
       }
     };
 
     const weaponFire = (event: Event) => {
       const fired = (event as CustomEvent<{ weapon: WeaponId }>).detail.weapon;
-      if (fired === "sniper") playOne(A.sniperShoot, 0.42);
-      if (fired === "shotgun") playOne(A.shotgunShoot, 0.2);
+      if (fired === "sniper") playOne(A.sniperShoot, 0.95);
+      if (fired === "shotgun") playOne(A.shotgunShoot, 0.85);
     };
 
     const rifleDown = () => {
       if (!unlocked.current || rifleHeld.current) return;
       rifleHeld.current = true;
-      playOne(A.rifleOne, 0.18);
+      playOne(A.rifleOne, 0.75);
 
       rifleHoldTimer.current = window.setTimeout(() => {
         if (!rifleHeld.current || !unlocked.current) return;
@@ -407,8 +409,14 @@ export function AudioManager() {
     };
 
     const rifleUp = () => stopRifleBurst();
-    const grenadeCock = () => playOne(A.grenadeCock, 0.34);
-    const grenadeExplode = () => playOne(A.grenadeExplode, 0.4);
+    const grenadeCock = () => playOne(A.grenadeCock, 0.75);
+    const grenadeExplode = () => playOne(A.grenadeExplode, 1.35);
+    const magicCast = (event: Event) => playOne(A.magic[(event as CustomEvent<{kind:MagicType}>).detail.kind], 1);
+    const reveal = () => playOne(A.reveal, .85);
+    const crateDrop = () => playOne(A.crateDrop, .9);
+    const crateUnlock = () => playOne(A.crateUnlock, .9);
+    const crateSpin = () => playOne(A.crateSpin, .85);
+    const crateReveal = () => playOne(A.crateReveal, 1);
     const playerDamage = () => playOne(A.playerDamage, 0.24);
     const landing = () => playOne(A.land, 0.3);
 
@@ -430,6 +438,12 @@ export function AudioManager() {
     window.addEventListener("rifle-trigger-down", rifleDown);
     window.addEventListener("rifle-trigger-up", rifleUp);
     window.addEventListener("grenade-cocked", grenadeCock);
+    window.addEventListener("magic-cast", magicCast);
+    window.addEventListener("scan-started", reveal);
+    window.addEventListener("crate-drop", crateDrop);
+    window.addEventListener("crate-unlock", crateUnlock);
+    window.addEventListener("crate-spin", crateSpin);
+    window.addEventListener("crate-reveal", crateReveal);
     window.addEventListener("paper-grenade-explode", grenadeExplode);
     window.addEventListener("player-damaged", playerDamage);
     window.addEventListener("player-landed", landing);
@@ -443,6 +457,12 @@ export function AudioManager() {
       window.removeEventListener("rifle-trigger-down", rifleDown);
       window.removeEventListener("rifle-trigger-up", rifleUp);
       window.removeEventListener("grenade-cocked", grenadeCock);
+      window.removeEventListener("magic-cast", magicCast);
+      window.removeEventListener("scan-started", reveal);
+      window.removeEventListener("crate-drop", crateDrop);
+      window.removeEventListener("crate-unlock", crateUnlock);
+      window.removeEventListener("crate-spin", crateSpin);
+      window.removeEventListener("crate-reveal", crateReveal);
       window.removeEventListener("paper-grenade-explode", grenadeExplode);
       window.removeEventListener("player-damaged", playerDamage);
       window.removeEventListener("player-landed", landing);

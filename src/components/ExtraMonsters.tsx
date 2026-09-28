@@ -7,11 +7,12 @@ import { paperBlastDamage, type PaperBlast } from "../game/hazards";
 import { hasEnemyLineOfSight, moveWithAvoidance, safeEnemySpawn } from "../game/navigation";
 import { useGameStore } from "../game/store";
 import { ScanHalo } from "./ScanHalo";
+import { EnemyFeedback } from "./EnemyFeedback";
 
-const STATUE_PERIOD = 15;
-const STATUE_WARNING = 3;
+const STATUE_PERIOD = 20;
+const STATUE_WARNING = 5;
 const STATUE_FIRE_SECONDS = 5;
-const STATUE_RADIUS = 6.4;
+const STATUE_RADIUS = 8.5;
 
 export function ExtraMonster({ id, spawn, kind }: { id: string; spawn: [number, number, number]; kind: "fly" | "statue" }) {
   const root = useRef<THREE.Group>(null);
@@ -21,6 +22,10 @@ export function ExtraMonster({ id, spawn, kind }: { id: string; spawn: [number, 
   const awarenessUntil = useRef(0);
   const lastAttack = useRef(0);
   const lastDamage = useRef(0);
+  const targetArea = useRef(new THREE.Vector3());
+  const wasWarning = useRef(false);
+  const hitTimer = useRef<number | null>(null);
+  const [hitFlash, setHitFlash] = useState(false);
   const lastPosition = useRef(0);
   const dive = useRef<"cruise" | "dive" | "recover">("cruise");
   const recoveryUntil = useRef(0);
@@ -44,12 +49,15 @@ export function ExtraMonster({ id, spawn, kind }: { id: string; spawn: [number, 
       if (target !== id || hp.current <= 0) return;
       hp.current = Math.max(0, hp.current - damage);
       setHealth(hp.current);
+      setHitFlash(true);
+      if (hitTimer.current) window.clearTimeout(hitTimer.current);
+      hitTimer.current = window.setTimeout(() => setHitFlash(false), 330);
       awarenessUntil.current = performance.now() + 5600;
       lastSeen.current.set(...useGameStore.getState().playerPosition);
       if (!hp.current) { setDead(true); eliminate(id); }
     };
     window.addEventListener("boss-hit", onHit);
-    return () => window.removeEventListener("boss-hit", onHit);
+    return () => { window.removeEventListener("boss-hit", onHit); if (hitTimer.current) window.clearTimeout(hitTimer.current); };
   }, [eliminate, id]);
 
   useEffect(() => {
@@ -129,7 +137,10 @@ export function ExtraMonster({ id, spawn, kind }: { id: string; spawn: [number, 
     const started = shifted >= STATUE_PERIOD;
     const warning = phase >= STATUE_PERIOD - STATUE_WARNING;
     const active = started && phase < STATUE_FIRE_SECONDS;
+    if (warning && !wasWarning.current) targetArea.current.set(px - mesh.position.x, 0, pz - mesh.position.z);
+    wasWarning.current = warning;
     if (telegraph.current) {
+      telegraph.current.position.set(targetArea.current.x, 0.08, targetArea.current.z);
       telegraph.current.visible = warning && motion > 0;
       const material = (telegraph.current.children[0] as THREE.Mesh).material as THREE.MeshBasicMaterial;
       const timeToFire = STATUE_PERIOD - phase;
@@ -137,30 +148,32 @@ export function ExtraMonster({ id, spawn, kind }: { id: string; spawn: [number, 
       material.opacity = 0.3 + 0.47 * Math.abs(Math.sin(now * blink));
     }
     if (fire.current) {
+      fire.current.position.set(targetArea.current.x, 0, targetArea.current.z);
       fire.current.visible = active && motion > 0;
-      if (active) fire.current.children.slice(1).forEach((flame, i) => {
+      if (active) fire.current.children.slice(2).forEach((flame, i) => {
         flame.scale.y = 0.7 + Math.sin(now * 11 + i * 2.1) * 0.27;
         flame.rotation.y = Math.sin(now * 5 + i) * 0.25;
       });
     }
-    if (active && motion > 0 && py < 5.2 && Math.hypot(px - mesh.position.x, pz - mesh.position.z) < STATUE_RADIUS && now - lastDamage.current >= 0.75) {
+    if (active && motion > 0 && Math.hypot(px - (mesh.position.x + targetArea.current.x), pz - (mesh.position.z + targetArea.current.z)) < STATUE_RADIUS && now - lastDamage.current >= 0.75) {
       lastDamage.current = now;
-      live.damagePlayer(Math.round(7 * tuning.damage), [mesh.position.x, 1, mesh.position.z]);
+      live.damagePlayer(Math.round(10 * tuning.damage), [mesh.position.x + targetArea.current.x, py, mesh.position.z + targetArea.current.z]);
     }
   });
 
   return <group ref={root} position={[safeSpawn[0], kind === "fly" ? 5.2 : 0, safeSpawn[2]]}>
+    <EnemyFeedback id={id} root={root} />
     {kind === "fly" ? <>
-      <mesh userData={{ targetId: id, targetPart: "body" }} castShadow><icosahedronGeometry args={[1.2, 1]} /><meshStandardMaterial color="#8558dc" emissive="#402379" emissiveIntensity={0.35} /></mesh>
-      <mesh position={[0, 0.18, 0.88]} userData={{ targetId: id, targetPart: "head" }}><sphereGeometry args={[0.48, 12, 8]} /><meshBasicMaterial color="#f7eaf6" /></mesh>
-      {[-1, 1].map((side, i) => <mesh key={side} ref={(node) => { wings.current[i] = node; }} position={[side * 1.25, 0, 0]} userData={{ targetId: id, targetPart: "body" }}><coneGeometry args={[0.7, 2.1, 3]} /><meshStandardMaterial color="#c69cf1" side={THREE.DoubleSide} /></mesh>)}
+      <mesh userData={{ targetId: id, targetPart: "body" }} castShadow><icosahedronGeometry args={[1.2, 1]} /><meshStandardMaterial color={hitFlash ? "#ff363c" : "#8558dc"} emissive="#402379" emissiveIntensity={0.35} /></mesh>
+      <mesh position={[0, 0.18, 0.88]} userData={{ targetId: id, targetPart: "head" }}><sphereGeometry args={[0.48, 12, 8]} /><meshBasicMaterial color={hitFlash ? "#ff363c" : "#f7eaf6"} /></mesh>
+      {[-1, 1].map((side, i) => <mesh key={side} ref={(node) => { wings.current[i] = node; }} position={[side * 1.25, 0, 0]} userData={{ targetId: id, targetPart: "body" }}><coneGeometry args={[0.7, 2.1, 3]} /><meshStandardMaterial color={hitFlash ? "#ff363c" : "#c69cf1"} side={THREE.DoubleSide} /></mesh>)}
       {[-0.38, 0.38].map((x) => <mesh key={x} position={[x, -1.35, 0.42]} rotation={[Math.PI, 0, 0]} userData={{ targetId: id, targetPart: "leg" }}>
         <coneGeometry args={[0.28, 0.86, 4]} /><meshBasicMaterial color="#e8eefc" />
       </mesh>)}
     </> : <>
-      <mesh position={[0, 0.7, 0]} castShadow userData={{ targetId: id, targetPart: "leg" }}><cylinderGeometry args={[1.2, 1.4, 1.4, 7]} /><meshStandardMaterial color="#737884" roughness={0.9} /></mesh>
-      <mesh position={[0, 2.1, 0]} castShadow userData={{ targetId: id, targetPart: "body" }}><boxGeometry args={[2.5, 2.2, 1.8]} /><meshStandardMaterial color="#8e94aa" roughness={0.8} /></mesh>
-      <mesh position={[0, 3.6, 0]} castShadow userData={{ targetId: id, targetPart: "head" }}><dodecahedronGeometry args={[0.91, 0]} /><meshBasicMaterial color="#d1cad1" /></mesh>
+      <mesh position={[0, 0.7, 0]} castShadow userData={{ targetId: id, targetPart: "leg" }}><cylinderGeometry args={[1.2, 1.4, 1.4, 7]} /><meshStandardMaterial color={hitFlash ? "#ff363c" : "#737884"} roughness={0.9} /></mesh>
+      <mesh position={[0, 2.1, 0]} castShadow userData={{ targetId: id, targetPart: "body" }}><boxGeometry args={[2.5, 2.2, 1.8]} /><meshStandardMaterial color={hitFlash ? "#ff363c" : "#8e94aa"} roughness={0.8} /></mesh>
+      <mesh position={[0, 3.6, 0]} castShadow userData={{ targetId: id, targetPart: "head" }}><dodecahedronGeometry args={[0.91, 0]} /><meshBasicMaterial color={hitFlash ? "#ff363c" : "#d1cad1"} /></mesh>
       <mesh position={[0, 3.65, 0.7]} userData={{ ignoreProjectile: true }}><boxGeometry args={[0.85, 0.15, 0.22]} /><meshBasicMaterial color="#ed5f61" /></mesh>
     </>}
     {kind === "statue" && <>
@@ -170,6 +183,7 @@ export function ExtraMonster({ id, spawn, kind }: { id: string; spawn: [number, 
       </group>
       <group ref={fire} visible={false} userData={{ ignoreProjectile: true }}>
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.11, 0]}><circleGeometry args={[STATUE_RADIUS, 32]} /><meshBasicMaterial color="#e84655" side={THREE.DoubleSide} transparent opacity={0.42} depthWrite={false} /></mesh>
+        <mesh position={[0, 9, 0]}><cylinderGeometry args={[STATUE_RADIUS * 0.8, STATUE_RADIUS * 0.8, 18, 28, 1, true]} /><meshBasicMaterial color="#ff304a" side={THREE.DoubleSide} transparent opacity={0.42} depthWrite={false} /></mesh>
         {Array.from({ length: 16 }, (_, i) => {
           const angle = (i / 16) * Math.PI * 2;
           const radius = i % 3 ? 4.7 : 2.8;

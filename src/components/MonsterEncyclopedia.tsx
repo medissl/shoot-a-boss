@@ -1,5 +1,5 @@
-import { Canvas, useFrame } from "@react-three/fiber";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Canvas } from "@react-three/fiber";
+import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react";
 import * as THREE from "three";
 import { BOSS_MAX_HP, PAPER_MONSTER_MAX_HP, PEN_MONSTER_MAX_HP } from "../game/config";
@@ -8,12 +8,12 @@ import { drawBoss } from "./Dummy";
 
 type Kind = "boss" | "ranged" | "paper" | "pen" | "fly" | "statue";
 const entries: { kind: Kind; name: string; slogan: string; description: string; attack: string; hp: number; baseDamage: number }[] = [
-  { kind: "boss", name: "Mr. Deadline", slogan: "Your work is due yesterday.", description: "The office boss has left the desk to personally collect your soul. He spots you, closes the distance, and throws heavy punches. Keep moving while you aim for that enormous head.", attack: "Close-range punch", hp: BOSS_MAX_HP, baseDamage: 10 },
+  { kind: "boss", name: "Mr. Boss", slogan: "Your work is due yesterday.", description: "The office boss has left the desk to personally collect your soul. He spots you, closes the distance, and throws heavy punches. Keep moving while you aim for that enormous head.", attack: "Close-range punch", hp: BOSS_MAX_HP, baseDamage: 10 },
   { kind: "ranged", name: "The Feedback Manager", slogan: "Just one more revision.", description: "The same boss, but armed with either a handgun or a bow. A red line shows the shot he is lining up. Break his line of sight or sidestep before it fires.", attack: "Telegraphed shot", hp: BOSS_MAX_HP, baseDamage: 12 },
   { kind: "paper", name: "Paper Cutlet", slogan: "Small form. Big attitude.", description: "A living sheet of paperwork that slips through narrow hiding places. It chases at ground level and attacks up close. Watch your feet when a pack gathers.", attack: "Close-range cut", hp: PAPER_MONSTER_MAX_HP, baseDamage: 10 },
   { kind: "pen", name: "The Inktern", slogan: "Five shots, then a coffee break.", description: "This little pen fires five ink shots in a burst. Each shot gives you a red warning line. It needs time to refill, so rush it after the fifth shot.", attack: "Five ink projectiles", hp: PEN_MONSTER_MAX_HP, baseDamage: 8 },
   { kind: "fly", name: "Airmail Menace", slogan: "Special delivery to your face.", description: "A flying courier that cruises above the arena. It dives to face level for one hard bite, then climbs away to recover before attacking again. Track it overhead.", attack: "Single diving strike", hp: 125, baseDamage: 11 },
-  { kind: "statue", name: "Overtime Idol", slogan: "No moving. Plenty of burning.", description: "A motionless monument to bad deadlines. Its surrounding circle blinks red faster before it erupts for five seconds. Leave the ring when it starts flashing.", attack: "Five-second fire circle", hp: 280, baseDamage: 7 },
+  { kind: "statue", name: "Burn the Deadline Statue", slogan: "Your deadline follows you.", description: "A motionless monument that locks a broad red laser onto your last position. You get a five-second warning, then the beam fires for five seconds. Leave the marked area.", attack: "Targeted red laser", hp: 280, baseDamage: 10 },
 ];
 
 function BossImage({ ranged }: { ranged: boolean }) {
@@ -30,12 +30,8 @@ function BossImage({ ranged }: { ranged: boolean }) {
 }
 
 function Model({ kind }: { kind: Kind }) {
-  const group = useRef<THREE.Group>(null);
-  useFrame((state) => {
-    if (group.current && kind !== "boss" && kind !== "ranged") group.current.rotation.y = Math.sin(state.clock.elapsedTime * 0.45) * 0.25;
-  });
   if (kind === "boss" || kind === "ranged") return <BossImage ranged={kind === "ranged"} />;
-  return <group ref={group} position={[0, kind === "fly" ? 0 : -0.35, 0]}>
+  return <group position={[0, kind === "fly" ? 0 : -0.35, 0]}>
     {kind === "paper" && <>
       <mesh><planeGeometry args={[2.2, 2.85]} /><meshBasicMaterial color="#2548b8" side={THREE.DoubleSide} /></mesh>
       <mesh position={[0, 0, 0.02]}><planeGeometry args={[2.05, 2.7]} /><meshBasicMaterial color="#fbfaf4" side={THREE.DoubleSide} /></mesh>
@@ -66,7 +62,7 @@ function Model({ kind }: { kind: Kind }) {
 }
 
 function EnemyPortrait({ kind }: { kind: Kind }) {
-  return <div className="encyclopedia-model"><Canvas dpr={[1, 1.4]} camera={{ position: [0, 0, 7], fov: 48 }}><ambientLight intensity={2} /><directionalLight position={[4, 5, 6]} intensity={2} /><Model kind={kind} /></Canvas></div>;
+  return <div className="encyclopedia-model"><Canvas frameloop="demand" dpr={[1, 1.4]} camera={{ position: [0, 0, 8.8], fov: 43 }}><ambientLight intensity={2} /><directionalLight position={[4, 5, 6]} intensity={2} /><Model kind={kind} /></Canvas></div>;
 }
 
 export function MonsterEncyclopedia({ onBack }: { onBack: () => void }) {

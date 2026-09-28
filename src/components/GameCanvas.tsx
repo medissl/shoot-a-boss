@@ -17,6 +17,7 @@ import { PaperDustStorm } from "./PaperDustStorm";
 import { JungleThorns } from "./JungleThorns";
 import { ExtraMonster } from "./ExtraMonsters";
 import { CombatAura } from "./CombatAura";
+import { MagicSystem } from "./MagicSystem";
 import { RoundResult } from "./RoundResult";
 import { MobileControls } from "./MobileControls";
 import { ControlsPopup } from "./ControlsList";
@@ -68,6 +69,7 @@ export function GameCanvas() {
             <PlayerController />
             <CombatSystem />
             <CombatAura />
+            <MagicSystem />
             <PaintSystem />
             <SurfaceDamageSystem />
             {definition.theme === "playground" && <PaperDustStorm />}
