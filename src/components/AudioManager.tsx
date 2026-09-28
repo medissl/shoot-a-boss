@@ -144,7 +144,7 @@ export function AudioManager() {
     if(skin==="default")return;
     const context=boostedContext.current??new AudioContext();boostedContext.current=context;
     void context.resume().catch(()=>undefined);
-    playSkinSound(context,skin,action,sfxLevel(.85));
+    playSkinSound(context,skin,action,sfxLevel(.85),weapon);
   },[sfxLevel]);
 
   const playMenuSound = useCallback((kind: "open" | "select" | "confirm") => {

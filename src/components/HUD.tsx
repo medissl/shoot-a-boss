@@ -4,6 +4,7 @@ import { WEAPONS, type WeaponId } from "../game/config";
 import { getLevelDefinition } from "../game/levels";
 import { UPGRADE_CARDS } from "../game/progression";
 import { useGameStore } from "../game/store";
+import { getSkin } from "../game/skins";
 
 const WEAPON_ORDER: WeaponId[] = ["sniper", "rifle", "shotgun", "knife"];
 
@@ -24,6 +25,8 @@ export function HUD() {
   const targetCount = useGameStore((state) => state.targetCount);
   const currentLevel = useGameStore((state) => state.currentLevel);
   const scoped = useGameStore((state) => state.scoped);
+  const equippedSkin = useGameStore((state) => state.equippedSkins[state.weapon]);
+  const scopeTheme = getSkin(equippedSkin);
   const boostActive = useGameStore((state) => state.speedBoostActive);
   const reloading = useGameStore((state) => state.reloading);
   const reloadingWeapon = useGameStore((state) => state.reloadingWeapon);
@@ -194,11 +197,18 @@ export function HUD() {
         </div>
       )}
 
-      {scoped && weapon === "sniper" && (
-        <div className="scope-overlay scope-overlay--sniper">
+      {scoped && weapon !== "knife" && (
+        <div
+          className={`scope-overlay scope-overlay--${weapon} ${scopeTheme ? `scope-overlay--themed scope-overlay--${scopeTheme.rarity} scope-overlay--${scopeTheme.motif}` : ""}`}
+          style={scopeTheme ? { "--scope-color": scopeTheme.color, "--scope-accent": scopeTheme.accent } as CSSProperties : undefined}
+          aria-hidden="true"
+        >
           <div className="scope-ring" />
-          <span className="scope-axis scope-axis--x" />
-          <span className="scope-axis scope-axis--y" />
+          {scopeTheme && <div className="scope-theme-rim"><i/><i/><i/><i/></div>}
+          {weapon === "sniper" && <>
+            <span className="scope-axis scope-axis--x" />
+            <span className="scope-axis scope-axis--y" />
+          </>}
           <span className="scope-reticle" />
         </div>
       )}

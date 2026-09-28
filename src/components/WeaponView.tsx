@@ -8,7 +8,7 @@ function RifleHipArt() {
   return (
     <g className="gun-drawing gun-drawing--rifle">
       <path className="gun-fill gun-hatch" d="M314 250 L330 238 L472 346 L454 362 Z" />
-      <circle className="gun-dot gun-dot--red" cx="315" cy="248" r="5" />
+      
       <path className="gun-fill" d="M427 314 L466 299 L548 362 L509 381 Z" />
       <path className="gun-fill gun-hatch" d="M455 352 L497 331 L650 448 L607 470 Z" />
       <path className="gun-fill" d="M607 470 L650 448 L685 479 L640 503 Z" />
@@ -31,7 +31,7 @@ function ShotgunHipArt() {
     <g className="gun-drawing gun-drawing--shotgun">
       <path className="gun-fill" d="M298 236 L316 226 L474 345 L456 362 Z" />
       <path className="gun-line gun-line--thin" d="M307 247 L461 365" />
-      <circle className="gun-dot gun-dot--red" cx="299" cy="235" r="5.5" />
+      
       <path className="gun-fill gun-hatch" d="M419 321 L458 304 L584 400 L544 421 Z" />
       <path className="gun-fill" d="M454 358 L495 336 L653 457 L609 480 Z" />
       <path className="gun-fill gun-hatch" d="M490 357 L548 401 L517 438 L461 394 Z" />
@@ -92,7 +92,7 @@ function KnifeHipArt() {
         className="gun-hand"
         d="M590 451 Q628 435 674 469 L703 521 L663 558 L619 529 Z"
       />
-      <circle className="gun-dot gun-dot--red" cx="303" cy="194" r="5" />
+      
     </g>
   );
 }
@@ -158,7 +158,7 @@ function ScopedWeaponArt({ weapon, skin }: { weapon: WeaponId; skin: SkinId }) {
           <path className="ads-fill" d="M418 452 L582 452 L650 600 H350 Z" />
           <path className="ads-line" d="M500 452 V306" />
           <path className="ads-line ads-line--thin" d="M470 330 H530" />
-          <circle className="ads-dot ads-dot--red" cx="500" cy="300" r="7" />
+          <circle className="ads-dot" cx="500" cy="300" r="5" />
         </g>
       )}
       <ScopedSkinArt weapon={weapon} id={skin}/>

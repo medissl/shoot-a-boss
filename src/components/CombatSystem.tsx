@@ -10,6 +10,7 @@ import { useGameStore } from "../game/store";
 type Trace = {
   id: number;
   color: string;
+  skin: SkinId;
   from: [number, number, number];
   to: [number, number, number];
   hit: boolean;
@@ -44,6 +45,8 @@ function TraceLine({ trace }: { trace: Trace }) {
     [from, to],
   );
   const length = from.distanceTo(to);
+  const skin = getSkin(trace.skin);
+  const motif = skin?.motif;
   const quaternion = useMemo(
     () =>
       new THREE.Quaternion().setFromUnitVectors(
@@ -64,12 +67,19 @@ function TraceLine({ trace }: { trace: Trace }) {
           depthWrite={false}
         />
       </mesh>
+      {skin && <mesh>
+        <cylinderGeometry args={[skin.rarity === "legendary" ? .016 : .011, .003, length * .68, motif === "pixel" || motif === "redaction" ? 4 : 5]} />
+        <meshBasicMaterial color={trace.color} transparent opacity={skin.rarity === "rare" ? .24 : .45} depthWrite={false} />
+      </mesh>}
+      {(motif === "pixel" || motif === "redaction" || motif === "circuit") && [0, 1, 2].map((i) => (
+        <mesh key={i} position={[0, (i - 1) * Math.min(length * .24, .55), 0]}>
+          <boxGeometry args={[.045, .11, .045]} />
+          <meshBasicMaterial color={trace.color} depthWrite={false} />
+        </mesh>
+      ))}
       <mesh position={[0, length / 2, 0]}>
-        <octahedronGeometry args={[trace.hit ? 0.05 : 0.03, 0]} />
-        <meshBasicMaterial
-          color={trace.color}
-          depthWrite={false}
-        />
+        {motif === "ice" ? <tetrahedronGeometry args={[trace.hit ? .08 : .05]} /> : motif === "redaction" ? <boxGeometry args={[.09,.055,.055]}/> : <octahedronGeometry args={[trace.hit ? .05 : .03, 0]} />}
+        <meshBasicMaterial color={trace.color} depthWrite={false} />
       </mesh>
     </group>
   );
@@ -184,6 +194,7 @@ export function CombatSystem() {
         {
           id,
           color: color === "default" ? hit ? "#ff6ea8" : "#5978e8" : skinColor(color),
+          skin: color,
           from: [from.x, from.y, from.z],
           to: [to.x, to.y, to.z],
           hit,

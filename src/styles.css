@@ -2510,3 +2510,51 @@ button {
 .crate-prize--legendary{box-shadow:0 0 18px var(--crate-color),8px 8px #9bb4e7}.crate-roulette span{padding:6px;font-size:10px;line-height:1.2;overflow:hidden;overflow-wrap:anywhere}
 .crate-roulette--epic{border:3px double #fff}.crate-roulette--legendary{border:4px solid #ffebaa}
 @media (max-width:780px){.skin-selection{grid-template-columns:1fr}.skin-weapon-preview{min-height:74px}.skin-weapon-preview svg{height:74px}.skin-options{max-height:92px}.crate-prize .skin-weapon-preview svg{height:95px}.crate-prize .skin-weapon-preview{min-height:100px}}
+
+/* Cosmetic aiming treatment for all three ranged weapons. Effects stay on the rim. */
+.scope-overlay{pointer-events:none;--scope-size:min(66vh,66vw)}
+.scope-overlay--rifle{--scope-size:min(31vh,31vw)}
+.scope-overlay--shotgun{display:grid;--scope-size:min(24vh,24vw)}
+.scope-overlay--shotgun .scope-ring{width:var(--scope-size);border-width:2px;border-style:dashed;box-shadow:none;opacity:.36}
+.scope-overlay--rifle .scope-ring{width:var(--scope-size)}
+.scope-overlay--rifle .scope-reticle,.scope-overlay--shotgun .scope-reticle{width:5px;height:5px;opacity:.82}
+.scope-overlay--themed .scope-ring{border-color:var(--scope-color);box-shadow:0 0 0 2px #fffdf1,0 0 0 9999px rgba(251,250,244,.28)}
+.scope-overlay--themed.scope-overlay--rifle .scope-ring,.scope-overlay--themed.scope-overlay--shotgun .scope-ring{box-shadow:0 0 0 1px #fffdf1,0 0 9px var(--scope-color);opacity:.7}
+.scope-overlay--themed .scope-reticle{background:var(--scope-color);box-shadow:0 0 0 1px var(--scope-accent)}
+.scope-theme-rim{position:absolute;width:var(--scope-size);aspect-ratio:1;border-radius:50%;color:var(--scope-color);filter:drop-shadow(0 0 2px var(--scope-color))}
+.scope-theme-rim i{position:absolute;width:12%;height:12%;border:2px solid currentColor}
+.scope-theme-rim i:nth-child(1){top:6%;left:12%;border-right:0;border-bottom:0;transform:rotate(-30deg)}
+.scope-theme-rim i:nth-child(2){top:6%;right:12%;border-left:0;border-bottom:0;transform:rotate(30deg)}
+.scope-theme-rim i:nth-child(3){bottom:6%;left:12%;border-right:0;border-top:0;transform:rotate(30deg)}
+.scope-theme-rim i:nth-child(4){bottom:6%;right:12%;border-left:0;border-top:0;transform:rotate(-30deg)}
+.scope-overlay--rare .scope-theme-rim{opacity:.52}
+.scope-overlay--epic .scope-theme-rim{opacity:.72}
+.scope-overlay--legendary .scope-theme-rim{opacity:.86;animation:scope-theme-breathe 2.5s ease-in-out infinite}
+.scope-overlay--stars .scope-theme-rim{border:1px dotted var(--scope-color)}
+.scope-overlay--ice .scope-theme-rim i{border-style:dashed}
+.scope-overlay--circuit .scope-theme-rim i,.scope-overlay--storm .scope-theme-rim i{border-radius:2px}
+.scope-overlay--redaction .scope-theme-rim i{border-width:4px;border-color:var(--scope-accent)}
+.scope-overlay--eye .scope-theme-rim i{border-radius:48%}
+.scope-overlay--flame .scope-theme-rim{filter:drop-shadow(0 0 3px var(--scope-color))}
+.scope-overlay--shotgun .scope-theme-rim i{width:15%;height:15%}
+@keyframes scope-theme-breathe{50%{opacity:.52;filter:drop-shadow(0 0 5px var(--scope-color))}}
+@media(prefers-reduced-motion:reduce){.scope-overlay--legendary .scope-theme-rim{animation:none}}
+
+/* Engraved material channels replace the repeated floating motif stamps. */
+.skin-channel{opacity:.65;filter:drop-shadow(0 0 2px var(--skin-color))}
+.skin-channel--inner{opacity:.72}
+.skin-geometry--rare .skin-channel{opacity:.45;filter:none}
+.skin-geometry--epic .skin-channel{opacity:.8}
+.skin-geometry--legendary .skin-channel{opacity:1;filter:drop-shadow(0 0 5px var(--skin-color))}
+.skin-receiver-inlay{filter:drop-shadow(0 0 2px var(--skin-color))}
+.skin-impulse{animation:skin-channel-flow 2.1s linear infinite;opacity:.8}
+.weapon-view.is-kicking .skin-impulse{stroke-width:7;filter:drop-shadow(0 0 8px var(--skin-color))}
+.weapon-view.is-reloading .skin-channel{opacity:.24}
+.skin-geometry--eye .skin-channel{animation:skin-channel-twitch 3.2s steps(2,end) infinite}
+.skin-geometry--stars .skin-receiver-inlay{filter:drop-shadow(0 0 6px var(--skin-color))}
+.skin-geometry--redacted .skin-channel{stroke-dasharray:28 8;animation:skin-channel-flow 1.6s steps(3,end) infinite}
+.skin-geometry--hellfire .skin-channel{filter:drop-shadow(0 0 6px #ff894c)}
+.skin-geometry--frostbite .skin-receiver-inlay{fill:#def9ff}
+@keyframes skin-channel-flow{to{stroke-dashoffset:-240}}
+@keyframes skin-channel-twitch{90%,100%{opacity:.65}94%{opacity:1}}
+@media(prefers-reduced-motion:reduce){.skin-impulse,.skin-geometry--eye .skin-channel,.skin-geometry--redacted .skin-channel{animation:none}}
