@@ -34,6 +34,8 @@ export function HUD() {
   const scanCooldownUntil = useGameStore((state) => state.scanCooldownUntil);
   const upgrades = useGameStore((state) => state.upgrades);
   const coins = useGameStore((state) => state.coins);
+  const shieldCharges = useGameStore((state) => state.shieldCharges);
+  const shieldReadyAt = useGameStore((state) => state.shieldReadyAt);
   const [now, setNow] = useState(() => performance.now());
   const [pickupNotice, setPickupNotice] = useState("");
   const [emptyAlert, setEmptyAlert] = useState(false);
@@ -174,7 +176,8 @@ export function HUD() {
         <small>ESC · CARD INVENTORY FOR DETAILS</small>
       </div>
       <div className="hud-scan">Q · {scanTargets.length ? `MARKED ${scanTargets.length}` : scanCooldownUntil > now ? `RECHARGE ${Math.ceil((scanCooldownUntil - now) / 1000)}S` : "MARK ENEMY"}</div>
-      <div className="hud-coins">◉ {coins} COINS</div>
+      <div className="hud-coins"><span className="doodle-coin" aria-hidden="true">◉</span> {coins} COINS</div>
+      {(shieldCharges > 0 || upgrades.shieldOrbit) && <div className="hud-shield">⬡ SHIELD {shieldCharges > 0 ? `×${shieldCharges}` : now < shieldReadyAt ? `${Math.ceil((shieldReadyAt - now) / 1000)}S` : "READY"}</div>}
       {scanDirections.map((mark) => <div key={mark.id} className={`scan-edge scan-edge--${mark.edge}`} style={{ "--edge-offset": `${mark.offset}px` } as CSSProperties}>◆<small>TARGET</small></div>)}
 
       {!scoped && (

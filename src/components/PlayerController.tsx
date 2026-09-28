@@ -310,7 +310,7 @@ export function PlayerController() {
     if (sliding) {
       const remaining = Math.max(0, (slideUntil.current - now) / SLIDE_MS);
       const slideStrength =
-        THREE.MathUtils.lerp(WALK_SPEED, SLIDE_SPEED, remaining) *
+        THREE.MathUtils.lerp(WALK_SPEED, SLIDE_SPEED * (1 + useGameStore.getState().gear.skates * 0.09), remaining) *
         speedMultiplier;
 
       horizontal = slideDirection.current

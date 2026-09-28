@@ -71,7 +71,7 @@ export function UpgradeScreen() {
           ) : (
             <>
               {selected && <button type="button" onClick={undoUpgrade}>↶ CHANGE MY CARD</button>}
-              <button type="button" className="is-primary" onClick={nextLevel}>NEXT: LEVEL {next.level} · {next.name} →</button>
+              <button type="button" className="is-primary" onClick={nextLevel}>{currentLevel === 10 ? "FINISH RUN · NG+ UNLOCKED →" : `NEXT: LEVEL ${next.level} · ${next.name} →`}</button>
             </>
           )}
 

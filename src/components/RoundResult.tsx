@@ -25,16 +25,25 @@ function RoundResultScreen() {
   }, [screen]);
   if (!["stageClear", "won", "lost"].includes(screen)) return null;
   const win = screen !== "lost";
-  return <div className={`round-result ${win ? "round-result--win" : "round-result--loss"}`}>
-    <div className="round-result__sparks" aria-hidden="true">✦ ✧ ✴ ✦ ✧</div>
-    <p>{win ? `LEVEL ${level} · ${cycle ? `NG+ ${cycle}` : "DREAM"} COMPLETE` : "ONE HEART LOST"}</p>
-    <h2>{win ? "YOU WIN!" : "YOU DIED"}</h2>
-    <strong>{win ? `+${reward} COINS · ${coins} TOTAL` : `${hearts} ${hearts === 1 ? "HEART" : "HEARTS"} REMAINING`}</strong>
-    <div className={`round-result__actions ${ready ? "is-ready" : ""}`}>
-      {screen === "stageClear" && <button type="button" onClick={continueAfterVictory}>{level === 10 ? "SEE YOUR VICTORY →" : "CHOOSE YOUR CARD →"}</button>}
-      {screen === "won" && <button type="button" onClick={startNewGamePlus}>NG+ · KEEP YOUR CARDS →</button>}
-      {screen === "lost" && <button type="button" onClick={restart}>RETRY THIS LEVEL →</button>}
-      <button type="button" onClick={goToMenu}>MAIN MENU</button>
+  const advance = () => {
+    if (!ready || !win) return;
+    if (screen === "stageClear") continueAfterVictory();
+    else startNewGamePlus();
+  };
+  return <div className={`round-result ${win ? "round-result--win" : "round-result--loss"}`} onClick={advance} onKeyDown={(event) => {
+    if (win && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); advance(); }
+  }} role={win ? "button" : undefined} tabIndex={win ? 0 : undefined}>
+    <div className="round-result__frame">
+      <div className="round-result__sparks" aria-hidden="true">✳ · ✦ · ✳</div>
+      <p>{win ? `LEVEL ${level} · ${cycle ? `NG+ ${cycle}` : "DREAM"} COMPLETE` : "ONE HEART LOST"}</p>
+      <h2>{win ? "YOU WIN!" : "YOU DIED"}</h2>
+      <strong>{win ? <><span className="doodle-coin" aria-hidden="true">◉</span> +{reward} COINS · {coins} TOTAL</> : `${hearts} ${hearts === 1 ? "HEART" : "HEARTS"} REMAINING`}</strong>
+      {win ? <p className={`round-result__continue ${ready ? "is-ready" : ""}`}>CLICK ANYWHERE TO {screen === "stageClear" ? "CHOOSE YOUR CARD" : "BEGIN NG+"} →</p>
+        : <div className={`round-result__actions ${ready ? "is-ready" : ""}`}>
+          <button type="button" onClick={restart}>RETRY THIS LEVEL →</button>
+          <button type="button" onClick={goToMenu}>MAIN MENU</button>
+        </div>}
+      <div className="round-result__underline" aria-hidden="true" />
     </div>
   </div>;
 }

@@ -9,8 +9,9 @@ import {
   ShoppingBag,
 } from "lucide-react";
 import { LEVELS } from "../game/levels";
-import { GEAR, gearCost, useGameStore } from "../game/store";
+import { useGameStore } from "../game/store";
 import { ControlsList } from "./ControlsList";
+import { GearShopScene } from "./GearShopScene";
 
 export function MainMenu() {
   const startLevel = useGameStore((state) => state.startLevel);
@@ -30,8 +31,8 @@ export function MainMenu() {
   const [controlsOpen, setControlsOpen] = useState(false);
   const [shopOpen, setShopOpen] = useState(false);
   const coins = useGameStore((state) => state.coins);
-  const gear = useGameStore((state) => state.gear);
-  const buyGear = useGameStore((state) => state.buyGear);
+
+  if (shopOpen) return <GearShopScene onBack={() => { setShopOpen(false); window.dispatchEvent(new Event("ui-scene-open")); }} />;
 
   return (
     <main className="main-menu-shell">
@@ -40,8 +41,6 @@ export function MainMenu() {
       <section
         className={`main-menu-card ${levelSelectOpen ? "is-level-select" : ""}`}
       >
-        <div className="main-menu-heartbar">HEARTS {"♥".repeat(hearts)}{"♡".repeat(5 - hearts)}</div>
-        <div className="main-menu-wallet">◉ {coins} COINS</div>
         {!levelSelectOpen ? (
           <>
             <p className="main-menu-kicker">AFTER HOURS // DREAM TERMINAL</p>
@@ -57,6 +56,7 @@ export function MainMenu() {
                   setOptionsOpen(false);
                   setShopOpen(false);
                   setLevelSelectOpen(true);
+                  window.dispatchEvent(new Event("ui-scene-open"));
                 }}
               >
                 <Play size={17} /> PLAY DREAM
@@ -66,11 +66,9 @@ export function MainMenu() {
                 NG+ (surprised u made it this far) · {champion.ready ? `LOOP ${champion.cycle + 1}` : `CONTINUE LOOP ${champion.cycle}`}
               </button>}
 
-              <button type="button" onClick={() => { setShopOpen((value) => !value); setOptionsOpen(false); }}><ShoppingBag size={17} /> GEAR SHOP</button>
-
               <button
                 type="button"
-                onClick={() => { setOptionsOpen((value) => !value); setShopOpen(false); }}
+                onClick={() => { setOptionsOpen((value) => !value); window.dispatchEvent(new Event("ui-scene-open")); }}
               >
                 <SlidersHorizontal size={17} /> OPTIONS
               </button>
@@ -83,16 +81,6 @@ export function MainMenu() {
                 <Github size={17} /> CREATOR ↗
               </a>
             </div>
-
-            {shopOpen && <div className="gear-shop">
-              <h3>GEAR SHOP <small>PERMANENT ARTIFACTS · CARRY INTO EVERY RUN</small></h3>
-              {GEAR.map((item) => <div className="gear-shop__row" key={item.id}>
-                <div><strong>{item.name} · {gear[item.id]}/5</strong><small>{item.detail}</small></div>
-                <button type="button" disabled={gear[item.id] >= 5 || coins < gearCost(item.id, gear[item.id])} onClick={() => buyGear(item.id)}>
-                  {gear[item.id] >= 5 ? "MAXED" : `◉ ${gearCost(item.id, gear[item.id])}`}
-                </button>
-              </div>)}
-            </div>}
 
             {optionsOpen && (
               <div className="main-menu-options">
@@ -156,11 +144,16 @@ export function MainMenu() {
             <button
               type="button"
               className="stage-select__back"
-              onClick={() => setLevelSelectOpen(false)}
+              onClick={() => { setLevelSelectOpen(false); window.dispatchEvent(new Event("ui-scene-open")); }}
             >
               <ChevronLeft size={16} /> BACK
             </button>
             <p className="main-menu-kicker">DREAM MAP // 10 DEADLINES</p>
+            <div className="stage-select__wallet">
+              <span>HEARTS {"♥".repeat(hearts)}{"♡".repeat(5 - hearts)}</span>
+              <span><b className="doodle-coin" aria-hidden="true">◉</b> {coins} COINS</span>
+              <button type="button" onClick={() => { setShopOpen(true); window.dispatchEvent(new Event("ui-scene-open")); }}><ShoppingBag size={17} /> GEAR SHOP →</button>
+            </div>
             <h2>CHOOSE<br />A STAGE</h2>
             <p className="stage-select__copy">
               Clear stages to unlock the next deadline. Upgrades only carry

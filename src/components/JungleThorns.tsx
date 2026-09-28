@@ -37,9 +37,14 @@ function thornPatches(wave: number, player: [number, number, number]): Patch[] {
 
 export function JungleThorns() {
   const [patches, setPatches] = useState<Patch[]>([]);
+  const [warnedPatches, setWarnedPatches] = useState<Patch[]>([]);
   const patchesRef = useRef<Patch[]>([]);
+  const warnedRef = useRef<Patch[]>([]);
+  const warnedWave = useRef(0);
   const ground = useRef<THREE.InstancedMesh>(null);
   const spikes = useRef<THREE.InstancedMesh>(null);
+  const warningGround = useRef<THREE.InstancedMesh>(null);
+  const warningMaterial = useRef<THREE.MeshBasicMaterial>(null);
   const elapsed = useRef(0);
   const lastWave = useRef(0);
   const lastDamage = useRef(0);
@@ -64,19 +69,48 @@ export function JungleThorns() {
     if (spikes.current) spikes.current.instanceMatrix.needsUpdate = true;
   }, [patches]);
 
+  useLayoutEffect(() => {
+    const object = new THREE.Object3D();
+    warnedPatches.forEach(({ x, z }, index) => {
+      object.position.set(x, 0.065, z);
+      object.updateMatrix();
+      warningGround.current?.setMatrixAt(index, object.matrix);
+    });
+    if (warningGround.current) warningGround.current.instanceMatrix.needsUpdate = true;
+  }, [warnedPatches]);
+
   useFrame((_, delta) => {
-    if (screen !== "playing" || useGameStore.getState().tutorialOpen) return;
+    if (screen !== "playing" || useGameStore.getState().tutorialOpen) {
+      if (warningGround.current) warningGround.current.visible = false;
+      return;
+    }
     elapsed.current += Math.min(delta, 0.1);
     const time = elapsed.current;
     const wave = Math.floor(time / 30);
+    const upcomingWave = wave + 1;
+    const untilWave = 30 - time % 30;
+    if (untilWave <= 6 && warnedWave.current !== upcomingWave) {
+      warnedWave.current = upcomingWave;
+      warnedRef.current = thornPatches(upcomingWave, useGameStore.getState().playerPosition);
+      setWarnedPatches(warnedRef.current);
+    }
     if (wave > lastWave.current) {
       const player = useGameStore.getState().playerPosition;
       const active = patchesRef.current.filter((patch) => patch.expires > time && !isThornSafe(patch.x, patch.z, player));
       const combined = new Map(active.map((patch) => [`${patch.x},${patch.z}`, patch]));
-      thornPatches(wave, player).forEach((patch) => combined.set(`${patch.x},${patch.z}`, patch));
+      // The red zones show every new patch; moving during the warning may
+      // remove patches to keep a safe corridor, but never adds an unwarned one.
+      warnedRef.current.filter((patch) => !isThornSafe(patch.x, patch.z, player)).forEach((patch) => combined.set(`${patch.x},${patch.z}`, patch));
       patchesRef.current = [...combined.values()];
       setPatches(patchesRef.current);
+      warnedRef.current = [];
+      setWarnedPatches([]);
       lastWave.current = wave;
+    }
+    if (warningGround.current) warningGround.current.visible = untilWave <= 6 && warnedPatches.length > 0;
+    if (warningMaterial.current) {
+      const urgency = 1 - untilWave / 6;
+      warningMaterial.current.opacity = 0.25 + (0.2 + urgency * 0.28) * Math.abs(Math.sin(time * (4 + urgency * 16)));
     }
     const next = Math.ceil(30 - time % 30);
     const message = next <= 6 ? `THORNS SPREAD IN ${next}S · CLIMB A TREE`
@@ -96,6 +130,10 @@ export function JungleThorns() {
   });
 
   return <group userData={{ ignoreProjectile: true }}>
+    <instancedMesh ref={warningGround} args={[undefined, undefined, warnedPatches.length]} visible={false}>
+      <boxGeometry args={[11.7, 0.03, 11.7]} />
+      <meshBasicMaterial ref={warningMaterial} color="#f7455a" side={THREE.DoubleSide} transparent opacity={0.38} depthWrite={false} />
+    </instancedMesh>
     <instancedMesh ref={ground} args={[undefined, undefined, patches.length]}>
       <boxGeometry args={[11.7, 0.08, 11.7]} />
       <meshBasicMaterial color="#38663a" transparent opacity={0.65} depthWrite={false} />

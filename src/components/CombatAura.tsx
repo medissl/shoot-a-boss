@@ -1,10 +1,12 @@
 import { useFrame, useThree } from "@react-three/fiber";
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { useGameStore } from "../game/store";
 
 export function CombatAura() {
   const ring = useRef<THREE.Mesh>(null);
+  const fragments = useRef<(THREE.Mesh | null)[]>([]);
+  const shieldBrokeAt = useRef(-Infinity);
   const balls = useRef<(THREE.Group | null)[]>([]);
   const lastBurn = useRef(0);
   const lastNav = useRef(0);
@@ -13,16 +15,41 @@ export function CombatAura() {
   const upgrades = useGameStore((s) => s.upgrades);
   const scanUntil = useGameStore((s) => s.scanUntil);
   const screen = useGameStore((s) => s.screen);
+  useEffect(() => {
+    const shatter = () => {
+      shieldBrokeAt.current = performance.now();
+      const state = useGameStore.getState();
+      if (!state.upgrades.shieldShatter) return;
+      const [px, py, pz] = state.playerPosition;
+      Object.entries(state.enemyPositions).forEach(([id, [x, y, z]]) => {
+        if (Math.hypot(px - x, pz - z) < 5 && Math.abs(py - y) < 4.5) {
+          window.dispatchEvent(new CustomEvent("boss-hit", { detail: { id, damage: 30, part: "body" } }));
+        }
+      });
+    };
+    window.addEventListener("shield-blocked", shatter);
+    return () => window.removeEventListener("shield-blocked", shatter);
+  }, []);
   useFrame(({ clock }) => {
     const live = useGameStore.getState();
     const now = clock.elapsedTime;
     const [x, y, z] = live.playerPosition;
+    const breakAge = (performance.now() - shieldBrokeAt.current) / 1000;
     if (ring.current) {
       ring.current.position.set(x, y, z);
-      ring.current.visible = Boolean(upgrades.shieldOrbit && performance.now() >= live.shieldReadyAt && screen === "playing");
+      ring.current.visible = Boolean((live.shieldCharges > 0 || upgrades.shieldOrbit && performance.now() >= live.shieldReadyAt) && breakAge > 0.85 && screen === "playing");
       ring.current.rotation.y = now * 0.75;
       ring.current.rotation.z = Math.sin(now * 1.6) * 0.18;
     }
+    fragments.current.forEach((piece, index) => {
+      if (!piece) return;
+      piece.visible = screen === "playing" && breakAge >= 0 && breakAge < 0.85;
+      if (!piece.visible) return;
+      const side = index ? 1 : -1;
+      piece.position.set(x + side * breakAge * 2.5, y + breakAge * 1.2, z);
+      piece.rotation.set(0, side * breakAge * 2.3, index ? Math.PI + side * breakAge : -side * breakAge);
+      (piece.material as THREE.MeshBasicMaterial).opacity = 0.95 * (1 - breakAge / 0.85);
+    });
     balls.current.forEach((ball, index) => {
       if (!ball) return;
       ball.visible = Boolean(upgrades.fireOrbit && screen === "playing");
@@ -58,7 +85,10 @@ export function CombatAura() {
     }
   });
   return <group userData={{ ignoreProjectile: true }}>
-    <mesh ref={ring} visible={false}><torusGeometry args={[1.25, 0.055, 6, 36]} /><meshBasicMaterial color="#61f4ff" transparent opacity={0.67} depthWrite={false} /></mesh>
+    <mesh ref={ring} visible={false}><torusGeometry args={[1.25, 0.075, 6, 36]} /><meshBasicMaterial color="#8bd6ff" transparent opacity={0.83} depthWrite={false} /></mesh>
+    {[0, 1].map((index) => <mesh key={index} ref={(node) => { fragments.current[index] = node; }} visible={false}>
+      <torusGeometry args={[1.25, 0.085, 6, 24, Math.PI]} /><meshBasicMaterial color="#d7f8ff" transparent opacity={0.95} depthWrite={false} />
+    </mesh>)}
     {Array.from({ length: 3 }, (_, i) => <group key={i} ref={(node) => { balls.current[i] = node; }} visible={false}>
       <mesh><icosahedronGeometry args={[0.32, 1]} /><meshBasicMaterial color="#ffbc36" /></mesh>
       <mesh scale={1.45}><icosahedronGeometry args={[0.29, 0]} /><meshBasicMaterial color="#ff581b" transparent opacity={0.38} depthWrite={false} /></mesh>

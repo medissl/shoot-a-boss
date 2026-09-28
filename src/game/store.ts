@@ -12,14 +12,19 @@ import {
 
 type AmmoState = Record<WeaponId, { mag: number; reserve: number }>;
 type Champion = { cycle: number; level: number; hearts: number; upgrades: UpgradeLevels; ready: boolean };
-export type GearId = "vest" | "boots" | "barrel" | "medallion";
+export type GearId = "vest" | "boots" | "barrel" | "medallion" | "skates" | "aegis" | "lens" | "satchel";
 export const GEAR: { id: GearId; name: string; detail: string; cost: number }[] = [
   { id: "vest", name: "IRON VEST", detail: "+15 maximum HP per rank", cost: 100 },
   { id: "boots", name: "QUICK BOOTS", detail: "+5% movement per rank", cost: 100 },
   { id: "barrel", name: "INK BARREL", detail: "+6% weapon damage per rank", cost: 120 },
   { id: "medallion", name: "LIFE MEDALLION", detail: "Heal 4 HP on every elimination per rank", cost: 140 },
+  { id: "skates", name: "INK SKATES", detail: "+9% slide speed per rank", cost: 110 },
+  { id: "aegis", name: "PAPER AEGIS", detail: "Start each round with a shield charge (up to 3)", cost: 180 },
+  { id: "lens", name: "SCOUT LENS", detail: "+2 seconds of Q mark time per rank", cost: 120 },
+  { id: "satchel", name: "EXTRA SATCHEL", detail: "+1 paper bomb per rank", cost: 110 },
 ];
 export type GearLevels = Record<GearId, number>;
+export const gearCap = (id: GearId) => id === "aegis" ? 3 : 5;
 export const MAX_HEARTS = 5;
 const CHAMPION_KEY = "shoot-a-boss:champion";
 const HEARTS_KEY = "shoot-a-boss:hearts";
@@ -78,6 +83,7 @@ type GameStore = {
   playerYaw: number;
   enemyPositions: Record<string, [number, number, number]>;
   shieldReadyAt: number;
+  shieldCharges: number;
   speedBoostUntil: number;
   speedBoostActive: boolean;
   movementMode: MovementMode;
@@ -163,7 +169,7 @@ function readCoins() {
 function readGear(): GearLevels {
   let raw: Record<string, unknown> = {};
   try { raw = JSON.parse(window.localStorage.getItem("shoot-a-boss:gear") ?? "{}") ?? {}; } catch { /* Corrupt saves start clean. */ }
-  return Object.fromEntries(GEAR.map(({ id }) => [id, Number.isInteger(raw[id]) ? Math.min(5, Math.max(0, Number(raw[id]))) : 0])) as GearLevels;
+  return Object.fromEntries(GEAR.map(({ id }) => [id, Number.isInteger(raw[id]) ? Math.min(gearCap(id), Math.max(0, Number(raw[id]))) : 0])) as GearLevels;
 }
 
 export function gearCost(id: GearId, rank: number) {
@@ -225,7 +231,7 @@ function freshAmmo(upgrades: UpgradeLevels): AmmoState {
 
 const weaponOrder: WeaponId[] = ["sniper", "rifle", "shotgun", "knife"];
 
-function freshRun(level: number, upgrades: UpgradeLevels, cycle = 0, gear: GearLevels = { vest: 0, boots: 0, barrel: 0, medallion: 0 }) {
+function freshRun(level: number, upgrades: UpgradeLevels, cycle = 0, gear: GearLevels = { vest: 0, boots: 0, barrel: 0, medallion: 0, skates: 0, aegis: 0, lens: 0, satchel: 0 }) {
   const stats = getUpgradeStats(upgrades);
 
   return {
@@ -235,7 +241,7 @@ function freshRun(level: number, upgrades: UpgradeLevels, cycle = 0, gear: GearL
     maxHp: stats.maxHp + gear.vest * 15,
     weapon: "rifle" as WeaponId,
     ammo: freshAmmo(upgrades),
-    grenades: stats.grenadeCapacity || GRENADE_COUNT,
+    grenades: stats.grenadeCapacity + gear.satchel || GRENADE_COUNT,
     eliminated: [] as string[],
     scanTargets: [] as string[],
     scanUntil: 0,
@@ -245,6 +251,7 @@ function freshRun(level: number, upgrades: UpgradeLevels, cycle = 0, gear: GearL
     playerYaw: 0,
     enemyPositions: {} as Record<string, [number, number, number]>,
     shieldReadyAt: 0,
+    shieldCharges: Math.min(5, gear.aegis + upgrades.shieldReserve),
     speedBoostUntil: 0,
     speedBoostActive: false,
     movementMode: "idle" as MovementMode,
@@ -288,7 +295,7 @@ export const useGameStore = create<GameStore>((set, get) => {
     ngPlusCycle: 0,
     champion: readChampion(),
     coins: typeof window === "undefined" ? 0 : readCoins(),
-    gear: typeof window === "undefined" ? { vest: 0, boots: 0, barrel: 0, medallion: 0 } : readGear(),
+    gear: typeof window === "undefined" ? { vest: 0, boots: 0, barrel: 0, medallion: 0, skates: 0, aegis: 0, lens: 0, satchel: 0 } : readGear(),
     lastReward: 0,
     upgrades: initialUpgrades,
     upgradeChoices: [],
@@ -363,7 +370,9 @@ export const useGameStore = create<GameStore>((set, get) => {
     nextLevel: () => {
       const state = get();
       if (state.currentLevel >= 10) {
-        set({ screen: "won" });
+        const champion: Champion = { cycle: state.ngPlusCycle, level: 10, hearts: state.hearts, upgrades: state.upgrades, ready: true };
+        writeChampion(champion);
+        set({ screen: "won", champion });
         return;
       }
 
@@ -394,20 +403,21 @@ export const useGameStore = create<GameStore>((set, get) => {
       if (state.upgrades[id] >= card.maxStacks) return;
       const newUpgrades = { ...state.upgrades, [id]: state.upgrades[id] + 1 };
       const maxHp = getUpgradeStats(newUpgrades).maxHp + state.gear.vest * 15;
-      const champion = state.ngPlusCycle > 0 ? {
+      const champion = state.ngPlusCycle > 0 || state.currentLevel === 10 ? {
         cycle: state.ngPlusCycle, level: Math.min(10, state.currentLevel + 1), hearts: state.hearts,
-        upgrades: newUpgrades, ready: false,
+        upgrades: newUpgrades, ready: state.currentLevel === 10,
       } : state.champion;
-      if (state.ngPlusCycle > 0) writeChampion(champion);
+      if (state.ngPlusCycle > 0 || state.currentLevel === 10) writeChampion(champion);
 
       set({
         upgrades: newUpgrades,
         champion,
         maxHp,
         hp: Math.min(maxHp, state.hp + (maxHp - state.maxHp > 0 ? maxHp - state.maxHp : 0) + (id === "ironWill" ? 20 : 0)),
-        grenades: id === "bombBelt" ? Math.min(getUpgradeStats(newUpgrades).grenadeCapacity, state.grenades + 1) : state.grenades,
+        grenades: id === "bombBelt" ? Math.min(getUpgradeStats(newUpgrades).grenadeCapacity + state.gear.satchel, state.grenades + 1) : state.grenades,
         selectedUpgrade: id,
       });
+      window.dispatchEvent(new Event("ui-confirm"));
     },
 
     undoUpgrade: () => {
@@ -416,19 +426,19 @@ export const useGameStore = create<GameStore>((set, get) => {
       const id = state.selectedUpgrade;
       const upgrades = { ...state.upgrades, [id]: state.upgrades[id] - 1 };
       const maxHp = getUpgradeStats(upgrades).maxHp + state.gear.vest * 15;
-      const champion = state.ngPlusCycle > 0 ? { cycle: state.ngPlusCycle, level: Math.min(10, state.currentLevel + 1), hearts: state.hearts, upgrades, ready: false } : state.champion;
-      if (state.ngPlusCycle > 0) writeChampion(champion);
-      set({ upgrades, champion, maxHp, hp: Math.min(maxHp, state.hp), grenades: Math.min(state.grenades, getUpgradeStats(upgrades).grenadeCapacity), selectedUpgrade: null });
+      const champion = state.ngPlusCycle > 0 || state.currentLevel === 10 ? { cycle: state.ngPlusCycle, level: Math.min(10, state.currentLevel + 1), hearts: state.hearts, upgrades, ready: state.currentLevel === 10 } : state.champion;
+      if (state.ngPlusCycle > 0 || state.currentLevel === 10) writeChampion(champion);
+      set({ upgrades, champion, maxHp, hp: Math.min(maxHp, state.hp), grenades: Math.min(state.grenades, getUpgradeStats(upgrades).grenadeCapacity + state.gear.satchel), selectedUpgrade: null });
     },
 
     continueAfterVictory: () => {
       const state = get();
-      if (state.screen === "stageClear") set({ screen: state.currentLevel === 10 ? "won" : "upgrade" });
+      if (state.screen === "stageClear") set({ screen: "upgrade" });
     },
 
     buyGear: (id) => {
       const state = get();
-      if (state.screen !== "menu" || state.gear[id] >= 5) return;
+      if (state.screen !== "menu" || state.gear[id] >= gearCap(id)) return;
       const cost = gearCost(id, state.gear[id]);
       if (state.coins < cost) return;
       const coins = state.coins - cost;
@@ -436,6 +446,7 @@ export const useGameStore = create<GameStore>((set, get) => {
       window.localStorage.setItem("shoot-a-boss:coins", String(coins));
       window.localStorage.setItem("shoot-a-boss:gear", JSON.stringify(gear));
       set({ coins, gear });
+      window.dispatchEvent(new Event("ui-confirm"));
     },
 
     closeTutorial: () => set({ tutorialOpen: false }),
@@ -455,11 +466,12 @@ export const useGameStore = create<GameStore>((set, get) => {
       if (!targets.length) return;
       const all = state.upgrades.recon > 0;
       const selected = all ? targets : [targets[Math.floor(Math.random() * targets.length)]];
-      const until = now + (all ? 10000 : 5000);
+      const duration = (all ? 10000 : 5000) + state.gear.lens * 2000;
+      const until = now + duration;
       set({ scanTargets: selected, scanUntil: until, scanCooldownUntil: now + 30000 });
       window.setTimeout(() => {
         if (get().scanUntil === until) set({ scanTargets: [] });
-      }, all ? 10000 : 5000);
+      }, duration);
     },
 
     rerollUpgrades: () => {
@@ -525,7 +537,7 @@ export const useGameStore = create<GameStore>((set, get) => {
           cycle: state.ngPlusCycle,
           level: state.screen === "upgrade" ? Math.min(10, state.currentLevel + 1) : state.currentLevel,
           hearts: state.hearts,
-          upgrades: state.upgrades, ready: false,
+          upgrades: state.upgrades, ready: state.screen === "upgrade" && state.currentLevel === 10,
         };
         writeChampion(champion);
         set({ champion });
@@ -656,7 +668,7 @@ export const useGameStore = create<GameStore>((set, get) => {
     refillGrenades: (amount = 1) =>
       set((state) => ({
         grenades: Math.min(
-          getUpgradeStats(state.upgrades).grenadeCapacity,
+          getUpgradeStats(state.upgrades).grenadeCapacity + state.gear.satchel,
           state.grenades + amount,
         ),
       })),
@@ -674,6 +686,11 @@ export const useGameStore = create<GameStore>((set, get) => {
     damagePlayer: (amount, source) => {
       const state = get();
       if (state.screen !== "playing" || amount <= 0) return;
+      if (state.shieldCharges > 0) {
+        set({ shieldCharges: state.shieldCharges - 1 });
+        window.dispatchEvent(new CustomEvent("shield-blocked", { detail: { source, chargesRemaining: state.shieldCharges - 1 } }));
+        return;
+      }
       if (state.upgrades.shieldOrbit && performance.now() >= state.shieldReadyAt) {
         set({ shieldReadyAt: performance.now() + 12000 });
         window.dispatchEvent(new CustomEvent("shield-blocked", { detail: { source } }));
@@ -751,6 +768,13 @@ export const useGameStore = create<GameStore>((set, get) => {
             screen: "stageClear", coins, lastReward, ammo, enemyPositions,
             scoped: false,
             movementMode: "idle",
+            upgradeChoices: rollUpgradeChoices(
+              state.currentLevel,
+              0,
+              state.upgrades,
+            ),
+            upgradeRerollsLeft: 1,
+            selectedUpgrade: null,
           });
           return;
         }

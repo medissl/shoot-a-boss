@@ -5,7 +5,7 @@ export type UpgradeId =
   | "rifleFreeze" | "riflePrecision" | "rifleOverclock" | "riflePower"
   | "shotgunPellets" | "shotgunChoke" | "shotgunSlow" | "shotgunClose"
   | "recon" | "sniperTwin" | "rifleSurge" | "shotgunDouble" | "ironWill"
-  | "shieldOrbit" | "fireOrbit" | "vampireInk" | "swiftReset";
+  | "shieldOrbit" | "shieldReserve" | "shieldShatter" | "fireOrbit" | "vampireInk" | "swiftReset";
 export type UpgradeLevels = Record<UpgradeId, number>;
 export type Rarity = "common" | "rare" | "epic" | "legendary";
 export type UpgradeCard = {
@@ -44,6 +44,8 @@ export const UPGRADE_CARDS: UpgradeCard[] = [
   { id:"shotgunDouble", name:"DOUBLE ENTRY", description:"Shotgun blasts fire 75% more pellets.", glyph:"❖", rarity:"legendary", maxStacks:1, weapon:"shotgun" },
   { id:"ironWill", name:"FINAL NOTICE", description:"Gain 35 maximum HP and heal 20 HP immediately.", glyph:"✺", rarity:"legendary", maxStacks:1 },
   { id:"shieldOrbit", name:"ORBITAL GUARD", description:"A visible shield absorbs one hit every 12 seconds.", glyph:"⬡", rarity:"legendary", maxStacks:1 },
+  { id:"shieldReserve", name:"PAPER ARMOR", description:"Begin each stage with one extra shield charge per stack.", glyph:"▱", rarity:"epic", maxStacks:2 },
+  { id:"shieldShatter", name:"SHATTERED INK", description:"When a shield breaks, nearby monsters take 30 damage.", glyph:"✳", rarity:"epic", maxStacks:1 },
   { id:"fireOrbit", name:"FIRE WALTZ", description:"Three fireballs orbit you and singe nearby monsters.", glyph:"☄", rarity:"legendary", maxStacks:1 },
   { id:"vampireInk", name:"LIFE IN INK", description:"Every third elimination heals 15 HP.", glyph:"❣", rarity:"epic", maxStacks:1 },
   { id:"swiftReset", name:"FRESH PAGE", description:"Each elimination immediately reloads 20% of your current magazine.", glyph:"↶", rarity:"epic", maxStacks:1 },
@@ -75,7 +77,7 @@ const rarityWeights: [Rarity, number][] = [["common", 0.5], ["rare", 0.3], ["epi
 export function rollUpgradeChoices(level: number, rerollIndex: number, upgrades: UpgradeLevels): UpgradeId[] {
   const stackScore = Object.values(upgrades).reduce((sum, value) => sum + value, 0);
   const random = seeded(level * 92821 + rerollIndex * 19391 + stackScore * 7919 + 17);
-  const available = UPGRADE_CARDS.filter((card) => upgrades[card.id] < card.maxStacks);
+  const available = UPGRADE_CARDS.filter((card) => upgrades[card.id] < card.maxStacks && (card.id !== "shieldShatter" || upgrades.shieldOrbit || upgrades.shieldReserve));
   const choices: UpgradeId[] = [];
   for (let slot = 0; slot < 3; slot++) {
     const pool = available.filter((card) => !choices.includes(card.id) && (slot === 0 ? Boolean(card.weapon) : slot === 1 ? !card.weapon : true));

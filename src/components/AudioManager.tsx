@@ -11,6 +11,9 @@ const A = {
   slide: "/audio/Slide.mp3",
   land: "/audio/Landing.mp3",
   playerDamage: "/audio/PlayerDamage.mp3",
+  uiOpen: "/audio/OpeningStuffSFX.m4a",
+  uiSelect: "/audio/SelectingSFX.m4a",
+  uiConfirm: "/audio/ConfirmingSFX.m4a",
   pickup: "/audio/PickUpThing.mp3",
   speed: "/audio/SpeedBoost.mp3",
   grenadeCock: "/audio/GrenadeCocking.mp3",
@@ -73,6 +76,7 @@ export function AudioManager() {
   const sfxVolume = useGameStore((state) => state.sfxVolume);
 
   const unlocked = useRef(false);
+  const previousScreen = useRef(screen);
 
   // One persistent music player only. Keeping a single HTMLAudioElement means
   // IntroMenuBGM and ShootingBGM can never overlap, even during rapid state changes.
@@ -218,6 +222,40 @@ export function AudioManager() {
   useEffect(() => {
     requestBgm(bgmFor(screen, currentLevel));
   }, [requestBgm, screen, currentLevel]);
+
+  useEffect(() => {
+    if (screen !== previousScreen.current) {
+      previousScreen.current = screen;
+      playOne(A.uiOpen, 0.48);
+    }
+  }, [screen, playOne]);
+
+  useEffect(() => {
+    let hovered: Element | null = null;
+    const sceneOpen = () => playOne(A.uiOpen, 0.48);
+    const confirm = () => playOne(A.uiConfirm, 0.66);
+    const hover = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const choice = target.closest("button, a");
+      if (!choice || choice === hovered || choice.matches(":disabled")) return;
+      hovered = choice;
+      playOne(A.uiSelect, 0.27);
+    };
+    const leave = (event: PointerEvent) => {
+      if (hovered && !hovered.contains(event.relatedTarget as Node | null)) hovered = null;
+    };
+    window.addEventListener("ui-scene-open", sceneOpen);
+    window.addEventListener("ui-confirm", confirm);
+    document.addEventListener("pointerover", hover);
+    document.addEventListener("pointerout", leave);
+    return () => {
+      window.removeEventListener("ui-scene-open", sceneOpen);
+      window.removeEventListener("ui-confirm", confirm);
+      document.removeEventListener("pointerover", hover);
+      document.removeEventListener("pointerout", leave);
+    };
+  }, [playOne]);
 
   useEffect(() => {
     const retry = () => {
