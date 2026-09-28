@@ -5,15 +5,18 @@ import { useGameStore } from "../game/store";
 
 export function ScanHalo({ id, size = 2 }: { id: string; size?: number }) {
   const marked = useGameStore((state) => state.scanTargets.includes(id));
-  const diamond = useRef<THREE.Mesh>(null);
+  const diamond = useRef<THREE.Group>(null);
   useFrame(({ clock }) => {
     if (!diamond.current) return;
-    diamond.current.rotation.y += 0.035;
-    diamond.current.position.y = size * 1.7 + Math.sin(clock.getElapsedTime() * 5) * 0.2;
+    diamond.current.rotation.y += 0.028;
+    diamond.current.position.y = size * 1.7 + Math.sin(clock.getElapsedTime() * 5) * 0.27;
+    diamond.current.scale.setScalar(1 + Math.sin(clock.getElapsedTime() * 5) * .13);
   });
   if (!marked) return null;
-  return <mesh ref={diamond} position={[0, size * 1.7, 0]} renderOrder={1000} userData={{ ignoreProjectile: true }}>
-    <octahedronGeometry args={[0.48, 0]} />
-    <meshBasicMaterial color="#ffe850" depthTest={false} depthWrite={false} transparent opacity={0.94} />
-  </mesh>;
+  return <group ref={diamond} position={[0, size * 1.7, 0]} renderOrder={1000} userData={{ ignoreProjectile: true }}>
+    <mesh renderOrder={1001}><octahedronGeometry args={[0.78, 0]} /><meshBasicMaterial color="#fff137" toneMapped={false} depthTest={false} depthWrite={false} /></mesh>
+    <mesh scale={1.7} renderOrder={1000}><octahedronGeometry args={[.78, 0]} /><meshBasicMaterial color="#ffdd00" toneMapped={false} depthTest={false} depthWrite={false} transparent opacity={.27} /></mesh>
+    <mesh rotation={[Math.PI/2,0,0]} renderOrder={1000}><torusGeometry args={[1.05,.095,6,32]}/><meshBasicMaterial color="#fff847" toneMapped={false} depthTest={false} depthWrite={false} /></mesh>
+    <mesh rotation={[0,Math.PI/2,0]} renderOrder={1000}><torusGeometry args={[1.12,.06,6,32]}/><meshBasicMaterial color="#ffe900" toneMapped={false} depthTest={false} depthWrite={false} /></mesh>
+  </group>;
 }

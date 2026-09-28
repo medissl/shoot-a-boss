@@ -371,7 +371,7 @@ export function CombatSystem() {
       const candidates = projectileMeshes(scene);
 
       const pelletCount = currentWeapon === "sniper" && state.upgrades.sniperTwin ? 2 :
-        Math.round((config.pellets + (currentWeapon === "shotgun" ? state.upgrades.shotgunPellets * 2 : 0)) * (currentWeapon === "shotgun" && state.upgrades.shotgunDouble ? 1.75 : 1));
+        Math.round((config.pellets + (currentWeapon === "shotgun" ? state.upgrades.shotgunPellets * 2 : 0)) * (currentWeapon === "shotgun" && state.upgrades.shotgunDouble ? 1.3 : 1));
       for (let pellet = 0; pellet < pelletCount; pellet += 1) {
         const raycaster = new THREE.Raycaster();
         const spreadX = (Math.random() - 0.5) * spread;

@@ -55,7 +55,7 @@ export const WEAPONS: Record<WeaponId, WeaponConfig> = {
     label: "STAPLE SHOTGUN",
     magazine: 5,
     reserve: 35,
-    damage: 44,
+    damage: 36,
     cooldownMs: 850,
     aimDelayMs: 130,
     pellets: 5,

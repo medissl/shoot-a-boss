@@ -38,6 +38,7 @@ export function PaperworkMonster({
   const maxHp = Math.round(PAPER_MONSTER_MAX_HP * (1 + (useGameStore.getState().currentLevel + useGameStore.getState().ngPlusCycle * 10 - 1) * 0.085));
   const hpRef = useRef(maxHp);
   const nextAttackAt = useRef(0);
+  const lastStepSound = useRef(0);
   const deadAt = useRef(0);
   const nextPopId = useRef(1);
   const awarenessUntil = useRef(0);
@@ -192,6 +193,7 @@ export function PaperworkMonster({
       ) {
         nextAttackAt.current = now + Math.max(0.54, 0.78 - (effectiveLevel - 1) * 0.027);
         damagePlayer(Math.round(10 * tuning.damage), [here.x, here.y + 1.1, here.z]);
+        window.dispatchEvent(new CustomEvent("world-sfx", { detail: { kind: "paperAttack", position: [here.x, here.y, here.z] } }));
       }
     } else {
       if (
@@ -225,6 +227,10 @@ export function PaperworkMonster({
       sideBias,
       currentLevel,
     );
+    if (motion.lengthSq() > 0.001 && playerDistance < 34 && now - lastStepSound.current > 0.55) {
+      lastStepSound.current = now;
+      window.dispatchEvent(new CustomEvent("world-sfx", { detail: { kind: "paperStep", position: [here.x, here.y, here.z] } }));
+    }
 
     group.lookAt(faceTarget.x, 1.15, faceTarget.z);
     group.rotation.x = 0;

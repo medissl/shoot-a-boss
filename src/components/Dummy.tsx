@@ -359,6 +359,7 @@ export function Dummy({
   const poseRef = useRef<Pose>("idle");
   const punchUntil = useRef(0);
   const lastPunch = useRef(0);
+  const lastStepSound = useRef(0);
   const nextRangedShot = useRef(1.2 + Number(id.split("-")[1]) * 0.18);
   const aimingUntil = useRef(0);
   const telegraphTarget = useRef(new THREE.Vector3());
@@ -611,6 +612,7 @@ export function Dummy({
           lastPunch.current = now;
           punchUntil.current = now + 0.36;
           damagePlayer(Math.round(10 * tuning.damage), [here.x, here.y + 2, here.z]);
+          window.dispatchEvent(new CustomEvent("world-sfx", { detail: { kind: "bossAttack", position: [here.x, here.y, here.z] } }));
         }
 
         if (now < punchUntil.current) desiredPose = "punch";
@@ -635,6 +637,7 @@ export function Dummy({
             const muzzle = here.clone().add(new THREE.Vector3(0, 2.25, 0));
             shotTarget.current.copy(telegraphTarget.current);
             shotVisibleUntil.current = now + 0.095;
+            window.dispatchEvent(new CustomEvent("world-sfx", { detail: { kind: "bossShot", position: [here.x, here.y + 2, here.z] } }));
 
             if (player.distanceTo(telegraphTarget.current) < 1.65) {
               damagePlayer(
@@ -702,6 +705,10 @@ export function Dummy({
     if (poseRef.current !== desiredPose) {
       poseRef.current = desiredPose;
       setPose(desiredPose);
+    }
+    if (desiredPose === "walk" && playerDistance < 38 && now - lastStepSound.current > 0.62) {
+      lastStepSound.current = now;
+      window.dispatchEvent(new CustomEvent("world-sfx", { detail: { kind: "bossStep", position: [here.x, here.y, here.z] } }));
     }
 
     const visible = root.children[0] as THREE.Mesh | undefined;

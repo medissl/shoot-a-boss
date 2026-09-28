@@ -12,12 +12,16 @@ import { EnemyFeedback } from "./EnemyFeedback";
 const STATUE_PERIOD = 20;
 const STATUE_WARNING = 5;
 const STATUE_FIRE_SECONDS = 5;
-const STATUE_RADIUS = 8.5;
+const STATUE_RADIUS = 5.5;
 
 export function ExtraMonster({ id, spawn, kind }: { id: string; spawn: [number, number, number]; kind: "fly" | "statue" }) {
   const root = useRef<THREE.Group>(null);
   const telegraph = useRef<THREE.Group>(null);
   const fire = useRef<THREE.Group>(null);
+  const warningBeam = useRef<THREE.Mesh>(null);
+  const attackBeam = useRef<THREE.Mesh>(null);
+  const armed = useRef(false);
+  const wasActive = useRef(false);
   const wings = useRef<(THREE.Mesh | null)[]>([]);
   const awarenessUntil = useRef(0);
   const lastAttack = useRef(0);
@@ -79,6 +83,8 @@ export function ExtraMonster({ id, spawn, kind }: { id: string; spawn: [number, 
     if (screen !== "playing" || live.tutorialOpen) {
       if (telegraph.current) telegraph.current.visible = false;
       if (fire.current) fire.current.visible = false;
+      if (warningBeam.current) warningBeam.current.visible = false;
+      if (attackBeam.current) attackBeam.current.visible = false;
       return;
     }
     const now = state.clock.elapsedTime;
@@ -114,6 +120,7 @@ export function ExtraMonster({ id, spawn, kind }: { id: string; spawn: [number, 
         mesh.position.y = THREE.MathUtils.damp(mesh.position.y, 5.2 + Math.sin(now * 2 + index) * 0.5, 1.4, delta);
       }
       mesh.rotation.y = THREE.MathUtils.damp(mesh.rotation.y, Math.atan2(px - mesh.position.x, pz - mesh.position.z), 4, delta);
+      if (seesPlayer && Math.floor(now * 2) !== Math.floor((now - delta) * 2)) window.dispatchEvent(new CustomEvent("world-sfx", { detail: { kind: "flyWing", position: [mesh.position.x, mesh.position.y, mesh.position.z] } }));
       wings.current.forEach((wing, side) => { if (wing) wing.rotation.z = (side ? 1 : -1) * (0.35 + Math.sin(now * 12) * 0.32); });
       if (now - lastPosition.current > 0.14) {
         lastPosition.current = now;
@@ -124,6 +131,7 @@ export function ExtraMonster({ id, spawn, kind }: { id: string; spawn: [number, 
         dive.current = "recover";
         recoveryUntil.current = now + 1.1;
         live.damagePlayer(Math.round(11 * tuning.damage), [mesh.position.x, mesh.position.y, mesh.position.z]);
+        window.dispatchEvent(new CustomEvent("world-sfx", { detail: { kind: "flyAttack", position: [mesh.position.x, mesh.position.y, mesh.position.z] } }));
       }
       return;
     }
@@ -137,27 +145,43 @@ export function ExtraMonster({ id, spawn, kind }: { id: string; spawn: [number, 
     const started = shifted >= STATUE_PERIOD;
     const warning = phase >= STATUE_PERIOD - STATUE_WARNING;
     const active = started && phase < STATUE_FIRE_SECONDS;
-    if (warning && !wasWarning.current) targetArea.current.set(px - mesh.position.x, 0, pz - mesh.position.z);
+    if (warning && !wasWarning.current) {
+      armed.current = Math.hypot(px-mesh.position.x,pz-mesh.position.z) < 72*tuning.vision &&
+        hasEnemyLineOfSight(new THREE.Vector3(mesh.position.x,3.6,mesh.position.z),new THREE.Vector3(px,py+1,pz),level,.45);
+      targetArea.current.set(px - mesh.position.x, Math.max(0,py-1.4), pz - mesh.position.z);
+      if(armed.current)window.dispatchEvent(new CustomEvent("world-sfx",{detail:{kind:"statueCharge",position:[mesh.position.x,mesh.position.y,mesh.position.z]}}));
+    }
     wasWarning.current = warning;
+    const origin = new THREE.Vector3(0,3.5,0);
+    const target = new THREE.Vector3(targetArea.current.x,targetArea.current.y+1,targetArea.current.z);
+    const direction = target.clone().sub(origin);
+    const length = direction.length();
+    const unit = direction.clone().normalize();
+    for(const beam of [warningBeam.current,attackBeam.current])if(beam){beam.position.copy(origin).addScaledVector(direction,.5);beam.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),unit);beam.scale.y=length;}
+    if(warningBeam.current)warningBeam.current.visible=warning&&armed.current&&motion>0;
+    if(attackBeam.current)attackBeam.current.visible=active&&armed.current&&motion>0;
+    if(active&&!wasActive.current&&armed.current)window.dispatchEvent(new CustomEvent("world-sfx",{detail:{kind:"statueFire",position:[mesh.position.x,mesh.position.y,mesh.position.z]}}));
+    wasActive.current=active;
     if (telegraph.current) {
-      telegraph.current.position.set(targetArea.current.x, 0.08, targetArea.current.z);
-      telegraph.current.visible = warning && motion > 0;
+      telegraph.current.position.set(targetArea.current.x, targetArea.current.y+0.08, targetArea.current.z);
+      telegraph.current.visible = warning && armed.current && motion > 0;
       const material = (telegraph.current.children[0] as THREE.Mesh).material as THREE.MeshBasicMaterial;
       const timeToFire = STATUE_PERIOD - phase;
       const blink = 4 + (1 - timeToFire / STATUE_WARNING) * 25;
       material.opacity = 0.3 + 0.47 * Math.abs(Math.sin(now * blink));
+      if(warningBeam.current)(warningBeam.current.material as THREE.MeshBasicMaterial).opacity=material.opacity;
     }
     if (fire.current) {
-      fire.current.position.set(targetArea.current.x, 0, targetArea.current.z);
-      fire.current.visible = active && motion > 0;
+      fire.current.position.set(targetArea.current.x,targetArea.current.y,targetArea.current.z);
+      fire.current.visible = active && armed.current && motion > 0;
       if (active) fire.current.children.slice(2).forEach((flame, i) => {
         flame.scale.y = 0.7 + Math.sin(now * 11 + i * 2.1) * 0.27;
         flame.rotation.y = Math.sin(now * 5 + i) * 0.25;
       });
     }
-    if (active && motion > 0 && Math.hypot(px - (mesh.position.x + targetArea.current.x), pz - (mesh.position.z + targetArea.current.z)) < STATUE_RADIUS && now - lastDamage.current >= 0.75) {
+    if (active && armed.current && motion > 0 && Math.abs(py-(targetArea.current.y+1.4))<2.5 && Math.hypot(px - (mesh.position.x + targetArea.current.x), pz - (mesh.position.z + targetArea.current.z)) < STATUE_RADIUS && now - lastDamage.current >= 0.75) {
       lastDamage.current = now;
-      live.damagePlayer(Math.round(10 * tuning.damage), [mesh.position.x + targetArea.current.x, py, mesh.position.z + targetArea.current.z]);
+      live.damagePlayer(Math.round(8 * tuning.damage), [mesh.position.x, 3.6, mesh.position.z]);
     }
   });
 
@@ -177,13 +201,14 @@ export function ExtraMonster({ id, spawn, kind }: { id: string; spawn: [number, 
       <mesh position={[0, 3.65, 0.7]} userData={{ ignoreProjectile: true }}><boxGeometry args={[0.85, 0.15, 0.22]} /><meshBasicMaterial color="#ed5f61" /></mesh>
     </>}
     {kind === "statue" && <>
+      <mesh ref={warningBeam} visible={false} userData={{ ignoreProjectile: true }}><cylinderGeometry args={[.09,.09,1,8]}/><meshBasicMaterial color="#ff5062" depthWrite={false} transparent opacity={.6}/></mesh>
+      <mesh ref={attackBeam} visible={false} userData={{ ignoreProjectile: true }}><cylinderGeometry args={[.48,.48,1,12]}/><meshBasicMaterial color="#ff213a" toneMapped={false} depthWrite={false} transparent opacity={.88}/></mesh>
       <group ref={telegraph} visible={false} position={[0, 0.08, 0]} userData={{ ignoreProjectile: true }}>
         <mesh rotation={[-Math.PI / 2, 0, 0]}><circleGeometry args={[STATUE_RADIUS, 32]} /><meshBasicMaterial color="#f33b4d" side={THREE.DoubleSide} transparent opacity={0.4} depthWrite={false} /></mesh>
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}><ringGeometry args={[STATUE_RADIUS - 0.3, STATUE_RADIUS, 32]} /><meshBasicMaterial color="#fc5c65" side={THREE.DoubleSide} /></mesh>
       </group>
       <group ref={fire} visible={false} userData={{ ignoreProjectile: true }}>
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.11, 0]}><circleGeometry args={[STATUE_RADIUS, 32]} /><meshBasicMaterial color="#e84655" side={THREE.DoubleSide} transparent opacity={0.42} depthWrite={false} /></mesh>
-        <mesh position={[0, 9, 0]}><cylinderGeometry args={[STATUE_RADIUS * 0.8, STATUE_RADIUS * 0.8, 18, 28, 1, true]} /><meshBasicMaterial color="#ff304a" side={THREE.DoubleSide} transparent opacity={0.42} depthWrite={false} /></mesh>
         {Array.from({ length: 16 }, (_, i) => {
           const angle = (i / 16) * Math.PI * 2;
           const radius = i % 3 ? 4.7 : 2.8;

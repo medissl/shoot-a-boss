@@ -71,6 +71,7 @@ function InkProjectile({
     if (root.position.distanceTo(player) < 0.78) {
       done.current = true;
       useGameStore.getState().damagePlayer(projectile.damage, projectile.position);
+      window.dispatchEvent(new CustomEvent("world-sfx", { detail: { kind: "inkHit", position: projectile.position } }));
       onDone(projectile.id);
       return;
     }
@@ -294,6 +295,7 @@ export function PenMonster({
             damage: Math.round(8 * tuning.damage),
           };
           setProjectiles((current) => [...current.slice(-18), projectile]);
+          window.dispatchEvent(new CustomEvent("world-sfx", { detail: { kind: "penShot", position: projectile.position } }));
 
           shotsLeft.current -= 1;
           if (shotsLeft.current > 0) {

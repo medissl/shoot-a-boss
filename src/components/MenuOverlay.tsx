@@ -5,7 +5,6 @@ import { FullscreenToggle } from "./FullscreenToggle";
 import { getUpgradeCard, type UpgradeId } from "../game/progression";
 import { useGameStore } from "../game/store";
 import { restorePreferredFullscreen } from "../game/fullscreen";
-import { ResetDataButton } from "./ResetDataButton";
 
 export function MenuOverlay() {
   const screen = useGameStore((state) => state.screen);
@@ -107,7 +106,6 @@ export function MenuOverlay() {
               onChange={(event) => setSfxVolume(Number(event.target.value))}
             />
           </label>
-          <ResetDataButton />
           </>}
           {panel === "controls" && <ControlsList />}
           {panel === "cards" && <div className="inventory-panel">

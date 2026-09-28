@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { GRENADE_COUNT, WEAPONS, type WeaponId } from "./config";
 import { getEnemyTuning, getLevelDefinition, getPlayerSpawn, getTargetCount } from "./levels";
+import { ELEMENTS, emptyMagicChoices, isMilestone, magicCost, magicStats, type Element, type Branch, type MagicChoices } from "./magicTree";
 import {
   emptyUpgrades,
   getUpgradeStats,
@@ -12,8 +13,8 @@ import {
 
 type AmmoState = Record<WeaponId, { mag: number; reserve: number }>;
 type Champion = { cycle: number; level: number; hearts: number; upgrades: UpgradeLevels; ready: boolean };
-export const MAGIC_TYPES = ["fire", "crystal", "ice", "water", "thunder"] as const;
-export type MagicType = typeof MAGIC_TYPES[number];
+export const MAGIC_TYPES = ELEMENTS;
+export type MagicType = Element;
 export type SkinColor = "default" | "blue" | "yellow" | "green" | "pink" | "red" | "orange";
 export const SKIN_COLORS: Exclude<SkinColor, "default">[] = ["blue", "yellow", "green", "pink", "red", "orange"];
 export type Skins = Record<WeaponId, SkinColor[]>;
@@ -22,9 +23,7 @@ const emptySkins = (): Skins => ({ sniper: ["default"], rifle: ["default"], shot
 const defaultSkins = (): EquippedSkins => ({ sniper: "default", rifle: "default", shotgun: "default", knife: "default" });
 const emptyMagic = (): Record<MagicType, number> => ({ fire: 0, crystal: 0, ice: 0, water: 0, thunder: 0 });
 export const xpToNextLevel = (level: number) => Math.round((120 + level * 42 + Math.floor(level / 10) * 160) * (1 + level * 0.035));
-export const magicDamage = (rank: number) => 300 + (rank - 1) * 65;
-export const magicCooldown = (rank: number) => Math.max(12, 45 - (rank - 1) * 1.5);
-export type GearId = "vest" | "boots" | "barrel" | "medallion" | "skates" | "aegis" | "lens" | "satchel";
+export type GearId = "vest" | "boots" | "barrel" | "medallion" | "skates" | "aegis" | "lens" | "satchel" | "arcana";
 export const GEAR: { id: GearId; name: string; detail: string; cost: number }[] = [
   { id: "vest", name: "IRON VEST", detail: "+15 maximum HP per rank", cost: 100 },
   { id: "boots", name: "QUICK BOOTS", detail: "+5% movement per rank", cost: 100 },
@@ -34,6 +33,7 @@ export const GEAR: { id: GearId; name: string; detail: string; cost: number }[] 
   { id: "aegis", name: "PAPER AEGIS", detail: "Start each round with a shield charge (up to 3)", cost: 180 },
   { id: "lens", name: "SCOUT LENS", detail: "+2 seconds of Q mark time per rank", cost: 120 },
   { id: "satchel", name: "EXTRA SATCHEL", detail: "+1 paper bomb per rank", cost: 110 },
+  { id: "arcana", name: "ARCANE PEN", detail: "+6% magic damage and -2% magic cooldown per rank", cost: 190 },
 ];
 export type GearLevels = Record<GearId, number>;
 export const gearCap = (id: GearId) => id === "aegis" ? 3 : 5;
@@ -46,7 +46,7 @@ const saved = typeof window === "undefined" ? {} : readSave();
 function persist(state: GameStore) {
   const level = ["stageClear", "upgrade"].includes(state.screen) && state.currentLevel < 10 ? state.currentLevel + 1 : state.currentLevel;
   localStorage.setItem(SAVE_KEY, JSON.stringify({ level, cycle: state.ngPlusCycle, upgrades: state.upgrades,
-    xp: state.xp, playerLevel: state.playerLevel, skillPoints: state.skillPoints, magic: state.magic, selectedMagic: state.selectedMagic,
+    xp: state.xp, playerLevel: state.playerLevel, skillPoints: state.skillPoints, magic: state.magic, magicChoices: state.magicChoices, selectedMagic: state.selectedMagic,
     skins: state.skins, equippedSkins: state.equippedSkins }));
 }
 function restoredUpgrades(): UpgradeLevels {
@@ -60,6 +60,15 @@ function restoredMagic(): Record<MagicType, number> {
   const raw = saved.magic as Record<string, number> | undefined;
   for (const kind of MAGIC_TYPES) magic[kind] = Math.min(20, Math.max(0, Math.floor(Number(raw?.[kind]) || 0)));
   return magic;
+}
+function restoredMagicChoices(): MagicChoices {
+  const choices = emptyMagicChoices();
+  const raw = saved.magicChoices as Record<string, Record<number, unknown>> | undefined;
+  for (const kind of MAGIC_TYPES) for (let tier = 2; tier <= 20; tier++) {
+    const value = raw?.[kind]?.[tier];
+    if (value === "force" || value === "tempo" || value === "craft") choices[kind][tier] = value;
+  }
+  return choices;
 }
 function restoredSkins(): Skins {
   const result = emptySkins();
@@ -104,6 +113,7 @@ type GameStore = {
   playerLevel: number;
   skillPoints: number;
   magic: Record<MagicType, number>;
+  magicChoices: MagicChoices;
   selectedMagic: MagicType | null;
   magicReadyAt: number;
   skins: Skins;
@@ -151,7 +161,7 @@ type GameStore = {
   buyHeart: () => void;
   buyCrate: (weapon: WeaponId) => SkinColor | null;
   equipSkin: (weapon: WeaponId, color: SkinColor) => void;
-  unlockMagic: (kind: MagicType) => void;
+  unlockMagic: (kind: MagicType, branch?: Branch) => void;
   selectMagic: (kind: MagicType) => void;
   castMagic: () => boolean;
   resetData: () => void;
@@ -286,7 +296,7 @@ function freshAmmo(upgrades: UpgradeLevels): AmmoState {
 
 const weaponOrder: WeaponId[] = ["sniper", "rifle", "shotgun", "knife"];
 
-function freshRun(level: number, upgrades: UpgradeLevels, cycle = 0, gear: GearLevels = { vest: 0, boots: 0, barrel: 0, medallion: 0, skates: 0, aegis: 0, lens: 0, satchel: 0 }) {
+function freshRun(level: number, upgrades: UpgradeLevels, cycle = 0, gear: GearLevels = { vest: 0, boots: 0, barrel: 0, medallion: 0, skates: 0, aegis: 0, lens: 0, satchel: 0, arcana: 0 }) {
   const stats = getUpgradeStats(upgrades);
 
   return {
@@ -354,13 +364,14 @@ export const useGameStore = create<GameStore>((set, get) => {
     ngPlusCycle: Math.max(0, Math.floor(Number(saved.cycle) || 0)),
     champion: readChampion(),
     coins: typeof window === "undefined" ? 0 : readCoins(),
-    gear: typeof window === "undefined" ? { vest: 0, boots: 0, barrel: 0, medallion: 0, skates: 0, aegis: 0, lens: 0, satchel: 0 } : readGear(),
+    gear: typeof window === "undefined" ? { vest: 0, boots: 0, barrel: 0, medallion: 0, skates: 0, aegis: 0, lens: 0, satchel: 0, arcana: 0 } : readGear(),
     lastReward: 0,
     lastXpReward: 0,
     xp: Math.max(0, Number(saved.xp) || 0),
     playerLevel: Math.max(1, Math.floor(Number(saved.playerLevel) || 1)),
     skillPoints: Math.max(0, Math.floor(Number(saved.skillPoints) || 0)),
     magic: restoredMagic(),
+    magicChoices: restoredMagicChoices(),
     selectedMagic: MAGIC_TYPES.includes(saved.selectedMagic as MagicType) ? saved.selectedMagic as MagicType : null,
     magicReadyAt: 0,
     skins: restoredSkins(),
@@ -550,11 +561,13 @@ export const useGameStore = create<GameStore>((set, get) => {
       if (!get().skins[weapon].includes(color)) return;
       set({ equippedSkins: { ...get().equippedSkins, [weapon]: color } }); persist(get());
     },
-    unlockMagic: (kind) => {
+    unlockMagic: (kind, branch = "force") => {
       const state = get();
-      if (state.skillPoints < 1 || state.magic[kind] >= 20) return;
-      const magic = { ...state.magic, [kind]: state.magic[kind] + 1 };
-      set({ magic, skillPoints: state.skillPoints - 1, selectedMagic: state.selectedMagic ?? kind }); persist(get());
+      const tier = state.magic[kind] + 1;
+      if (tier > 20 || state.skillPoints < magicCost(tier) || !["force", "tempo", "craft"].includes(branch)) return;
+      const magic = { ...state.magic, [kind]: tier };
+      const magicChoices = tier > 1 && !isMilestone(tier) ? { ...state.magicChoices, [kind]: { ...state.magicChoices[kind], [tier]: branch } } : state.magicChoices;
+      set({ magic, magicChoices, skillPoints: state.skillPoints - magicCost(tier), selectedMagic: state.selectedMagic ?? kind }); persist(get());
       window.dispatchEvent(new Event("ui-confirm"));
     },
     selectMagic: (kind) => {
@@ -566,7 +579,8 @@ export const useGameStore = create<GameStore>((set, get) => {
       const kind = state.selectedMagic;
       const now = performance.now();
       if (state.screen !== "playing" || state.tutorialOpen || !kind || !state.magic[kind] || now < state.magicReadyAt) return false;
-      set({ magicReadyAt: now + magicCooldown(state.magic[kind]) * 1000 });
+      set({ magicReadyAt: now + magicStats(kind, state.magic[kind], state.magicChoices).cooldown * (1 - state.gear.arcana * .02) * (1 - state.upgrades.magicTempo * .12) * 1000,
+        shieldCharges: state.upgrades.spellWard && state.shieldCharges === 0 ? 1 : state.shieldCharges });
       window.dispatchEvent(new CustomEvent("magic-cast", { detail: { kind, rank: state.magic[kind] } }));
       return true;
     },
@@ -575,7 +589,7 @@ export const useGameStore = create<GameStore>((set, get) => {
       const upgrades = emptyUpgrades(); const gear = Object.fromEntries(GEAR.map(({ id }) => [id, 0])) as GearLevels;
       set((state) => ({ screen: "story", runId: state.runId + 1, unlockedLevel: 1, hearts: MAX_HEARTS,
         ngPlusCycle: 0, champion: null, coins: 0, gear, lastReward: 0, lastXpReward: 0, xp: 0, playerLevel: 1, skillPoints: 0,
-        magic: emptyMagic(), selectedMagic: null, magicReadyAt: 0, skins: emptySkins(), equippedSkins: defaultSkins(),
+        magic: emptyMagic(), magicChoices: emptyMagicChoices(), selectedMagic: null, magicReadyAt: 0, skins: emptySkins(), equippedSkins: defaultSkins(),
         upgrades, upgradeChoices: [], selectedUpgrade: null, ...freshRun(1, upgrades, 0, gear) }));
     },
 

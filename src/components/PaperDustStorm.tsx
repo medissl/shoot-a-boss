@@ -24,6 +24,7 @@ export function PaperDustStorm() {
   const hitAt = useRef(0);
   const noticePhase = useRef("");
   const gameTime = useRef(0);
+  const lastSoundCycle = useRef(-1);
   const screen = useGameStore((s) => s.screen);
 
   useFrame((_, delta) => {
@@ -40,6 +41,10 @@ export function PaperDustStorm() {
     const region = regions[cycle % regions.length];
     const warningActive = phase >= 0 && phase < 8;
     const stormActive = phase >= 8 && phase < 13;
+    if (stormActive && lastSoundCycle.current !== cycle) {
+      lastSoundCycle.current = cycle;
+      window.dispatchEvent(new CustomEvent("world-sfx", { detail: { kind: "paperWind", position: [region.x, 2, region.z] } }));
+    }
     const state = phase < 0 ? `PAPER STORM IN ${Math.ceil(15 - elapsed)}S · WATCH THE RED ZONE`
       : warningActive ? `PAPER STORM IN ${Math.ceil(8 - phase)}S · LEAVE THE RED ZONE`
         : stormActive ? `PAPER STORM ACTIVE · ${Math.ceil(13 - phase)}S LEFT` : "PAPER STORM CLEARED";

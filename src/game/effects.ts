@@ -10,7 +10,7 @@ export function applyEnemyStatus(id: string, runId: number, freezeMs = 0, slowMs
     runId,
     freezeUntil: canFreeze ? now + freezeMs : sameRun ? previous?.freezeUntil ?? 0 : 0,
     freezeImmuneUntil: canFreeze ? now + 2700 : sameRun ? previous?.freezeImmuneUntil ?? 0 : 0,
-    slowUntil: Math.max(sameRun ? previous?.slowUntil ?? 0 : 0, now + slowMs),
+    slowUntil: Math.max(sameRun ? previous?.slowUntil ?? 0 : 0, now + (canFreeze ? freezeMs : 0) + slowMs),
   });
 }
 

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from "react";
 import { useGameStore, type GameScreen, type MagicType } from "../game/store";
 import type { WeaponId } from "../game/config";
 import { getLevelDefinition } from "../game/levels";
+import { playWorldSound, type WorldSound } from "../game/worldSound";
 
 const A = {
   introBgm: "/audio/IntroMenuBGM.mp3",
@@ -93,6 +94,7 @@ export function AudioManager() {
   const rifleHeld = useRef(false);
   const rifleBursts = useRef(new Set<HTMLAudioElement>());
   const oneShots = useRef(new Set<HTMLAudioElement>());
+  const boostedContext = useRef<AudioContext | null>(null);
 
   const sfxLevel = useCallback(
     (gain: number) => Math.min(1, Math.max(0, sfxVolume * gain)),
@@ -105,10 +107,21 @@ export function AudioManager() {
   );
 
   const playOne = useCallback(
-    (path: string, gain = 0.5) => {
+    (path: string, gain = 0.5, boost = 1) => {
       if (!unlocked.current) return;
       const audio = new Audio(path);
       audio.volume = sfxLevel(gain);
+      if (boost > 1 && typeof AudioContext !== "undefined") {
+        try {
+          const context = boostedContext.current ?? new AudioContext();
+          boostedContext.current = context;
+          const source = context.createMediaElementSource(audio);
+          const amplifier = context.createGain();
+          amplifier.gain.value = boost;
+          source.connect(amplifier).connect(context.destination);
+          void context.resume().catch(() => undefined);
+        } catch { /* Media audio still works if Web Audio is unavailable. */ }
+      }
       oneShots.current.add(audio);
       const cleanup = () => oneShots.current.delete(audio);
       audio.addEventListener("ended", cleanup, { once: true });
@@ -122,7 +135,7 @@ export function AudioManager() {
     if (!unlocked.current || !menuAudio.current) return;
     const audio = menuAudio.current[kind];
     audio.pause();
-    audio.volume = sfxLevel(kind === "select" ? 1.12 : kind === "confirm" ? 0.9 : 0.58);
+    audio.volume = sfxLevel(kind === "select" ? 0.66 : kind === "confirm" ? 0.9 : 0.58);
     audio.playbackRate = kind === "confirm" ? 1.12 : 1;
     // The supplied recordings begin with a short silent lead-in.
     if (audio.readyState >= HTMLMediaElement.HAVE_METADATA) audio.currentTime = kind === "open" ? 0.11 : 0.045;
@@ -393,7 +406,7 @@ export function AudioManager() {
 
     const weaponFire = (event: Event) => {
       const fired = (event as CustomEvent<{ weapon: WeaponId }>).detail.weapon;
-      if (fired === "sniper") playOne(A.sniperShoot, 0.95);
+      if (fired === "sniper") playOne(A.sniperShoot, 0.95, 1.6);
       if (fired === "shotgun") playOne(A.shotgunShoot, 0.85);
     };
 
@@ -413,10 +426,15 @@ export function AudioManager() {
     const grenadeExplode = () => playOne(A.grenadeExplode, 1.35);
     const magicCast = (event: Event) => playOne(A.magic[(event as CustomEvent<{kind:MagicType}>).detail.kind], 1);
     const reveal = () => playOne(A.reveal, .85);
-    const crateDrop = () => playOne(A.crateDrop, .9);
-    const crateUnlock = () => playOne(A.crateUnlock, .9);
-    const crateSpin = () => playOne(A.crateSpin, .85);
-    const crateReveal = () => playOne(A.crateReveal, 1);
+    const crateDrop = () => playOne(A.crateDrop, .9, 1.65);
+    const crateUnlock = () => playOne(A.crateUnlock, .9, 1.7);
+    const crateSpin = () => playOne(A.crateSpin, .85, 1.5);
+    const crateReveal = () => playOne(A.crateReveal, 1, 1.65);
+    const worldSound = (event: Event) => {
+      if (useGameStore.getState().screen !== "playing" || !unlocked.current) return;
+      const detail = (event as CustomEvent<{ kind: WorldSound; position?: [number, number, number] }>).detail;
+      if (detail?.kind) playWorldSound(detail.kind, useGameStore.getState().sfxVolume, detail.position, useGameStore.getState().playerPosition);
+    };
     const playerDamage = () => playOne(A.playerDamage, 0.24);
     const landing = () => playOne(A.land, 0.3);
 
@@ -444,6 +462,7 @@ export function AudioManager() {
     window.addEventListener("crate-unlock", crateUnlock);
     window.addEventListener("crate-spin", crateSpin);
     window.addEventListener("crate-reveal", crateReveal);
+    window.addEventListener("world-sfx", worldSound);
     window.addEventListener("paper-grenade-explode", grenadeExplode);
     window.addEventListener("player-damaged", playerDamage);
     window.addEventListener("player-landed", landing);
@@ -463,6 +482,7 @@ export function AudioManager() {
       window.removeEventListener("crate-unlock", crateUnlock);
       window.removeEventListener("crate-spin", crateSpin);
       window.removeEventListener("crate-reveal", crateReveal);
+      window.removeEventListener("world-sfx", worldSound);
       window.removeEventListener("paper-grenade-explode", grenadeExplode);
       window.removeEventListener("player-damaged", playerDamage);
       window.removeEventListener("player-landed", landing);

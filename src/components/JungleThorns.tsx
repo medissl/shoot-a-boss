@@ -96,6 +96,7 @@ export function JungleThorns() {
       setWarnedPatches(warnedRef.current);
     }
     if (wave > lastWave.current) {
+      window.dispatchEvent(new CustomEvent("world-sfx", { detail: { kind: "thornGrow", position: useGameStore.getState().playerPosition } }));
       const player = useGameStore.getState().playerPosition;
       const active = patchesRef.current.filter((patch) => patch.expires > time && !isThornSafe(patch.x, patch.z, player));
       const combined = new Map(active.map((patch) => [`${patch.x},${patch.z}`, patch]));
@@ -111,7 +112,7 @@ export function JungleThorns() {
     if (warningGround.current) warningGround.current.visible = untilWave <= 6 && warnedPatches.length > 0;
     if (warningMaterial.current) {
       const urgency = 1 - untilWave / 6;
-      warningMaterial.current.opacity = 0.25 + (0.2 + urgency * 0.28) * Math.abs(Math.sin(time * (4 + urgency * 16)));
+      warningMaterial.current.opacity = 0.47 + (0.18 + urgency * 0.22) * Math.abs(Math.sin(time * (4 + urgency * 16)));
     }
     const next = Math.ceil(30 - time % 30);
     const message = next <= 6 ? `THORNS SPREAD IN ${next}S · CLIMB A TREE`
@@ -138,11 +139,11 @@ export function JungleThorns() {
     </instancedMesh>
     <instancedMesh ref={ground} args={[undefined, undefined, patches.length]}>
       <boxGeometry args={[11.7, 0.08, 11.7]} />
-      <meshBasicMaterial color="#38663a" transparent opacity={0.65} depthWrite={false} />
+      <meshBasicMaterial color="#488e43" transparent opacity={0.72} depthWrite={false} />
     </instancedMesh>
     <instancedMesh ref={spikes} args={[undefined, undefined, patches.length * 3]}>
       <coneGeometry args={[2.15, 0.9, 4]} />
-      <meshStandardMaterial color="#406940" roughness={1} />
+      <meshStandardMaterial color="#8bdc62" emissive="#2d7d26" emissiveIntensity={0.6} roughness={0.75} />
     </instancedMesh>
   </group>;
 }

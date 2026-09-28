@@ -16,7 +16,7 @@ const shopkeeperLines = [
 ];
 const gearGlyphs: Record<GearId, string> = {
   vest: "♥", boots: "↝", barrel: "✦", medallion: "✚",
-  skates: "➜", aegis: "⬡", lens: "◎", satchel: "◌",
+  skates: "➜", aegis: "⬡", lens: "◎", satchel: "◌", arcana: "✧",
 };
 
 export function GearShopScene({ onBack }: { onBack: () => void }) {

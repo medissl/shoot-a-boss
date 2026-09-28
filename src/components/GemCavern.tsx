@@ -86,6 +86,7 @@ function GemLasers() {
   const notice = useRef("");
   const cycleCache = useRef({ cycle: -1, indices: [] as number[] });
   const lastPlayer = useRef<[number, number, number] | null>(null);
+  const lastSoundPhase = useRef("");
   const screen = useGameStore((state) => state.screen);
   useFrame((_, delta) => {
     if (screen !== "playing" || useGameStore.getState().tutorialOpen) {
@@ -107,6 +108,11 @@ function GemLasers() {
     lastPlayer.current = [...position];
     const warning = cycle > 0 && phase < 2;
     const active = cycle > 0 && phase >= 2 && phase < 5;
+    const soundPhase = warning ? `${cycle}:warning` : active ? `${cycle}:active` : "idle";
+    if (soundPhase !== lastSoundPhase.current) {
+      lastSoundPhase.current = soundPhase;
+      if (warning || active) window.dispatchEvent(new CustomEvent("world-sfx", { detail: { kind: warning ? "gemCharge" : "gemLaser", position: gems[cycleCache.current.indices[0]] } }));
+    }
     const message = warning ? `GEM LASERS IN ${Math.ceil(2 - phase)}S · LEAVE THE MARKED AREAS`
       : active ? `GEM LASERS ACTIVE · ${Math.ceil(5 - phase)}S LEFT`
         : `NEXT GEM LASERS IN ${Math.ceil(10 - phase)}S`;
@@ -145,8 +151,10 @@ function GemLasers() {
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}><ringGeometry args={[LASER_RADIUS - 0.45, LASER_RADIUS, 32]} /><meshBasicMaterial color="#fff4a0" side={THREE.DoubleSide} /></mesh>
     </group>)}
     {Array.from({ length: 7 }, (_, slot) => <group key={`laser-${slot}`} ref={(node) => { beams.current[slot] = node; }} visible={false}>
-      <mesh><cylinderGeometry args={[LASER_RADIUS, LASER_RADIUS, 16, 24, 1, true]} /><meshBasicMaterial color={colors[slot % colors.length]} transparent opacity={0.3} side={THREE.DoubleSide} depthWrite={false} /></mesh>
+      <mesh><cylinderGeometry args={[LASER_RADIUS, LASER_RADIUS, 16, 24, 1, true]} /><meshBasicMaterial color={colors[slot % colors.length]} transparent opacity={0.48} side={THREE.DoubleSide} depthWrite={false} toneMapped={false} /></mesh>
+      <mesh><cylinderGeometry args={[LASER_RADIUS * 0.54, LASER_RADIUS * 0.54, 16, 24, 1, true]} /><meshBasicMaterial color="#ffffff" transparent opacity={0.16} side={THREE.DoubleSide} depthWrite={false} toneMapped={false} /></mesh>
       <mesh><cylinderGeometry args={[0.35, 0.35, 16, 8]} /><meshBasicMaterial color="#fffaf0" transparent opacity={0.85} depthWrite={false} /></mesh>
+      <mesh position={[0, -7.8, 0]} rotation={[-Math.PI / 2, 0, 0]}><ringGeometry args={[LASER_RADIUS - 1, LASER_RADIUS, 32]}/><meshBasicMaterial color="#ffffff" side={THREE.DoubleSide} toneMapped={false} transparent opacity={0.75} depthWrite={false}/></mesh>
     </group>)}
   </group>;
 }

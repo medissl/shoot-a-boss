@@ -2416,3 +2416,48 @@ button {
 
 @keyframes crate-spin{from{transform:translateX(0)}to{transform:translateX(calc(-2620px + min(325px,45vw)))}}
 @media(pointer:coarse){.kill-combo{top:118px;left:8px}.kill-combo span{font-size:8px;padding:2px 4px}.kill-combo strong{font-size:26px}}
+
+/* Branching magic grimoire */
+.skill-inspector{position:sticky;top:8px;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:16px;width:min(1400px,100%);margin:14px auto 0;padding:11px 18px;border:3px solid #2548b8;border-radius:12px;background:#fffef6;box-shadow:5px 6px 0 #a9bce7}
+.skill-inspector>div{min-width:0}.skill-inspector b{display:block;font:900 10px ui-monospace,monospace;letter-spacing:.09em}.skill-inspector strong{display:block;font-size:clamp(17px,2vw,24px)}.skill-inspector p{margin:3px 0;font:700 13px/1.4 ui-rounded,sans-serif}.skill-inspector small{font:900 11px ui-monospace,monospace}
+.skill-inspector>button{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-width:170px;min-height:48px;background:#2548b8;color:white;font-size:12px}.skill-inspector>button:disabled{background:#e9efff;color:#2548b8}
+.skill-instructions{width:min(1400px,100%);margin:14px auto 0;font:700 12px/1.4 ui-rounded,sans-serif}
+.skill-tree{grid-template-columns:repeat(5,minmax(182px,1fr));min-width:1000px;gap:14px;margin:15px auto}
+.skill-column{--spell:#4265c0;min-width:0;border-radius:13px 9px 14px 10px;box-shadow:4px 5px 0 #9ab5ed;background:repeating-linear-gradient(0deg,transparent 0 31px,#dde6fc7a 32px 33px),#fffdf9}
+.skill-column--fire{--spell:#e05b3c}.skill-column--crystal{--spell:#9d60ca}.skill-column--ice{--spell:#299ec4}.skill-column--water{--spell:#4387df}.skill-column--thunder{--spell:#bf950d}
+.skill-column h2{color:var(--spell);border-bottom:2px dashed #bed0e9;padding-bottom:8px}.skill-column p{min-height:45px;margin:8px 0;font-size:11px}
+.skill-column .skill-equip{width:100%;min-height:38px}.skill-column .skill-equip.is-active{background:#2548b8;color:white}
+.skill-emblem{position:relative;display:grid;place-items:center;flex:none;width:38px;height:38px;border:2px solid currentColor;border-radius:50%;background:#fff;filter:drop-shadow(1px 2px 1px #2548b866)}
+.skill-emblem i{position:absolute;right:-5px;top:-10px;color:#f2b943;font-style:normal;font-size:18px;animation:skill-spark 2s ease-in-out infinite}
+.skill-emblem--2,.skill-emblem--3,.skill-emblem--4{box-shadow:inset 0 0 0 3px #ffe4a5,0 0 10px #e1bd57}
+@keyframes skill-spark{50%{transform:scale(1.4) rotate(30deg);opacity:.6}}
+.skill-nodes{display:grid;gap:0;padding:4px 5px 8px;margin:10px 0}
+.skill-tier{position:relative;display:grid;grid-template-columns:30px minmax(0,1fr);align-items:center;min-height:63px}
+.skill-tier:not(:first-child)::before{content:"";position:absolute;top:-14px;left:calc(30px + (100% - 30px)/2);height:28px;width:3px;background:#a5b4d2;z-index:0}
+.skill-tier--owned:not(:first-child)::before{background:var(--spell)}
+.skill-tier__label{z-index:1;font:900 11px ui-monospace,monospace;color:#465d96}.skill-tier__label small{display:block;font-size:8px;white-space:nowrap}
+.skill-tier__paths{position:relative;display:flex;align-items:center;justify-content:space-around;gap:3px;min-width:0;z-index:1}
+.skill-tier__paths::before{content:"";position:absolute;left:17%;right:17%;top:50%;height:2px;background:#a5b4d2;z-index:-1}
+.skill-tier--special .skill-tier__paths::before{display:none}
+.skill-scene .skill-node{position:relative;width:clamp(32px,3vw,39px);height:38px;min-height:0;padding:0;display:grid;place-items:center;text-align:center;border:2px solid #8fa4d1;border-radius:45% 55% 48% 52%;background:#f1f4fd;color:#7186b9;box-shadow:2px 3px 0 #d4dff5;transition:transform .15s,background .15s;opacity:1}
+.skill-scene .skill-node.is-owned{background:var(--spell);color:white;border-color:#2548b8;box-shadow:1px 2px 0 #2548b8}
+.skill-scene .skill-node.is-locked{opacity:.47}
+.skill-scene .skill-node.is-selected{outline:3px solid #2548b8;outline-offset:2px;transform:scale(1.16);z-index:2}
+.skill-scene .skill-node:hover{transform:scale(1.16)}
+.skill-tier--special .skill-node{width:49px;height:49px;border-width:3px;border-radius:50%;background:#fff5d6;color:var(--spell)}
+.skill-tier--special .skill-node.is-owned{background:var(--spell);color:white}
+.skill-node__star{position:absolute;top:-12px;right:-4px;color:#ffce4e;text-shadow:0 0 5px #e6a326;font-size:15px}
+.skill-node--milestone-2,.skill-node--milestone-3,.skill-node--milestone-4{box-shadow:0 0 10px #e6c773}
+.skill-inspector--fire{border-color:#bd5e43}.skill-inspector--crystal{border-color:#9560b4}.skill-inspector--ice{border-color:#3d9dbb}.skill-inspector--water{border-color:#477dc4}.skill-inspector--thunder{border-color:#b69523}
+.gear-scene__intro{min-width:0}.gear-scene__intro h1{font-size:clamp(34px,2.5vw,47px);line-height:1.02;letter-spacing:-.09em;transform:rotate(-2deg);max-width:100%;overflow-wrap:anywhere}
+.encyclopedia-body{align-items:start}.encyclopedia-body>*{min-width:0}.encyclopedia-portrait{min-width:0;height:390px}
+.encyclopedia-portrait strong{box-sizing:border-box;max-width:100%;overflow-wrap:anywhere;word-break:normal;font-size:clamp(10px,1.15vw,14px);line-height:1.25;padding:7px 5px}
+.encyclopedia-copy h1{font-size:clamp(25px,3.4vw,48px);overflow-wrap:normal}
+.scan-edge{font-size:36px;color:#fff437;text-shadow:0 0 7px #ffe500,0 0 19px #ffcc00,0 2px 3px #4d3a05}
+.main-menu-options .reset-data-button{width:auto;min-height:0;margin:22px 0 0;padding:3px 0;border:0;background:none;box-shadow:none;color:#7a87ad;text-decoration:underline;font:700 10px ui-rounded,sans-serif;text-align:left;opacity:.72}
+.main-menu-options .reset-data-button:hover{opacity:1;color:#a22f47}
+@media(max-width:1050px){.gear-scene__intro h1{font-size:clamp(28px,3vw,42px)}}
+@media(max-width:700px){.gear-scene__intro h1{font-size:clamp(36px,9vw,49px);letter-spacing:-.08em}.skill-inspector{top:4px;padding:7px;gap:7px}.skill-inspector strong{font-size:15px}.skill-inspector p{font-size:10px}.skill-inspector small{font-size:9px}.skill-inspector>button{min-width:110px;min-height:40px;font-size:10px}.skill-tree{min-width:1000px}}
+@media(max-width:700px),(pointer:coarse){.encyclopedia-portrait{height:clamp(235px,54vh,310px)}.encyclopedia-model{height:auto;min-height:145px;flex:1 1 auto}}
+@media(pointer:coarse) and (orientation:landscape){.reload-progress{bottom:calc(clamp(46px,12vh,61px) + 52px);left:50%;width:min(235px,32vw);padding:4px;border-radius:8px;background:#fffdf0dc;transform:translateX(-50%)}.reload-progress__label{margin-bottom:3px;font-size:9px}.weapon-view.is-hip{width:min(48vw,380px);right:9%;bottom:-3vh}}
+@media(pointer:coarse) and (orientation:portrait){.reload-progress{top:clamp(144px,25vh,215px);bottom:auto;left:50%;width:min(210px,44vw);padding:4px;border-radius:8px;background:#fffdf0de;transform:translateX(-50%)}.reload-progress__label{margin-bottom:3px;font-size:9px}.weapon-view.is-hip{width:min(53vw,350px);right:6%;bottom:-4vh}}

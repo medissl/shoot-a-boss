@@ -56,6 +56,7 @@ export function HellHazards() {
   const lastDamage = useRef(0);
   const notice = useRef("");
   const gameTime = useRef(0);
+  const soundPhase = useRef("");
   const playerPosition = useGameStore((state) => state.playerPosition);
   const screen = useGameStore((state) => state.screen);
   const impacts = useMemo(() => Array.from({ length: 5 }, () => ({ x: 0, z: 0, radius: 0 } as Impact)), []);
@@ -69,6 +70,11 @@ export function HellHazards() {
     const t = gameTime.current;
     const cycle = Math.max(0, Math.floor((t - 10) / 10));
     const phase = t < 10 ? -1 : (t - 10) % 10;
+    const audioPhase = phase < 0 ? "idle" : phase < 4 ? `${cycle}:warning` : phase < 7.1 ? `${cycle}:active` : "idle";
+    if (audioPhase !== soundPhase.current) {
+      soundPhase.current = audioPhase;
+      if (phase >= 0 && phase < 7.1) window.dispatchEvent(new CustomEvent("world-sfx", { detail: { kind: phase < 4 ? "hellWarning" : "hellErupt", position: [0, 22, -4] } }));
+    }
     const message = phase < 0 ? `VOLCANO WARNING IN ${Math.ceil(10 - t)}S · USE STONE BRIDGES`
       : phase < 4 ? `LAVA STRIKES IN ${Math.ceil(4 - phase)}S · DODGE RED CIRCLES`
         : phase < 7.1 ? `LAVA STRIKES ACTIVE · ${Math.ceil(7.1 - phase)}S LEFT`

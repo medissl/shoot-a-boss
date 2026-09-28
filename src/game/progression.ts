@@ -5,7 +5,8 @@ export type UpgradeId =
   | "rifleFreeze" | "riflePrecision" | "rifleOverclock" | "riflePower"
   | "shotgunPellets" | "shotgunChoke" | "shotgunSlow" | "shotgunClose"
   | "recon" | "sniperTwin" | "rifleSurge" | "shotgunDouble" | "ironWill"
-  | "shieldOrbit" | "shieldReserve" | "shieldShatter" | "fireOrbit" | "vampireInk" | "swiftReset";
+  | "shieldOrbit" | "shieldReserve" | "shieldShatter" | "fireOrbit" | "vampireInk" | "swiftReset"
+  | "magicPower" | "magicTempo" | "magicEcho" | "spellWard" | "fireBloom" | "crystalThorns" | "iceBarrier" | "waterHealing" | "thunderSpark";
 export type UpgradeLevels = Record<UpgradeId, number>;
 export type Rarity = "common" | "rare" | "epic" | "legendary";
 export type UpgradeCard = {
@@ -24,7 +25,7 @@ export const UPGRADE_CARDS: UpgradeCard[] = [
   { id:"fireRate", name:"TRIGGER FINGER", description:"8% shorter firing cooldown per stack.", glyph:"⚡", rarity:"rare", maxStacks:2 },
   { id:"grenadePower", name:"BIGGER MESS", description:"+22% paper bomb damage and radius per stack.", glyph:"◉", rarity:"rare", maxStacks:2 },
   { id:"knifeDamage", name:"PAPER CUT", description:"+45% knife damage per stack.", glyph:"╱", rarity:"common", maxStacks:3 },
-  { id:"secondWind", name:"SECOND WIND", description:"Heal 8 HP after a kill.", glyph:"+", rarity:"rare", maxStacks:1 },
+  { id:"secondWind", name:"SECOND WIND", description:"Heal 12 HP after a kill.", glyph:"+", rarity:"rare", maxStacks:1 },
   { id:"bombBelt", name:"BOMB BELT", description:"+1 maximum paper bomb and refill immediately.", glyph:"○", rarity:"rare", maxStacks:2 },
   { id:"sniperFire", name:"BURNING INK", description:"Sniper hits burn enemies for 4 seconds.", glyph:"♨", rarity:"epic", maxStacks:1, weapon:"sniper" },
   { id:"sniperFocus", name:"DEADLINE FOCUS", description:"+20% aimed sniper damage.", glyph:"⌖", rarity:"rare", maxStacks:1, weapon:"sniper" },
@@ -41,7 +42,7 @@ export const UPGRADE_CARDS: UpgradeCard[] = [
   { id:"recon", name:"ALL HANDS REPORT", description:"Q marks ALL surviving enemies with yellow diamonds for 10 seconds, once every 30 seconds.", glyph:"◈", rarity:"epic", maxStacks:1 },
   { id:"sniperTwin", name:"TWIN SIGNATURE", description:"Sniper fires a second round at the same target for 65% damage.", glyph:"✧", rarity:"legendary", maxStacks:1, weapon:"sniper" },
   { id:"rifleSurge", name:"FULL AUTO AUDIT", description:"Every fifth rifle shot fires a bonus 75% damage hit at its target.", glyph:"⚑", rarity:"legendary", maxStacks:1, weapon:"rifle" },
-  { id:"shotgunDouble", name:"DOUBLE ENTRY", description:"Shotgun blasts fire 75% more pellets.", glyph:"❖", rarity:"legendary", maxStacks:1, weapon:"shotgun" },
+  { id:"shotgunDouble", name:"DOUBLE ENTRY", description:"Shotgun fires about 30% more pellets (rounded).", glyph:"❖", rarity:"legendary", maxStacks:1, weapon:"shotgun" },
   { id:"ironWill", name:"FINAL NOTICE", description:"Gain 35 maximum HP and heal 20 HP immediately.", glyph:"✺", rarity:"legendary", maxStacks:1 },
   { id:"shieldOrbit", name:"ORBITAL GUARD", description:"A visible shield absorbs one hit every 12 seconds.", glyph:"⬡", rarity:"legendary", maxStacks:1 },
   { id:"shieldReserve", name:"PAPER ARMOR", description:"Begin each stage with one extra shield charge per stack.", glyph:"▱", rarity:"epic", maxStacks:2 },
@@ -49,6 +50,15 @@ export const UPGRADE_CARDS: UpgradeCard[] = [
   { id:"fireOrbit", name:"FIRE WALTZ", description:"Three fireballs orbit you and singe nearby monsters.", glyph:"☄", rarity:"legendary", maxStacks:1 },
   { id:"vampireInk", name:"LIFE IN INK", description:"Every third elimination heals 15 HP.", glyph:"❣", rarity:"epic", maxStacks:1 },
   { id:"swiftReset", name:"FRESH PAGE", description:"Each elimination immediately reloads 20% of your current magazine.", glyph:"↶", rarity:"epic", maxStacks:1 },
+  { id:"magicPower", name:"ARCANE INK", description:"+15% magic damage per stack, including secondary effects.", glyph:"✧", rarity:"rare", maxStacks:2 },
+  { id:"magicTempo", name:"SHORTCUT SPELL", description:"Magic cooldown is 12% shorter.", glyph:"⌛", rarity:"rare", maxStacks:1 },
+  { id:"magicEcho", name:"SECOND DRAFT", description:"A magic hit repeats 30% of its impact damage once.", glyph:"◈", rarity:"epic", maxStacks:1 },
+  { id:"spellWard", name:"SPELL SHIELD", description:"Casting magic restores one shield charge if you have none.", glyph:"⬡", rarity:"legendary", maxStacks:1 },
+  { id:"fireBloom", name:"WILDFIRE MEMO", description:"Fire circles last 2 seconds longer and burn 20% harder.", glyph:"♨", rarity:"epic", maxStacks:1 },
+  { id:"crystalThorns", name:"SHARP REMARKS", description:"Crystal footsteps deal 25% more trail damage.", glyph:"◆", rarity:"rare", maxStacks:1 },
+  { id:"iceBarrier", name:"COLD SHOULDER", description:"Freezing an enemy slows another nearby enemy.", glyph:"❄", rarity:"epic", maxStacks:1 },
+  { id:"waterHealing", name:"FRESH INK", description:"Water magic heals 8 HP on the first enemy hit.", glyph:"◌", rarity:"rare", maxStacks:1 },
+  { id:"thunderSpark", name:"CARBON COPY", description:"Thunder chains to a nearby enemy even before tier 5.", glyph:"⚡", rarity:"epic", maxStacks:1 },
 ];
 export function emptyUpgrades(): UpgradeLevels {
   return Object.fromEntries(UPGRADE_CARDS.map((c) => [c.id, 0])) as UpgradeLevels;
@@ -65,7 +75,7 @@ export function getUpgradeStats(u: UpgradeLevels) {
     fireCooldown: Math.pow(0.92, u.fireRate),
     grenadePower: 1 + u.grenadePower * 0.22,
     knifeDamage: 1 + u.knifeDamage * 0.45,
-    killHeal: u.secondWind * 8,
+    killHeal: u.secondWind * 12,
     grenadeCapacity: 3 + u.bombBelt,
   };
 }
@@ -73,7 +83,7 @@ function seeded(seed: number) {
   let value = seed >>> 0;
   return () => { value = (Math.imul(value, 1664525) + 1013904223) >>> 0; return value / 0x100000000; };
 }
-const rarityWeights: [Rarity, number][] = [["common", 0.5], ["rare", 0.3], ["epic", 0.15], ["legendary", 0.05]];
+const rarityWeights: [Rarity, number][] = [["common", 0.4], ["rare", 0.3], ["epic", 0.2], ["legendary", 0.1]];
 export function rollUpgradeChoices(level: number, rerollIndex: number, upgrades: UpgradeLevels): UpgradeId[] {
   const stackScore = Object.values(upgrades).reduce((sum, value) => sum + value, 0);
   const random = seeded(level * 92821 + rerollIndex * 19391 + stackScore * 7919 + 17);
