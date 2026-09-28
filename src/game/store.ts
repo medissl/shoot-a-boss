@@ -341,9 +341,13 @@ function announceRifle() {
 
 export const useGameStore = create<GameStore>((set, get) => {
   const initialUpgrades = restoredUpgrades();
+  const returningPlayer = typeof window !== "undefined" && (
+    window.localStorage.getItem(SAVE_KEY) !== null || readUnlockedLevel() > 1 ||
+    readHearts() < MAX_HEARTS || readCoins() > 0 || readChampion() !== null
+  );
 
   return {
-    screen: "story",
+    screen: returningPlayer ? "menu" : "story",
     runId: 0,
     unlockedLevel: readUnlockedLevel(),
     hearts: readHearts(),
@@ -384,7 +388,7 @@ export const useGameStore = create<GameStore>((set, get) => {
         upgradeChoices: [],
         upgradeRerollsLeft: 1,
         selectedUpgrade: null,
-        tutorialOpen: true,
+        tutorialOpen: state.currentLevel === 1 && state.ngPlusCycle === 0,
         ...freshRun(state.currentLevel, upgrades, state.ngPlusCycle, state.gear),
       }));
       announceRifle();

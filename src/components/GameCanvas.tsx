@@ -122,7 +122,7 @@ export function GameCanvas() {
       <WeaponView />
       <MenuOverlay />
       <RoundResult />
-      {currentLevel === 1 && <ControlsPopup />}
+      <ControlsPopup />
       {!touch && <div className="click-hint">click to lock mouse · ESC pause</div>}
       {definition.theme === "jungle" && <div className="map-hint">THORNS SPREAD EVERY 30S · E ZIPLINE FORWARD · SHIFT+E BACK</div>}
       {definition.theme === "gems" && <div className="map-hint">LEAVE THE MARKED GEMS BEFORE THEIR LASERS FIRE · CLIMB THE INNER SPIRAL</div>}
