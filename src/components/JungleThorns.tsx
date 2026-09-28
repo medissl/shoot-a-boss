@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { JUNGLE_TOWERS } from "../game/levels";
+import { hazardDamage } from "../game/hazards";
 import { useGameStore } from "../game/store";
 
 type Patch = { x: number; z: number; expires: number };
@@ -124,7 +125,8 @@ export function JungleThorns() {
     const [px, py, pz] = useGameStore.getState().playerPosition;
     const patch = patchesRef.current.find(({ x, z }) => Math.abs(x - px) < 5.8 && Math.abs(z - pz) < 5.8);
     if (py < 2.1 && patch) {
-      useGameStore.getState().damagePlayer(2.5, [patch.x, 0, patch.z]);
+      const live = useGameStore.getState();
+      live.damagePlayer(hazardDamage(2.5, live.currentLevel, live.ngPlusCycle), [patch.x, 0, patch.z]);
       lastDamage.current = time;
     }
   });

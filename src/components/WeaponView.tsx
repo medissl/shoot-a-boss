@@ -106,6 +106,7 @@ function HipWeaponArt({ weapon }: { weapon: WeaponId }) {
           patternUnits="userSpaceOnUse"
           patternTransform="rotate(29)"
         >
+          <rect width="11" height="11" fill="#fbfaf4" />
           <line x1="0" y1="0" x2="0" y2="11" className="gun-hatch-line" />
         </pattern>
       </defs>

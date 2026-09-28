@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { enemyMotionFactor } from "../game/effects";
 import { getEnemyTuning } from "../game/levels";
+import { paperBlastDamage, type PaperBlast } from "../game/hazards";
 import { hasEnemyLineOfSight, moveWithAvoidance, safeEnemySpawn } from "../game/navigation";
 import { useGameStore } from "../game/store";
 import { ScanHalo } from "./ScanHalo";
@@ -48,6 +49,17 @@ export function ExtraMonster({ id, spawn, kind }: { id: string; spawn: [number, 
     window.addEventListener("boss-hit", onHit);
     return () => window.removeEventListener("boss-hit", onHit);
   }, [eliminate, id]);
+
+  useEffect(() => {
+    const blast = (event: Event) => {
+      if (!root.current || dead) return;
+      const { x, y, z } = root.current.position;
+      const damage = paperBlastDamage((event as CustomEvent<PaperBlast>).detail, [x, y + (kind === "statue" ? 2 : 0), z]);
+      if (damage) window.dispatchEvent(new CustomEvent("boss-hit", { detail: { id, damage, part: "body" } }));
+    };
+    window.addEventListener("paper-grenade-explode", blast);
+    return () => window.removeEventListener("paper-grenade-explode", blast);
+  }, [dead, id, kind]);
 
   useFrame((state, delta) => {
     const mesh = root.current;
@@ -132,13 +144,15 @@ export function ExtraMonster({ id, spawn, kind }: { id: string; spawn: [number, 
   return <group ref={root} position={[safeSpawn[0], kind === "fly" ? 5.2 : 0, safeSpawn[2]]}>
     {kind === "fly" ? <>
       <mesh userData={{ targetId: id, targetPart: "body" }} castShadow><icosahedronGeometry args={[1.2, 1]} /><meshStandardMaterial color="#8558dc" emissive="#402379" emissiveIntensity={0.35} /></mesh>
-      <mesh position={[0, 0.18, 0.88]} userData={{ targetId: id, targetPart: "head" }}><sphereGeometry args={[0.48, 12, 8]} /><meshStandardMaterial color="#f7eaf6" emissive="#7972d0" emissiveIntensity={0.4} /></mesh>
+      <mesh position={[0, 0.18, 0.88]} userData={{ targetId: id, targetPart: "head" }}><sphereGeometry args={[0.48, 12, 8]} /><meshBasicMaterial color="#f7eaf6" /></mesh>
       {[-1, 1].map((side, i) => <mesh key={side} ref={(node) => { wings.current[i] = node; }} position={[side * 1.25, 0, 0]} userData={{ targetId: id, targetPart: "body" }}><coneGeometry args={[0.7, 2.1, 3]} /><meshStandardMaterial color="#c69cf1" side={THREE.DoubleSide} /></mesh>)}
-      <mesh position={[0, -0.8, 0.65]} userData={{ ignoreProjectile: true }}><coneGeometry args={[0.29, 0.8, 3]} /><meshStandardMaterial color="#e8eefc" /></mesh>
+      {[-0.38, 0.38].map((x) => <mesh key={x} position={[x, -1.35, 0.42]} rotation={[Math.PI, 0, 0]} userData={{ targetId: id, targetPart: "leg" }}>
+        <coneGeometry args={[0.28, 0.86, 4]} /><meshBasicMaterial color="#e8eefc" />
+      </mesh>)}
     </> : <>
       <mesh position={[0, 0.7, 0]} castShadow userData={{ targetId: id, targetPart: "leg" }}><cylinderGeometry args={[1.2, 1.4, 1.4, 7]} /><meshStandardMaterial color="#737884" roughness={0.9} /></mesh>
       <mesh position={[0, 2.1, 0]} castShadow userData={{ targetId: id, targetPart: "body" }}><boxGeometry args={[2.5, 2.2, 1.8]} /><meshStandardMaterial color="#8e94aa" roughness={0.8} /></mesh>
-      <mesh position={[0, 3.6, 0]} castShadow userData={{ targetId: id, targetPart: "head" }}><dodecahedronGeometry args={[0.91, 0]} /><meshStandardMaterial color="#d1cad1" roughness={0.7} /></mesh>
+      <mesh position={[0, 3.6, 0]} castShadow userData={{ targetId: id, targetPart: "head" }}><dodecahedronGeometry args={[0.91, 0]} /><meshBasicMaterial color="#d1cad1" /></mesh>
       <mesh position={[0, 3.65, 0.7]} userData={{ ignoreProjectile: true }}><boxGeometry args={[0.85, 0.15, 0.22]} /><meshBasicMaterial color="#ed5f61" /></mesh>
     </>}
     {kind === "statue" && <>

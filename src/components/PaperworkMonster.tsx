@@ -6,6 +6,7 @@ import * as THREE from "three";
 import { PAPER_MONSTER_MAX_HP } from "../game/config";
 import { enemyMotionFactor } from "../game/effects";
 import { getEnemyTuning } from "../game/levels";
+import { paperBlastDamage, type PaperBlast } from "../game/hazards";
 import {
   hasEnemyLineOfSight,
   moveWithAvoidance,
@@ -32,7 +33,7 @@ export function PaperworkMonster({
   spawn: [number, number, number];
 }) {
   const root = useRef<THREE.Group>(null);
-  const material = useRef<THREE.MeshStandardMaterial>(null);
+  const material = useRef<THREE.MeshBasicMaterial>(null);
   const maxHp = Math.round(PAPER_MONSTER_MAX_HP * (1 + (useGameStore.getState().currentLevel + useGameStore.getState().ngPlusCycle * 10 - 1) * 0.085));
   const hpRef = useRef(maxHp);
   const nextAttackAt = useRef(0);
@@ -100,6 +101,17 @@ export function PaperworkMonster({
     return () =>
       window.removeEventListener("boss-hit", handler as EventListener);
   }, [dead, eliminate, eliminated, id]);
+
+  useEffect(() => {
+    const blast = (event: Event) => {
+      if (!root.current || dead || eliminated) return;
+      const { x, y, z } = root.current.position;
+      const damage = paperBlastDamage((event as CustomEvent<PaperBlast>).detail, [x, y + 1, z]);
+      if (damage) window.dispatchEvent(new CustomEvent("boss-hit", { detail: { id, damage, part: "body" } }));
+    };
+    window.addEventListener("paper-grenade-explode", blast);
+    return () => window.removeEventListener("paper-grenade-explode", blast);
+  }, [dead, eliminated, id]);
 
   useFrame((state, delta) => {
     const group = root.current;
@@ -233,13 +245,12 @@ export function PaperworkMonster({
         castShadow
       >
         <planeGeometry args={[1.55, 1.95]} />
-        <meshStandardMaterial
+        <meshBasicMaterial
           ref={material}
           color={hit ? "#ff8caf" : PAPER}
           transparent
           opacity={1}
           side={THREE.DoubleSide}
-          roughness={1}
         />
         <Edges color={BLUE} threshold={3} />
       </mesh>
@@ -270,10 +281,22 @@ export function PaperworkMonster({
 
       {!dead && (
         <mesh
-          position={[0, 1.05, 0.07]}
-          userData={{ targetId: id, targetPart: "body" }}
+          position={[0, 1.68, 0.07]}
+          userData={{ targetId: id, targetPart: "head" }}
         >
-          <planeGeometry args={[1.72, 2.08]} />
+          <planeGeometry args={[1.62, 0.82]} />
+          <meshBasicMaterial transparent opacity={0} depthWrite={false} side={THREE.DoubleSide} />
+        </mesh>
+      )}
+      {!dead && (
+        <mesh position={[0, 0.92, 0.07]} userData={{ targetId: id, targetPart: "body" }}>
+          <planeGeometry args={[1.62, 0.7]} />
+          <meshBasicMaterial transparent opacity={0} depthWrite={false} side={THREE.DoubleSide} />
+        </mesh>
+      )}
+      {!dead && (
+        <mesh position={[0, 0.3, 0.07]} userData={{ targetId: id, targetPart: "leg" }}>
+          <planeGeometry args={[1.62, 0.54]} />
           <meshBasicMaterial
             transparent
             opacity={0}

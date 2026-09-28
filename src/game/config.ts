@@ -32,7 +32,7 @@ export const WEAPONS: Record<WeaponId, WeaponConfig> = {
     aimDelayMs: 380,
     pellets: 1,
     hipSpread: 0.24,
-    aimedSpread: 0.00025,
+    aimedSpread: 0,
     scopedFov: 12,
     maxRange: 135,
   },

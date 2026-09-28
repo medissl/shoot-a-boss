@@ -671,6 +671,19 @@ button {
   width: 1px;
 }
 
+.scope-reticle {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  border: 1px solid #fbfaf4;
+  border-radius: 50%;
+  background: #2548b8;
+  box-shadow: 0 0 0 1px #2548b8;
+  transform: translate(-50%, -50%);
+}
+
 .scope-overlay--rifle .scope-ring {
   width: min(31vh, 31vw);
   border-width: 2px;
@@ -809,6 +822,7 @@ button {
 }
 
 .gun-barrel { stroke-width: 9; }
+.gun-drawing .gun-line-only { fill: #fbfaf4; }
 .gun-barrel--thin,
 .gun-line--thin,
 .ads-line--thin { stroke-width: 4; }

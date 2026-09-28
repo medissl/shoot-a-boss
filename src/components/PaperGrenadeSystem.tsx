@@ -14,10 +14,11 @@ type GrenadeData = {
 type BurstData = {
   id: number;
   position: [number, number, number];
+  radius: number;
 };
 
-const FUSE_MS = 1350;
-const BURST_MS = 430;
+const FUSE_MS = 1150;
+const BURST_MS = 500;
 
 function PaperGrenade({
   grenade,
@@ -83,14 +84,14 @@ function PaperBurst({ burst, onDone }: { burst: BurstData; onDone: (id: number) 
       return;
     }
 
-    const scale = 1 + age * 4.8;
+    const scale = 0.75 + age * (burst.radius - 0.75);
     if (ring.current) {
       ring.current.scale.setScalar(scale);
       const material = ring.current.material as THREE.MeshBasicMaterial;
       material.opacity = 1 - age;
     }
     if (shell.current) {
-      shell.current.scale.setScalar(0.75 + age * 2.8);
+      shell.current.scale.setScalar(0.75 + age * burst.radius * 0.45);
       shell.current.rotation.y += 0.08;
       const material = shell.current.material as THREE.MeshBasicMaterial;
       material.opacity = (1 - age) * 0.75;
@@ -100,7 +101,7 @@ function PaperBurst({ burst, onDone }: { burst: BurstData; onDone: (id: number) 
   return (
     <group position={burst.position}>
       <mesh ref={ring} rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[0.68, 0.76, 28]} />
+        <ringGeometry args={[0.94, 1, 40]} />
         <meshBasicMaterial color="#171716" transparent opacity={1} side={THREE.DoubleSide} />
       </mesh>
       <mesh ref={shell}>
@@ -147,18 +148,21 @@ export function PaperGrenadeSystem() {
   }, [camera, spendGrenade]);
 
   function explode(id: number, position: [number, number, number]) {
-    const stats = getUpgradeStats(useGameStore.getState().upgrades);
+    const state = useGameStore.getState();
+    const stats = getUpgradeStats(state.upgrades);
+    const effectiveLevel = state.currentLevel + state.ngPlusCycle * 10;
+    const radius = 8.2 * stats.grenadePower;
     window.dispatchEvent(
       new CustomEvent("paper-grenade-explode", {
         detail: {
           position,
-          radius: 6.4 * stats.grenadePower,
-          damage: 92 * stats.grenadePower,
+          radius,
+          damage: 205 * (1 + (effectiveLevel - 1) * 0.05) * stats.grenadePower,
         },
       }),
     );
     setGrenades((current) => current.filter((grenade) => grenade.id !== id));
-    setBursts((current) => [...current, { id, position }]);
+    setBursts((current) => [...current, { id, position, radius }]);
   }
 
   return (

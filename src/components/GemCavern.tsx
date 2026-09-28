@@ -3,6 +3,7 @@ import { useFrame } from "@react-three/fiber";
 import { CuboidCollider, RigidBody, TrimeshCollider } from "@react-three/rapier";
 import * as THREE from "three";
 import { CAVE_CENTER_Z, CAVE_WALL_RADIUS, CAVE_WALL_SEGMENTS } from "../game/levels";
+import { hazardDamage } from "../game/hazards";
 import { useGameStore } from "../game/store";
 
 const colors = ["#00f9ee", "#ea3aff", "#ffe254", "#55ff8e", "#528bff"];
@@ -87,7 +88,8 @@ function GemLasers() {
       return Math.hypot(x - gem[0], z - gem[2]) < 4.3 && Math.abs(y - gem[1]) < 4.1;
     })) {
       const closest = cycleCache.current.indices.map((index) => gems[index]).sort((a, b) => Math.hypot(x - a[0], z - a[2]) - Math.hypot(x - b[0], z - b[2]))[0];
-      useGameStore.getState().damagePlayer(9, closest);
+      const live = useGameStore.getState();
+      live.damagePlayer(hazardDamage(9, live.currentLevel, live.ngPlusCycle), closest);
       lastHit.current = time;
     }
   });

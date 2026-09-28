@@ -6,6 +6,7 @@ import * as THREE from "three";
 import { PEN_MONSTER_MAX_HP } from "../game/config";
 import { enemyMotionFactor } from "../game/effects";
 import { getEnemyTuning } from "../game/levels";
+import { paperBlastDamage, type PaperBlast } from "../game/hazards";
 import {
   hasEnemyLineOfSight,
   moveWithAvoidance,
@@ -175,6 +176,17 @@ export function PenMonster({
       window.removeEventListener("boss-hit", handler as EventListener);
   }, [dead, eliminate, eliminated, id]);
 
+  useEffect(() => {
+    const blast = (event: Event) => {
+      if (!root.current || dead || eliminated) return;
+      const { x, y, z } = root.current.position;
+      const damage = paperBlastDamage((event as CustomEvent<PaperBlast>).detail, [x, y + 1.5, z]);
+      if (damage) window.dispatchEvent(new CustomEvent("boss-hit", { detail: { id, damage, part: "body" } }));
+    };
+    window.addEventListener("paper-grenade-explode", blast);
+    return () => window.removeEventListener("paper-grenade-explode", blast);
+  }, [dead, eliminated, id]);
+
   useFrame((state, delta) => {
     const group = root.current;
     if (group && !dead) useGameStore.getState().setEnemyPosition(id, [group.position.x, group.position.y + 1.5, group.position.z]);
@@ -341,9 +353,8 @@ export function PenMonster({
     <>
       <group ref={root} position={safeSpawn}>
         <ScanHalo id={id} size={1.4} />
-        {/* A flat, broad cartoon silhouette. Every visible piece belongs to
-            the target, so whichever part the ray first meets takes damage. */}
-        <group userData={dead ? { ignoreProjectile: true } : { targetId: id, targetPart: "body" }}>
+        {/* The decorative drawing stays clear of the three separate hit zones. */}
+        <group userData={{ ignoreProjectile: true }}>
           <mesh position={[0, 1.52, 0]} castShadow>
             <planeGeometry args={[0.94, 2.52]} />
             <meshBasicMaterial color={BLUE} side={THREE.DoubleSide} />
@@ -372,11 +383,22 @@ export function PenMonster({
             <torusGeometry args={[0.13, 0.025, 5, 12, Math.PI]} />
             <meshBasicMaterial color={INK} side={THREE.DoubleSide} />
           </mesh>
-          {!dead && <mesh position={[0, 1.5, 0.05]}>
-            <planeGeometry args={[1.2, 3]} />
-            <meshBasicMaterial transparent opacity={0} depthWrite={false} side={THREE.DoubleSide} />
-          </mesh>}
         </group>
+
+        {!dead && <>
+          <mesh position={[0, 2.66, 0.055]} userData={{ targetId: id, targetPart: "head" }}>
+            <planeGeometry args={[0.98, 0.62]} />
+            <meshBasicMaterial transparent opacity={0} depthWrite={false} side={THREE.DoubleSide} />
+          </mesh>
+          <mesh position={[0, 1.51, 0.055]} userData={{ targetId: id, targetPart: "body" }}>
+            <planeGeometry args={[1.16, 1.68]} />
+            <meshBasicMaterial transparent opacity={0} depthWrite={false} side={THREE.DoubleSide} />
+          </mesh>
+          <mesh position={[0, 0.36, 0.055]} userData={{ targetId: id, targetPart: "leg" }}>
+            <planeGeometry args={[1.16, 0.62]} />
+            <meshBasicMaterial transparent opacity={0} depthWrite={false} side={THREE.DoubleSide} />
+          </mesh>
+        </>}
 
         {!dead && (
           <group position={[0, 3.05, 0.04]} userData={{ ignoreProjectile: true }}>

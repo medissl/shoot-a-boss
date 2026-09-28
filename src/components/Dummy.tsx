@@ -6,18 +6,13 @@ import * as THREE from "three";
 import { BOSS_MAX_HP } from "../game/config";
 import { enemyMotionFactor } from "../game/effects";
 import { getEnemyTuning } from "../game/levels";
+import { paperBlastDamage, type PaperBlast } from "../game/hazards";
 import {
   hasEnemyLineOfSight,
   moveWithAvoidance,
   safeEnemySpawn,
 } from "../game/navigation";
 import { useGameStore } from "../game/store";
-
-type GrenadeDetail = {
-  position: [number, number, number];
-  radius: number;
-  damage: number;
-};
 
 export type EnemyArchetype = "melee" | "ranged";
 export type RangedWeapon = "handgun" | "bow";
@@ -452,14 +447,11 @@ export function Dummy({
     };
 
     const grenadeHandler = (event: Event) => {
-      const detail = (event as CustomEvent<GrenadeDetail>).detail;
+      const detail = (event as CustomEvent<PaperBlast>).detail;
       const root = group.current;
       if (!root || eliminated) return;
-      const blast = new THREE.Vector3(...detail.position);
-      const distance = root.position.distanceTo(blast);
-      if (distance > detail.radius) return;
-      const falloff = 1 - distance / detail.radius;
-      const damage = Math.max(22, detail.damage * falloff);
+      const damage = paperBlastDamage(detail, [root.position.x, root.position.y + 1.3, root.position.z]);
+      if (!damage) return;
       const nextHp = Math.max(0, hpRef.current - damage);
       hpRef.current = nextHp;
       setHp(nextHp);
@@ -740,22 +732,22 @@ export function Dummy({
         </mesh>
 
         {!dead && (
-          <mesh position={[0, 3.02, 0.08]} userData={{ targetId: id, targetPart: "head" }}>
-          <planeGeometry args={[1.42, 1.22]} />
+          <mesh position={[0, 2.88, 0.08]} userData={{ targetId: id, targetPart: "head" }}>
+          <planeGeometry args={[1.2, 0.88]} />
           <meshBasicMaterial transparent opacity={0} depthWrite={false} side={THREE.DoubleSide} />
           </mesh>
         )}
 
         {!dead && (
-          <mesh position={[0, 1.84, 0.07]} userData={{ targetId: id, targetPart: "body" }}>
-          <planeGeometry args={[3.15, 2.28]} />
+          <mesh position={[0, 1.82, 0.07]} userData={{ targetId: id, targetPart: "body" }}>
+          <planeGeometry args={[2.3, 1.24]} />
           <meshBasicMaterial transparent opacity={0} depthWrite={false} side={THREE.DoubleSide} />
           </mesh>
         )}
 
         {!dead && (
-          <mesh position={[0, 0.55, 0.09]} userData={{ targetId: id, targetPart: "leg" }}>
-          <planeGeometry args={[2.18, 1.15]} />
+          <mesh position={[0, 0.64, 0.09]} userData={{ targetId: id, targetPart: "leg" }}>
+          <planeGeometry args={[1.35, 1.16]} />
           <meshBasicMaterial transparent opacity={0} depthWrite={false} side={THREE.DoubleSide} />
           </mesh>
         )}

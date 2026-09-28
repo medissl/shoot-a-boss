@@ -3,6 +3,7 @@ import { useFrame } from "@react-three/fiber";
 import { CuboidCollider, CylinderCollider, RigidBody } from "@react-three/rapier";
 import * as THREE from "three";
 import { HELL_MOUNTAIN_RADIUS } from "../game/levels";
+import { hazardDamage } from "../game/hazards";
 import { useGameStore } from "../game/store";
 
 const bridgeZ = [-36, -18, 0, 18, 36];
@@ -101,7 +102,8 @@ export function HellHazards() {
     const inImpact = phase >= 4 && phase < 7.1 && positions.some(({ x, z, radius }) => Math.hypot(px - x, pz - z) < radius && py < 4);
     if (inRiver || inImpact) {
       const source = inImpact ? positions.find(({ x, z, radius }) => Math.hypot(px - x, pz - z) < radius) : null;
-      useGameStore.getState().damagePlayer(inImpact ? 14 : 7, [source?.x ?? lavaX.reduce((a, b) => Math.abs(px - a) < Math.abs(px - b) ? a : b), 0, source?.z ?? pz]);
+      const live = useGameStore.getState();
+      live.damagePlayer(hazardDamage(inImpact ? 14 : 7, live.currentLevel, live.ngPlusCycle), [source?.x ?? lavaX.reduce((a, b) => Math.abs(px - a) < Math.abs(px - b) ? a : b), 0, source?.z ?? pz]);
       lastDamage.current = t;
     }
   });

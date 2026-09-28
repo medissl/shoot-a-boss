@@ -195,6 +195,7 @@ export function HUD() {
           <div className="scope-ring" />
           <span className="scope-axis scope-axis--x" />
           <span className="scope-axis scope-axis--y" />
+          <span className="scope-reticle" />
         </div>
       )}
 
