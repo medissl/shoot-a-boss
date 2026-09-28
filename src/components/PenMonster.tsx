@@ -27,7 +27,7 @@ type Projectile = {
   damage: number;
 };
 
-type DamagePop = { id: number; amount: number };
+type DamagePop = { id: number; amount: number; part: "head" | "body" | "leg" };
 
 function setBeam(
   mesh: THREE.Mesh,
@@ -145,7 +145,7 @@ export function PenMonster({
   useEffect(() => {
     const handler = (event: Event) => {
       const detail = (
-        event as CustomEvent<{ id: string; damage: number }>
+        event as CustomEvent<{ id: string; damage: number; part?: "head" | "body" | "leg" }>
       ).detail;
       if (detail.id !== id || dead || eliminated) return;
 
@@ -157,7 +157,7 @@ export function PenMonster({
       const popId = nextPopId.current++;
       setDamagePops((current) => [
         ...current.slice(-2),
-        { id: popId, amount: Math.round(detail.damage) },
+        { id: popId, amount: Math.round(detail.damage), part: detail.part ?? "body" },
       ]);
       window.setTimeout(
         () =>
@@ -433,7 +433,8 @@ export function PenMonster({
             zIndexRange={[40, 0]}
             style={{ pointerEvents: "none" }}
           >
-            <div className="boss-damage-pop boss-damage-pop--body">
+          <div className={`boss-damage-pop boss-damage-pop--${pop.part}`}>
+            {pop.part === "head" && <span>HEADSHOT</span>}
               <strong>{pop.amount}</strong>
             </div>
           </Html>

@@ -25,6 +25,7 @@ export function GearShopScene({ onBack }: { onBack: () => void }) {
   const buyGear = useGameStore((s) => s.buyGear);
   const buyHeart = useGameStore((s) => s.buyHeart);
   const hearts = useGameStore((s) => s.hearts);
+  const skins = useGameStore((s) => s.skins);
   const [category, setCategory] = useState<"gear" | "crates">("gear");
   const [crate, setCrate] = useState<WeaponId | null>(null);
   const [dialogue, setDialogue] = useState(shopkeeperLines[0]);
@@ -73,7 +74,7 @@ export function GearShopScene({ onBack }: { onBack: () => void }) {
               {rank >= maxRank ? "MAXED" : `◉ ${cost} · BUY`}
             </button>
           </article>;
-        })}<article className="gear-item"><span className="gear-item__glyph">♥</span><div className="gear-item__copy"><h3>ONE MORE CHANCE</h3><p>Refill one campaign heart for the next stage.</p><small>HEARTS {hearts}/5 · SPECIAL STOCK</small></div><button disabled={hearts >= 5 || coins < 1000} onClick={buyHeart}>{hearts >= 5 ? "FULL HEARTS" : "◉ 1000 · BUY"}</button></article></div></> : <><h2>COLOR CRATES <small>◉ 300 EACH</small></h2><p>Unlock six sparkling color variants per weapon. Each crate awards a new color until the set is complete.</p><div className="crate-list">{(["rifle","sniper","shotgun","knife"] as WeaponId[]).map((weapon) => <button key={weapon} disabled={coins < 300} onClick={() => setCrate(weapon)}><span>✦ ◆ ✦</span><b>{weapon.toUpperCase()} CRATE</b><small>◉ 300 · OPEN</small></button>)}</div></>}
+        })}<article className="gear-item"><span className="gear-item__glyph">♥</span><div className="gear-item__copy"><h3>ONE MORE CHANCE</h3><p>Refill one campaign heart for the next stage.</p><small>HEARTS {hearts}/5 · SPECIAL STOCK</small></div><button disabled={hearts >= 5 || coins < 1000} onClick={buyHeart}>{hearts >= 5 ? "FULL HEARTS" : "◉ 1000 · BUY"}</button></article></div></> : <><h2>THEME CRATES <small>◉ 300 EACH</small></h2><p>Fifteen illustrated themes per weapon: seven rare, five epic, three legendary. New themes are guaranteed until that weapon's collection is complete.</p><div className="crate-list">{(["rifle","sniper","shotgun","knife"] as WeaponId[]).map((weapon) => <button key={weapon} disabled={coins < 300 || skins[weapon].length>=16} onClick={() => setCrate(weapon)}><span>✦ ◆ ✧</span><b>{weapon.toUpperCase()} CRATE</b><small>{skins[weapon].length-1}/15 OWNED · {skins[weapon].length>=16?"COLLECTION COMPLETE":"◉ 300 · OPEN"}</small></button>)}</div></>}
       </section>
       <aside className="shopkeeper" aria-label="Stickman shopkeeper">
         <div className="shopkeeper__bubble" aria-live="polite">{dialogue}</div>

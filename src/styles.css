@@ -2461,3 +2461,52 @@ button {
 @media(max-width:700px),(pointer:coarse){.encyclopedia-portrait{height:clamp(235px,54vh,310px)}.encyclopedia-model{height:auto;min-height:145px;flex:1 1 auto}}
 @media(pointer:coarse) and (orientation:landscape){.reload-progress{bottom:calc(clamp(46px,12vh,61px) + 52px);left:50%;width:min(235px,32vw);padding:4px;border-radius:8px;background:#fffdf0dc;transform:translateX(-50%)}.reload-progress__label{margin-bottom:3px;font-size:9px}.weapon-view.is-hip{width:min(48vw,380px);right:9%;bottom:-3vh}}
 @media(pointer:coarse) and (orientation:portrait){.reload-progress{top:clamp(144px,25vh,215px);bottom:auto;left:50%;width:min(210px,44vw);padding:4px;border-radius:8px;background:#fffdf0de;transform:translateX(-50%)}.reload-progress__label{margin-bottom:3px;font-size:9px}.weapon-view.is-hip{width:min(53vw,350px);right:6%;bottom:-4vh}}
+
+/* One illustrated skin kit per theme. All four existing silhouettes use the same ornaments. */
+.weapon-view.has-skin .gun-fill,.weapon-view.has-skin .ads-fill{stroke:#2548b8}
+.weapon-view.skin-papercraft .gun-fill,.weapon-view.skin-frostbite .gun-fill{fill:#e5f5ff}
+.weapon-view.skin-classroom .gun-fill,.weapon-view.skin-caution .gun-fill{fill:#fff7dc}
+.weapon-view.skin-office .gun-fill,.weapon-view.skin-hellfire .gun-fill{fill:#fff1e8}
+.weapon-view.skin-toxic .gun-fill{fill:#eaf9ed}
+.weapon-view.skin-void .gun-hatch{fill:#20244d}
+.weapon-view.skin-redacted .gun-hatch{fill:#f4eef0}
+.weapon-view.skin-living .gun-hatch{fill:#d8edfa}
+.weapon-view.has-skin .gun-line,.weapon-view.has-skin .gun-hatch-line,.weapon-view.has-skin .gun-line-only,.weapon-view.has-skin .ads-line{stroke:var(--skin-color)}
+.skin-geometry{pointer-events:none;animation:skin-draw-on .35s ease-out backwards}
+.skin-geometry--rare .skin-etched-panel{opacity:.85}
+.skin-geometry--epic .skin-etched-panel,.skin-geometry--legendary .skin-etched-panel{opacity:.95;filter:drop-shadow(0 0 3px var(--skin-color))}
+.skin-geometry--epic .skin-pulse-line,.skin-geometry--legendary .skin-pulse-line{animation:skin-circuit-flow 2.3s linear infinite;filter:drop-shadow(0 0 3px var(--skin-color))}
+.skin-geometry--legendary .skin-idle-ornament{transform-box:fill-box;transform-origin:center;animation:skin-living-idle 3.1s ease-in-out infinite}
+.weapon-view.is-inspecting.is-hip .weapon-view__perspective{animation:skin-inspect 1.7s ease-in-out both;transform-origin:78% 82%}
+.weapon-view.is-inspecting .skin-geometry--legendary .skin-etched-panel{filter:drop-shadow(0 0 9px var(--skin-color))}
+@keyframes skin-inspect{0%,100%{transform:translateY(0) rotate(0) scale(1)}28%{transform:translateY(-26px) rotate(-10deg) scale(1.13)}64%{transform:translateY(-32px) rotate(5deg) scale(1.1)}}
+.skin-geometry--void .skin-orbit-dust{transform-box:fill-box;transform-origin:center;animation:skin-star-orbit 5s linear infinite}
+.skin-geometry--redacted .skin-moving-redaction{animation:skin-redaction-flicker 3.6s steps(3,end) infinite}
+.skin-geometry--living .skin-pulse-line{stroke-dasharray:9 12;animation-duration:1.2s}
+.skin-geometry--hellfire .skin-idle-ornament,.skin-geometry--stormbound .skin-idle-ornament{filter:drop-shadow(0 0 7px var(--skin-color))}
+.skin-geometry--reload .skin-etched-panel{animation:skin-reload-sketch .6s ease-in-out infinite alternate}
+.skin-attack-effect{animation:skin-muzzle-out .24s ease-out both;filter:drop-shadow(0 0 3px var(--skin-color))}
+.skin-attack-effect--legendary{filter:drop-shadow(0 0 7px var(--skin-color))}
+@keyframes skin-circuit-flow{to{stroke-dashoffset:-83}}
+@keyframes skin-draw-on{from{opacity:0}to{opacity:1}}
+@keyframes skin-living-idle{50%{opacity:.66;filter:drop-shadow(0 0 7px var(--skin-color))}}
+@keyframes skin-star-orbit{to{transform:rotate(360deg)}}
+@keyframes skin-redaction-flicker{0%,87%,100%{opacity:1}89%,93%{opacity:.17}95%{opacity:1}}
+@keyframes skin-reload-sketch{to{opacity:.26}}
+@keyframes skin-muzzle-out{from{opacity:1;transform:scale(.65);transform-origin:30% 38%}to{opacity:0;transform:scale(1.18);transform-origin:30% 38%}}
+.skin-loadout{min-width:0}.skin-loadout h3{display:flex;justify-content:space-between;gap:4px;align-items:baseline}.skin-loadout h3 small{font-size:9px}
+.skin-selection{display:grid;grid-template-columns:minmax(92px,1fr) minmax(105px,1fr);gap:6px;align-items:center;border:2px dashed #97afe1;border-radius:9px;background:#eef4ff;padding:5px}
+.skin-selection>div:last-child{display:grid;gap:3px;min-width:0}.skin-selection strong{font:900 12px/1.2 ui-rounded,sans-serif;overflow-wrap:anywhere}.skin-selection small{font:900 9px ui-monospace,monospace}.skin-selection button{min-height:27px;padding:2px 4px;font-size:9px}.skin-selection button:disabled{opacity:.72}
+.skin-weapon-preview{display:grid;place-items:center;min-height:92px;overflow:hidden;background:radial-gradient(ellipse at 52% 85%,#dce9fc,transparent 70%)}
+.skin-weapon-preview svg{width:100%;height:94px;overflow:visible;filter:drop-shadow(2px 3px 0 #2548b83d)}
+.skin-weapon-preview .gun-fill,.skin-weapon-preview .gun-hand{stroke:#2548b8;stroke-width:7}
+.skin-weapon-preview .gun-line,.skin-weapon-preview .gun-line-only{stroke:var(--skin-color)}
+.skin-options{max-height:125px;overflow:auto;display:flex;align-content:start;scrollbar-color:#9cb8ef #f7faff}
+.skin-options button{border-width:2px;min-height:28px;background:#fff;padding:3px 5px;color:#2548b8}
+.skin-options button i{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--skin-preview);border:1px solid #2548b8}
+.skin-options button.is-locked{opacity:.58}.skin-options button.is-previewed{outline:2px solid #2548b8;outline-offset:1px}
+.skin-options button.skin-option--epic{border-style:double}.skin-options button.skin-option--legendary{border-width:3px;box-shadow:inset 0 0 5px #eab24a83}
+.crate-prize{max-width:min(680px,95vw)}.crate-prize .skin-weapon-preview{width:min(450px,65vw);min-height:160px;margin:auto}.crate-prize .skin-weapon-preview svg{height:150px}.crate-prize>strong{display:block;color:var(--crate-color);font:1000 14px ui-monospace,monospace}
+.crate-prize--legendary{box-shadow:0 0 18px var(--crate-color),8px 8px #9bb4e7}.crate-roulette span{padding:6px;font-size:10px;line-height:1.2;overflow:hidden;overflow-wrap:anywhere}
+.crate-roulette--epic{border:3px double #fff}.crate-roulette--legendary{border:4px solid #ffebaa}
+@media (max-width:780px){.skin-selection{grid-template-columns:1fr}.skin-weapon-preview{min-height:74px}.skin-weapon-preview svg{height:74px}.skin-options{max-height:92px}.crate-prize .skin-weapon-preview svg{height:95px}.crate-prize .skin-weapon-preview{min-height:100px}}

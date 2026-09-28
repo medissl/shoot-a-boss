@@ -1,5 +1,5 @@
 import { useFrame, useThree } from "@react-three/fiber";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { magicHit, magicSplash, magicTrails, magicPools, magicVisuals, tickMagic } from "../game/magicEffects";
 import { type MagicType, useGameStore } from "../game/store";
@@ -7,6 +7,17 @@ import { type MagicType, useGameStore } from "../game/store";
 const colors: Record<MagicType,string> = {fire:"#fb433b", crystal:"#ae65ff", ice:"#5ce6ff", water:"#3c97ff", thunder:"#ffe63f"};
 type Shot = { id:number; kind:MagicType; rank:number; position:THREE.Vector3; direction:THREE.Vector3; born:number };
 type Link = {id:number;from:[number,number,number];to:[number,number,number];color:string;until:number};
+function GroundedCrystalTrail({position}:{position:[number,number,number]}) {
+  const {scene}=useThree();
+  const floorY=useMemo(() => {
+    const walkable:THREE.Object3D[]=[];
+    scene.traverse((object)=>{if(object instanceof THREE.Mesh && object.receiveShadow && !object.userData.targetId)walkable.push(object);});
+    const ray=new THREE.Raycaster(new THREE.Vector3(position[0],Math.max(1,position[1]+.7),position[2]),new THREE.Vector3(0,-1,0),0,65);
+    const surface=ray.intersectObjects(walkable,false).find((hit)=>hit.face && hit.face.normal.clone().transformDirection(hit.object.matrixWorld).y>.6);
+    return (surface?.point.y ?? 0)+.08;
+  },[position,scene]);
+  return <mesh position={[position[0],floorY,position[2]]} rotation={[-Math.PI/2,0,0]} userData={{ignoreProjectile:true}}><circleGeometry args={[.56,6]}/><meshBasicMaterial color="#b477fb" transparent opacity={.67} depthWrite={false} side={THREE.DoubleSide}/></mesh>;
+}
 function Ball({shot,onDone}:{shot:Shot;onDone:(id:number)=>void}) {
   const root = useRef<THREE.Group>(null);
   const lastCheck = useRef(0);
@@ -53,7 +64,7 @@ export function MagicSystem() {
   const positions = useGameStore((s) => s.enemyPositions);
   return <>
     {shots.map((shot) => <Ball key={shot.id} shot={shot} onDone={(id) => setShots((current) => current.filter((item) => item.id !== id))}/>)}
-    {trails.map((trail,index) => <mesh key={index} position={[trail.position[0],trail.position[1]+.08,trail.position[2]]} rotation={[-Math.PI/2,0,0]} userData={{ignoreProjectile:true}}><circleGeometry args={[.56,6]}/><meshBasicMaterial color="#b477fb" transparent opacity={.67} depthWrite={false} side={THREE.DoubleSide}/></mesh>)}
+    {trails.map((trail,index) => <GroundedCrystalTrail key={`${trail.runId}-${index}-${trail.until}`} position={trail.position}/>)}
     {pools.map((pool,index)=><mesh key={`pool-${index}`} position={[pool.position[0],Math.max(.09,pool.position[1]-1),pool.position[2]]} rotation={[-Math.PI/2,0,0]} userData={{ignoreProjectile:true}}><circleGeometry args={[pool.radius,24]}/><meshBasicMaterial color="#ff581f" toneMapped={false} transparent opacity={.38} depthWrite={false} side={THREE.DoubleSide}/></mesh>)}
     {links.map((link)=>{const start=new THREE.Vector3(...link.from),end=new THREE.Vector3(...link.to),difference=end.clone().sub(start);return <mesh key={`link-${link.id}`} position={start.clone().add(end).multiplyScalar(.5)} quaternion={new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,1,0),difference.clone().normalize())} userData={{ignoreProjectile:true}}><cylinderGeometry args={[.08,.08,difference.length(),6]}/><meshBasicMaterial color={link.color} toneMapped={false} depthTest={false} depthWrite={false}/></mesh>;})}
     {visuals.map(({id,kind}) => {const p=positions[id];if(!p) return null; return <group key={id} position={[p[0],p[1]+(id.startsWith("fly") ? 0 : 1),p[2]]} userData={{ignoreProjectile:true}}><mesh rotation={[-Math.PI/2,0,0]} position={[0,-.8,0]}><ringGeometry args={[.5,.78,7]}/><meshBasicMaterial color={colors[kind]} side={THREE.DoubleSide} transparent opacity={.75}/></mesh>{kind === "ice" && <mesh position={[0,-.65,0]}><octahedronGeometry args={[.6,0]}/><meshBasicMaterial color="#6ee3ff" transparent opacity={.6}/></mesh>}{kind !== "water" && <mesh position={[0,.4,0]}><torusGeometry args={[.8,.06,6,12]}/><meshBasicMaterial color={colors[kind]} transparent opacity={.75}/></mesh>}{[0,1,2,3].map((i) => <mesh key={i} position={[Math.cos(i*1.57)*.85, i%2 ? -.2 : .9, Math.sin(i*1.57)*.85]}><octahedronGeometry args={[.1,0]}/><meshBasicMaterial color={colors[kind]}/></mesh>)}</group>;})}

@@ -21,6 +21,7 @@ export function ControlsList() {
     <div><b>SPACE</b><span>Jump / climb</span></div>
     <div><b>C</b><span>Crouch / slide while moving</span></div>
     <div><b>1–4 / WHEEL</b><span>Change weapon</span></div>
+    <div><b>I</b><span>Inspect your equipped weapon skin</span></div>
     <div><b>MOUSE</b><span>Look · left shoot · right aim</span></div>
     <div><b>R / G</b><span>Reload / paper bomb</span></div>
     <div><b>E / SHIFT+E</b><span>Jungle zipline forward / back</span></div>

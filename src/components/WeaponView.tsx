@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import type { WeaponId } from "../game/config";
 import { useGameStore } from "../game/store";
+import { getSkin, skinColor, type SkinId } from "../game/skins";
+import { ScopedSkinArt, WeaponSkinArt } from "./WeaponSkinArt";
 
 function RifleHipArt() {
   return (
@@ -95,9 +97,9 @@ function KnifeHipArt() {
   );
 }
 
-function HipWeaponArt({ weapon }: { weapon: WeaponId }) {
+function HipWeaponArt({ weapon, skin, firing, reloading, preview=false }: { weapon: WeaponId; skin: SkinId; firing:boolean; reloading:boolean; preview?:boolean }) {
   return (
-    <svg viewBox="0 0 900 620" role="presentation">
+    <svg viewBox={preview ? "255 173 615 452" : "0 0 900 620"} role="presentation">
       <defs>
         <pattern
           id="gun-hatch"
@@ -115,6 +117,7 @@ function HipWeaponArt({ weapon }: { weapon: WeaponId }) {
       {weapon === "shotgun" && <ShotgunHipArt />}
       {weapon === "sniper" && <SniperHipArt />}
       {weapon === "knife" && <KnifeHipArt />}
+      <WeaponSkinArt weapon={weapon} id={skin} firing={firing} reloading={reloading}/>
 
       {weapon !== "knife" && (
         <g className="muzzle-spark">
@@ -125,7 +128,11 @@ function HipWeaponArt({ weapon }: { weapon: WeaponId }) {
   );
 }
 
-function ScopedWeaponArt({ weapon }: { weapon: WeaponId }) {
+export function SkinWeaponPreview({weapon,skin}:{weapon:WeaponId;skin:SkinId}){
+  return <div className="skin-weapon-preview" style={{"--skin-color":skinColor(skin)} as CSSProperties} aria-hidden="true"><HipWeaponArt weapon={weapon} skin={skin} firing={false} reloading={false} preview/></div>;
+}
+
+function ScopedWeaponArt({ weapon, skin }: { weapon: WeaponId; skin: SkinId }) {
   return (
     <svg className="weapon-scope-model" viewBox="0 0 1000 600" role="presentation">
       {weapon === "sniper" && (
@@ -154,6 +161,7 @@ function ScopedWeaponArt({ weapon }: { weapon: WeaponId }) {
           <circle className="ads-dot ads-dot--red" cx="500" cy="300" r="7" />
         </g>
       )}
+      <ScopedSkinArt weapon={weapon} id={skin}/>
     </svg>
   );
 }
@@ -165,7 +173,22 @@ export function WeaponView() {
   const movementMode = useGameStore((state) => state.movementMode);
   const reloading = useGameStore((state) => state.reloading);
   const [kick, setKick] = useState(false);
+  const [inspecting,setInspecting]=useState(false);
   const kickTimer = useRef<number | null>(null);
+  const inspectTimer=useRef<number|null>(null);
+
+  useEffect(()=>{
+    const inspect=(event:KeyboardEvent)=>{
+      if(event.code!=="KeyI"||event.repeat||skin==="default"||useGameStore.getState().screen!=="playing")return;
+      if(event.target instanceof HTMLElement && /INPUT|TEXTAREA/.test(event.target.tagName))return;
+      setInspecting(false);
+      window.requestAnimationFrame(()=>setInspecting(true));
+      if(inspectTimer.current)window.clearTimeout(inspectTimer.current);
+      inspectTimer.current=window.setTimeout(()=>setInspecting(false),1750);
+    };
+    window.addEventListener("keydown",inspect);
+    return ()=>{window.removeEventListener("keydown",inspect);if(inspectTimer.current)window.clearTimeout(inspectTimer.current);};
+  },[skin]);
 
   useEffect(() => {
     const handler = () => {
@@ -186,18 +209,17 @@ export function WeaponView() {
 
   return (
     <div
-      className={`weapon-view weapon-view--${weapon} movement-${movementMode} ${scoped ? "is-scoped" : "is-hip"} ${kick ? "is-kicking" : ""} ${reloading ? "is-reloading" : ""} ${skin !== "default" ? "has-skin" : ""}`}
-      style={{"--skin-color":skin} as CSSProperties}
+      className={`weapon-view weapon-view--${weapon} movement-${movementMode} ${scoped ? "is-scoped" : "is-hip"} ${kick ? "is-kicking" : ""} ${inspecting ? "is-inspecting" : ""} ${reloading ? "is-reloading" : ""} ${skin !== "default" ? `has-skin skin-${skin} skin-${getSkin(skin)?.rarity}` : ""}`}
+      style={{"--skin-color":skinColor(skin)} as CSSProperties}
       aria-hidden="true"
     >
       <div className="weapon-view__motion">
         <div className="weapon-view__perspective">
           <div className="weapon-view__kick">
-            {skin !== "default" && <span className="weapon-skin-sparkles">✦ ◇ ✧</span>}
             {scoped && weapon !== "knife" ? (
-              <ScopedWeaponArt weapon={weapon} />
+              <ScopedWeaponArt weapon={weapon} skin={skin}/>
             ) : (
-              <HipWeaponArt weapon={weapon} />
+              <HipWeaponArt weapon={weapon} skin={skin} firing={kick} reloading={reloading}/>
             )}
           </div>
         </div>

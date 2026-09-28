@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { GRENADE_COUNT, WEAPONS, type WeaponId } from "./config";
 import { getEnemyTuning, getLevelDefinition, getPlayerSpawn, getTargetCount } from "./levels";
 import { ELEMENTS, emptyMagicChoices, isMilestone, magicCost, magicStats, type Element, type Branch, type MagicChoices } from "./magicTree";
+import { SKIN_IDS, normalizeSkin, rollSkin, type SkinId } from "./skins";
 import {
   emptyUpgrades,
   getUpgradeStats,
@@ -15,10 +16,10 @@ type AmmoState = Record<WeaponId, { mag: number; reserve: number }>;
 type Champion = { cycle: number; level: number; hearts: number; upgrades: UpgradeLevels; ready: boolean };
 export const MAGIC_TYPES = ELEMENTS;
 export type MagicType = Element;
-export type SkinColor = "default" | "blue" | "yellow" | "green" | "pink" | "red" | "orange";
-export const SKIN_COLORS: Exclude<SkinColor, "default">[] = ["blue", "yellow", "green", "pink", "red", "orange"];
-export type Skins = Record<WeaponId, SkinColor[]>;
-export type EquippedSkins = Record<WeaponId, SkinColor>;
+export type SkinColor = SkinId;
+export const SKIN_COLORS = SKIN_IDS;
+export type Skins = Record<WeaponId, SkinId[]>;
+export type EquippedSkins = Record<WeaponId, SkinId>;
 const emptySkins = (): Skins => ({ sniper: ["default"], rifle: ["default"], shotgun: ["default"], knife: ["default"] });
 const defaultSkins = (): EquippedSkins => ({ sniper: "default", rifle: "default", shotgun: "default", knife: "default" });
 const emptyMagic = (): Record<MagicType, number> => ({ fire: 0, crystal: 0, ice: 0, water: 0, thunder: 0 });
@@ -73,7 +74,13 @@ function restoredMagicChoices(): MagicChoices {
 function restoredSkins(): Skins {
   const result = emptySkins();
   const raw = saved.skins as Partial<Record<WeaponId, string[]>> | undefined;
-  for (const weapon of weaponOrder) result[weapon] = ["default", ...new Set((raw?.[weapon] ?? []).filter((color): color is SkinColor => SKIN_COLORS.includes(color as Exclude<SkinColor,"default">)))];
+  for (const weapon of weaponOrder) result[weapon] = ["default", ...new Set((raw?.[weapon] ?? []).map(normalizeSkin).filter((id): id is SkinId => id !== null && id !== "default"))];
+  return result;
+}
+function restoredEquippedSkins(owned:Skins):EquippedSkins {
+  const raw = saved.equippedSkins as Partial<Record<WeaponId,string>> | undefined;
+  const result=defaultSkins();
+  for(const weapon of weaponOrder){const id=normalizeSkin(raw?.[weapon]);if(id && owned[weapon].includes(id))result[weapon]=id;}
   return result;
 }
 
@@ -375,7 +382,7 @@ export const useGameStore = create<GameStore>((set, get) => {
     selectedMagic: MAGIC_TYPES.includes(saved.selectedMagic as MagicType) ? saved.selectedMagic as MagicType : null,
     magicReadyAt: 0,
     skins: restoredSkins(),
-    equippedSkins: { ...defaultSkins(), ...(saved.equippedSkins as EquippedSkins | undefined) },
+    equippedSkins: restoredEquippedSkins(restoredSkins()),
     upgrades: initialUpgrades,
     upgradeChoices: [],
     upgradeRerollsLeft: 1,
@@ -548,8 +555,9 @@ export const useGameStore = create<GameStore>((set, get) => {
     buyCrate: (weapon) => {
       const state = get();
       if (state.screen !== "menu" || state.coins < 300) return null;
-      const unowned = SKIN_COLORS.filter((color) => !state.skins[weapon].includes(color));
-      const color = (unowned.length ? unowned : SKIN_COLORS)[Math.floor(Math.random() * (unowned.length || SKIN_COLORS.length))];
+      const unowned = SKIN_IDS.filter((color) => !state.skins[weapon].includes(color));
+      if(!unowned.length)return null;
+      const color = rollSkin(unowned);
       const coins = state.coins - 300;
       const skins = { ...state.skins, [weapon]: [...new Set([...state.skins[weapon], color])] };
       localStorage.setItem("shoot-a-boss:coins", String(coins));

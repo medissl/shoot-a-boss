@@ -3,6 +3,7 @@ import { useGameStore, type GameScreen, type MagicType } from "../game/store";
 import type { WeaponId } from "../game/config";
 import { getLevelDefinition } from "../game/levels";
 import { playWorldSound, resumeWorldSound, type WorldSound } from "../game/worldSound";
+import { playSkinSound } from "../game/skinSound";
 
 const A = {
   introBgm: "/audio/IntroMenuBGM.mp3",
@@ -118,9 +119,13 @@ export function AudioManager() {
           boostedContext.current = context;
           const source = context.createMediaElementSource(audio);
           const amplifier = context.createGain();
+          const limiter = context.createDynamicsCompressor();
           amplifier.gain.value = boost;
-          source.connect(amplifier).connect(context.destination);
-          disconnect = () => { source.disconnect(); amplifier.disconnect(); };
+          limiter.threshold.value = -7;
+          limiter.ratio.value = 6;
+          limiter.attack.value = 0.003;
+          source.connect(amplifier).connect(limiter).connect(context.destination);
+          disconnect = () => { source.disconnect(); amplifier.disconnect(); limiter.disconnect(); };
           void context.resume().catch(() => undefined);
         } catch { /* Media audio still works if Web Audio is unavailable. */ }
       }
@@ -132,6 +137,15 @@ export function AudioManager() {
     },
     [sfxLevel],
   );
+
+  const skinAccent = useCallback((weapon:WeaponId,action:"fire"|"equip"|"reload") => {
+    if (!unlocked.current || useGameStore.getState().screen!=="playing" || typeof AudioContext==="undefined")return;
+    const skin=useGameStore.getState().equippedSkins[weapon];
+    if(skin==="default")return;
+    const context=boostedContext.current??new AudioContext();boostedContext.current=context;
+    void context.resume().catch(()=>undefined);
+    playSkinSound(context,skin,action,sfxLevel(.85));
+  },[sfxLevel]);
 
   const playMenuSound = useCallback((kind: "open" | "select" | "confirm") => {
     if (!unlocked.current || !menuAudio.current) return;
@@ -358,7 +372,8 @@ export function AudioManager() {
     const path = reloads[reloadingWeapon];
     if (!path) return;
     playOne(path, reloadGain[reloadingWeapon] ?? 0.25);
-  }, [playOne, reloading, reloadingWeapon]);
+    skinAccent(reloadingWeapon,"reload");
+  }, [playOne, reloading, reloadingWeapon, skinAccent]);
 
   useEffect(() => {
     const wanted: string | null =
@@ -404,6 +419,7 @@ export function AudioManager() {
       if (useGameStore.getState().screen === "playing") {
         const path = cocking[selected];
         if (path) playOne(path, 0.72);
+        skinAccent(selected,"equip");
       }
     };
 
@@ -411,6 +427,7 @@ export function AudioManager() {
       const fired = (event as CustomEvent<{ weapon: WeaponId }>).detail.weapon;
       if (fired === "sniper") playOne(A.sniperShoot, 0.95, 1.6);
       if (fired === "shotgun") playOne(A.shotgunShoot, 0.85);
+      skinAccent(fired,"fire");
     };
 
     const rifleDown = () => {
@@ -429,10 +446,10 @@ export function AudioManager() {
     const grenadeExplode = () => playOne(A.grenadeExplode, 1.35);
     const magicCast = (event: Event) => playOne(A.magic[(event as CustomEvent<{kind:MagicType}>).detail.kind], 1);
     const reveal = () => playOne(A.reveal, .85);
-    const crateDrop = () => playOne(A.crateDrop, .9, 1.65);
-    const crateUnlock = () => playOne(A.crateUnlock, .9, 1.7);
-    const crateSpin = () => playOne(A.crateSpin, .85, 1.5);
-    const crateReveal = () => playOne(A.crateReveal, 1, 1.65);
+    const crateDrop = () => playOne(A.crateDrop, .9, 3.0);
+    const crateUnlock = () => playOne(A.crateUnlock, .9, 3.0);
+    const crateSpin = () => playOne(A.crateSpin, .85, 2.7);
+    const crateReveal = () => playOne(A.crateReveal, 1, 3.2);
     const worldSound = (event: Event) => {
       if (useGameStore.getState().screen !== "playing" || !unlocked.current) return;
       const detail = (event as CustomEvent<{ kind: WorldSound; position?: [number, number, number] }>).detail;
@@ -492,7 +509,7 @@ export function AudioManager() {
       window.removeEventListener("pickup-collected", pickup as EventListener);
       window.removeEventListener("boss-killed", killed as EventListener);
     };
-  }, [playOne, startSmoothRifleBurst, stopRifleBurst]);
+  }, [playOne, skinAccent, startSmoothRifleBurst, stopRifleBurst]);
 
   useEffect(() => {
     if (screen !== "playing") stopRifleBurst();

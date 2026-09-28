@@ -4,6 +4,7 @@ import * as THREE from "three";
 import { WEAPONS, type WeaponId } from "../game/config";
 import { applyEnemyStatus } from "../game/effects";
 import { getUpgradeStats } from "../game/progression";
+import { getSkin, skinColor, type SkinId } from "../game/skins";
 import { useGameStore } from "../game/store";
 
 type Trace = {
@@ -17,6 +18,7 @@ type Trace = {
 type Impact = {
   id: number;
   color: string;
+  skin: SkinId;
   position: [number, number, number];
   sparks: [number, number, number][];
 };
@@ -74,11 +76,12 @@ function TraceLine({ trace }: { trace: Trace }) {
 }
 
 function ImpactBurst({ impact }: { impact: Impact }) {
+  const skin=getSkin(impact.skin);
   return (
     <group position={impact.position} userData={{ ignoreProjectile: true }}>
       {impact.sparks.map((offset, index) => (
         <mesh position={offset} key={index}>
-          <octahedronGeometry args={[index % 2 ? 0.05 : 0.075, 0]} />
+          {skin?.motif==="pixel"||skin?.motif==="redaction"||skin?.motif==="hazard"?<boxGeometry args={[.09,.07,.08]}/>:<octahedronGeometry args={[index % 2 ? 0.05 : 0.075, 0]} />}
           <meshBasicMaterial
             color={index % 3 === 0 ? "#ffffff" : impact.color}
             transparent
@@ -88,7 +91,7 @@ function ImpactBurst({ impact }: { impact: Impact }) {
         </mesh>
       ))}
       <mesh>
-        <ringGeometry args={[0.075, 0.125, 9]} />
+        <ringGeometry args={[skin?.rarity==="legendary"?.11:.075,skin?.rarity==="legendary"?.17:.125,skin?.motif==="ice"?6:9]} />
         <meshBasicMaterial
           color={impact.color}
           side={THREE.DoubleSide}
@@ -180,7 +183,7 @@ export function CombatSystem() {
         ...current.slice(-10),
         {
           id,
-          color: color === "default" ? hit ? "#ff6ea8" : "#5978e8" : color,
+          color: color === "default" ? hit ? "#ff6ea8" : "#5978e8" : skinColor(color),
           from: [from.x, from.y, from.z],
           to: [to.x, to.y, to.z],
           hit,
@@ -208,7 +211,8 @@ export function CombatSystem() {
         ...current.slice(-14),
         {
           id,
-          color: color === "default" ? "#ff5f9d" : color,
+          color: color === "default" ? "#ff5f9d" : skinColor(color),
+          skin: color,
           position: [position.x, position.y, position.z],
           sparks,
         },

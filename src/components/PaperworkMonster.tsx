@@ -24,6 +24,7 @@ const MONSTER_RADIUS = 0.66;
 type DamagePop = {
   id: number;
   amount: number;
+  part: "head" | "body" | "leg";
 };
 
 export function PaperworkMonster({
@@ -71,6 +72,7 @@ export function PaperworkMonster({
         event as CustomEvent<{
           id: string;
           damage: number;
+          part?: "head" | "body" | "leg";
         }>
       ).detail;
       if (detail.id !== id || dead || eliminated) return;
@@ -83,7 +85,7 @@ export function PaperworkMonster({
       const popId = nextPopId.current++;
       setDamagePops((current) => [
         ...current.slice(-2),
-        { id: popId, amount: Math.round(detail.damage) },
+        { id: popId, amount: Math.round(detail.damage), part: detail.part ?? "body" },
       ]);
 
       setHit(true);
@@ -338,7 +340,8 @@ export function PaperworkMonster({
           zIndexRange={[40, 0]}
           style={{ pointerEvents: "none" }}
         >
-          <div className="boss-damage-pop boss-damage-pop--body">
+          <div className={`boss-damage-pop boss-damage-pop--${pop.part}`}>
+            {pop.part === "head" && <span>HEADSHOT</span>}
             <strong>{pop.amount}</strong>
           </div>
         </Html>

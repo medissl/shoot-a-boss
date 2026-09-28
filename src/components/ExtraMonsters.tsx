@@ -1,4 +1,5 @@
 import { useFrame } from "@react-three/fiber";
+import { Html } from "@react-three/drei";
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { enemyMotionFactor } from "../game/effects";
@@ -44,13 +45,19 @@ export function ExtraMonster({ id, spawn, kind }: { id: string; spawn: [number, 
   const maxHp = Math.round((kind === "statue" ? 280 : 125) * (1 + (effectiveLevel - 1) * 0.085));
   const hp = useRef(maxHp);
   const [dead, setDead] = useState(false);
+  const deadAt = useRef(0);
   const [health, setHealth] = useState(maxHp);
+  const [damagePops, setDamagePops] = useState<{id:number; amount:number; part:"head"|"body"|"leg"}[]>([]);
+  const nextDamagePopId = useRef(0);
   const safeSpawn = useMemo(() => safeEnemySpawn(spawn, kind === "statue" ? 1.5 : 1.7, level), [spawn, kind, level]);
 
   useEffect(() => {
     const onHit = (event: Event) => {
-      const { id: target, damage } = (event as CustomEvent<{ id: string; damage: number }>).detail;
+      const { id: target, damage, part } = (event as CustomEvent<{ id: string; damage: number; part?:"head"|"body"|"leg" }>).detail;
       if (target !== id || hp.current <= 0) return;
+      const popId = ++nextDamagePopId.current;
+      setDamagePops((current) => [...current.slice(-3), {id:popId,amount:Math.round(damage),part:part??"body"}]);
+      window.setTimeout(() => setDamagePops((current) => current.filter((pop) => pop.id !== popId)), 750);
       hp.current = Math.max(0, hp.current - damage);
       setHealth(hp.current);
       setHitFlash(true);
@@ -58,7 +65,7 @@ export function ExtraMonster({ id, spawn, kind }: { id: string; spawn: [number, 
       hitTimer.current = window.setTimeout(() => setHitFlash(false), 330);
       awarenessUntil.current = performance.now() + 5600;
       lastSeen.current.set(...useGameStore.getState().playerPosition);
-      if (!hp.current) { setDead(true); eliminate(id); }
+      if (!hp.current) { deadAt.current=performance.now();if(root.current)root.current.userData.ignoreProjectile=true;setDead(true); eliminate(id); }
     };
     window.addEventListener("boss-hit", onHit);
     return () => { window.removeEventListener("boss-hit", onHit); if (hitTimer.current) window.clearTimeout(hitTimer.current); };
@@ -78,7 +85,7 @@ export function ExtraMonster({ id, spawn, kind }: { id: string; spawn: [number, 
   useFrame((state, delta) => {
     const mesh = root.current;
     if (!mesh) return;
-    if (dead) { mesh.visible = false; return; }
+    if (dead) { mesh.visible = performance.now()-deadAt.current<750; return; }
     const live = useGameStore.getState();
     if (screen !== "playing" || live.tutorialOpen) {
       if (telegraph.current) telegraph.current.visible = false;
@@ -189,7 +196,7 @@ export function ExtraMonster({ id, spawn, kind }: { id: string; spawn: [number, 
     <EnemyFeedback id={id} root={root} />
     {kind === "fly" ? <>
       <mesh userData={{ targetId: id, targetPart: "body" }} castShadow><icosahedronGeometry args={[1.2, 1]} /><meshStandardMaterial color={hitFlash ? "#ff363c" : "#8558dc"} emissive="#402379" emissiveIntensity={0.35} /></mesh>
-      <mesh position={[0, 0.18, 0.88]} userData={{ targetId: id, targetPart: "head" }}><sphereGeometry args={[0.48, 12, 8]} /><meshBasicMaterial color={hitFlash ? "#ff363c" : "#f7eaf6"} /></mesh>
+      <mesh position={[0, 0.72, 1.12]} userData={{ targetId: id, targetPart: "head" }}><sphereGeometry args={[0.61, 12, 8]} /><meshBasicMaterial color={hitFlash ? "#ff363c" : "#f7eaf6"} /></mesh>
       {[-1, 1].map((side, i) => <mesh key={side} ref={(node) => { wings.current[i] = node; }} position={[side * 1.25, 0, 0]} userData={{ targetId: id, targetPart: "body" }}><coneGeometry args={[0.7, 2.1, 3]} /><meshStandardMaterial color={hitFlash ? "#ff363c" : "#c69cf1"} side={THREE.DoubleSide} /></mesh>)}
       {[-0.38, 0.38].map((x) => <mesh key={x} position={[x, -1.35, 0.42]} rotation={[Math.PI, 0, 0]} userData={{ targetId: id, targetPart: "leg" }}>
         <coneGeometry args={[0.28, 0.86, 4]} /><meshBasicMaterial color="#e8eefc" />
@@ -197,7 +204,7 @@ export function ExtraMonster({ id, spawn, kind }: { id: string; spawn: [number, 
     </> : <>
       <mesh position={[0, 0.7, 0]} castShadow userData={{ targetId: id, targetPart: "leg" }}><cylinderGeometry args={[1.2, 1.4, 1.4, 7]} /><meshStandardMaterial color={hitFlash ? "#ff363c" : "#737884"} roughness={0.9} /></mesh>
       <mesh position={[0, 2.1, 0]} castShadow userData={{ targetId: id, targetPart: "body" }}><boxGeometry args={[2.5, 2.2, 1.8]} /><meshStandardMaterial color={hitFlash ? "#ff363c" : "#8e94aa"} roughness={0.8} /></mesh>
-      <mesh position={[0, 3.6, 0]} castShadow userData={{ targetId: id, targetPart: "head" }}><dodecahedronGeometry args={[0.91, 0]} /><meshBasicMaterial color={hitFlash ? "#ff363c" : "#d1cad1"} /></mesh>
+      <mesh position={[0, 4.02, 0.24]} castShadow userData={{ targetId: id, targetPart: "head" }}><dodecahedronGeometry args={[0.95, 0]} /><meshBasicMaterial color={hitFlash ? "#ff363c" : "#d1cad1"} /></mesh>
       <mesh position={[0, 3.65, 0.7]} userData={{ ignoreProjectile: true }}><boxGeometry args={[0.85, 0.15, 0.22]} /><meshBasicMaterial color="#ed5f61" /></mesh>
     </>}
     {kind === "statue" && <>
@@ -221,6 +228,7 @@ export function ExtraMonster({ id, spawn, kind }: { id: string; spawn: [number, 
     <group position={[0, kind === "fly" ? 1.65 : 4.7, 0]} userData={{ ignoreProjectile: true }}>
       <mesh scale={[Math.max(0.04, health / maxHp), 1, 1]}><boxGeometry args={[1.8, 0.09, 0.08]} /><meshBasicMaterial color="#fa5964" /></mesh>
     </group>
+    {damagePops.map((pop,index)=><Html key={pop.id} position={[0, (kind === "fly" ? 2.25 : 5.15)+index*.14,0]} center zIndexRange={[40,0]} style={{pointerEvents:"none"}}><div className={`boss-damage-pop boss-damage-pop--${pop.part}`}>{pop.part==="head"&&<span>HEADSHOT</span>}<strong>{pop.amount}</strong></div></Html>)}
     <ScanHalo id={id} size={kind === "fly" ? 1.3 : 2.8} />
   </group>;
 }
