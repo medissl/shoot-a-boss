@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef } from "react";
 import { useGameStore, type GameScreen, type MagicType } from "../game/store";
 import type { WeaponId } from "../game/config";
 import { getLevelDefinition } from "../game/levels";
-import { playWorldSound, type WorldSound } from "../game/worldSound";
+import { playWorldSound, resumeWorldSound, type WorldSound } from "../game/worldSound";
 
 const A = {
   introBgm: "/audio/IntroMenuBGM.mp3",
@@ -111,6 +111,7 @@ export function AudioManager() {
       if (!unlocked.current) return;
       const audio = new Audio(path);
       audio.volume = sfxLevel(gain);
+      let disconnect: (() => void) | undefined;
       if (boost > 1 && typeof AudioContext !== "undefined") {
         try {
           const context = boostedContext.current ?? new AudioContext();
@@ -119,11 +120,12 @@ export function AudioManager() {
           const amplifier = context.createGain();
           amplifier.gain.value = boost;
           source.connect(amplifier).connect(context.destination);
+          disconnect = () => { source.disconnect(); amplifier.disconnect(); };
           void context.resume().catch(() => undefined);
         } catch { /* Media audio still works if Web Audio is unavailable. */ }
       }
       oneShots.current.add(audio);
-      const cleanup = () => oneShots.current.delete(audio);
+      const cleanup = () => { oneShots.current.delete(audio); disconnect?.(); };
       audio.addEventListener("ended", cleanup, { once: true });
       audio.addEventListener("error", cleanup, { once: true });
       void audio.play().catch(cleanup);
@@ -239,6 +241,7 @@ export function AudioManager() {
     const unlock = () => {
       if (unlocked.current) return;
       unlocked.current = true;
+      resumeWorldSound();
 
       const state = useGameStore.getState();
       requestBgm(bgmFor(state.screen, state.currentLevel));
