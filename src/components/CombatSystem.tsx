@@ -6,6 +6,7 @@ import { applyEnemyStatus } from "../game/effects";
 import { getUpgradeStats } from "../game/progression";
 import { getSkin, skinColor, type SkinId } from "../game/skins";
 import { useGameStore } from "../game/store";
+import { weaponMuzzleWorldPosition } from "../game/weaponMuzzle";
 
 type Trace = {
   id: number;
@@ -48,25 +49,28 @@ function TraceLine({ trace }: { trace: Trace }) {
   const skin = getSkin(trace.skin);
   const motif = skin?.motif;
   const streak = Math.min(1.15, Math.max(.25, length * .11));
+  const direction = useMemo(() => to.clone().sub(from).normalize(), [from, to]);
   const quaternion = useMemo(
     () =>
       new THREE.Quaternion().setFromUnitVectors(
         new THREE.Vector3(0, 1, 0),
-        to.clone().sub(from).normalize(),
+        direction,
       ),
-    [from, to],
+    [direction],
   );
 
   useFrame(() => {
     if (!group.current) return;
     const progress = THREE.MathUtils.clamp((performance.now() - trace.startedAt) / trace.durationMs, 0, 1);
-    group.current.position.copy(from).lerp(to, progress);
-    group.current.scale.setScalar(Math.max(.18, 1 - progress * .58));
+    const traveled = progress * length;
+    const visibleLength = Math.min(streak, traveled);
+    group.current.position.copy(from).addScaledVector(direction, traveled - visibleLength / 2);
+    group.current.scale.set(1, Math.max(.001, visibleLength / streak), 1);
     if (core.current) core.current.opacity = (trace.hit ? .94 : .72) * (1 - progress * .8);
   });
 
   return (
-    <group ref={group} position={from} quaternion={quaternion} userData={{ ignoreProjectile: true }}>
+    <group ref={group} position={from} quaternion={quaternion} scale={[1, .001, 1]} userData={{ ignoreProjectile: true }}>
       <mesh>
         <cylinderGeometry args={[0.005, 0.014, streak, 5]} />
         <meshBasicMaterial
@@ -160,7 +164,7 @@ function inheritedUserData(object: THREE.Object3D, key: string) {
 }
 
 export function CombatSystem() {
-  const { camera, scene } = useThree();
+  const { camera, scene, gl } = useThree();
   const lastShot = useRef(0);
   const aimReadyAt = useRef(0);
   const emptyAlertAt = useRef(0);
@@ -403,6 +407,7 @@ export function CombatSystem() {
         (currentWeapon === "shotgun" ? Math.pow(0.75, state.upgrades.shotgunChoke) : 1);
       const hits = new Map<string, HitSummary>();
       const candidates = projectileMeshes(scene);
+      const muzzle = weaponMuzzleWorldPosition(camera, gl.domElement, currentWeapon, aimed);
 
       const pelletCount = currentWeapon === "sniper" && state.upgrades.sniperTwin ? 2 :
         Math.round((config.pellets + (currentWeapon === "shotgun" ? state.upgrades.shotgunPellets * 2 : 0)) * (currentWeapon === "shotgun" && state.upgrades.shotgunDouble ? 1.3 : 1));
@@ -416,10 +421,6 @@ export function CombatSystem() {
           camera,
         );
 
-        const origin = raycaster.ray.origin
-          .clone()
-          .add(raycaster.ray.direction.clone().multiplyScalar(0.9));
-        if (currentWeapon === "sniper" && pellet === 1) origin.x += 0.14;
         const intersections = raycaster.intersectObjects(candidates, false);
         const first = firstProjectileIntersection(intersections);
         const end = first
@@ -443,7 +444,7 @@ export function CombatSystem() {
           : undefined;
 
         if (currentWeapon !== "shotgun" || pellet < 3) {
-          addTrace(origin, end, Boolean(targetId || propId || destructibleId));
+          addTrace(muzzle, end, Boolean(targetId || propId || destructibleId));
         }
 
         if (!first) continue;
@@ -725,6 +726,7 @@ export function CombatSystem() {
     };
   }, [
     camera,
+    gl,
     cycleWeapon,
     reload,
     scene,

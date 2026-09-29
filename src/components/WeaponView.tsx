@@ -98,6 +98,9 @@ function KnifeHipArt() {
 }
 
 function HipWeaponArt({ weapon, skin, firing, reloading, preview=false }: { weapon: WeaponId; skin: SkinId; firing:boolean; reloading:boolean; preview?:boolean }) {
+  const muzzle = skin === "default"
+    ? { rifle: [310, 245], shotgun: [297, 235], sniper: [281, 220], knife: [0, 0] }[weapon]
+    : { rifle: [292, 232], shotgun: [286, 229], sniper: [269, 219], knife: [0, 0] }[weapon];
   return (
     <svg viewBox={preview ? "255 173 615 452" : "0 0 900 620"} role="presentation">
       <defs>
@@ -120,9 +123,11 @@ function HipWeaponArt({ weapon, skin, firing, reloading, preview=false }: { weap
         {weapon === "knife" && <KnifeHipArt />}
       </> : <SkinWeaponArt weapon={weapon} id={skin} firing={firing} reloading={reloading}/>}
 
+      {!preview && weapon !== "knife" && <circle data-weapon-muzzle={weapon} cx={muzzle[0]} cy={muzzle[1]} r="0" />}
+
       {skin === "default" && weapon !== "knife" && (
-        <g className="muzzle-spark">
-          <path d="M304 240 l-26 -17 M304 240 l-4 -28 M304 240 l21 -20 M304 240 l28 4" />
+        <g className="muzzle-spark" transform={`translate(${muzzle[0]} ${muzzle[1]})`}>
+          <path d="M0 0 l-24 -15 M0 0 l-4 -26 M0 0 l20 -16 M0 0 l27 4" />
         </g>
       )}
     </svg>
@@ -134,6 +139,7 @@ export function SkinWeaponPreview({weapon,skin,firing=false}:{weapon:WeaponId;sk
 }
 
 function ScopedWeaponArt({ weapon, skin }: { weapon: WeaponId; skin: SkinId }) {
+  const muzzle = { rifle: [500, 452], shotgun: [500, 366], sniper: [500, 489], knife: [0, 0] }[weapon];
   return (
     <svg className="weapon-scope-model" viewBox="0 0 1000 600" role="presentation">
       {skin === "default" && weapon === "sniper" && (
@@ -162,6 +168,8 @@ function ScopedWeaponArt({ weapon, skin }: { weapon: WeaponId; skin: SkinId }) {
         </g>
       )}
       <ScopedSkinArt weapon={weapon} id={skin}/>
+      {weapon !== "knife" && <circle data-weapon-muzzle={weapon} cx={muzzle[0]} cy={muzzle[1]} r="0" />}
+      {weapon !== "knife" && <g className="muzzle-spark" transform={`translate(${muzzle[0]} ${muzzle[1]})`}><path d="M0 0 l-16 -15 M0 0 v-22 M0 0 l16 -15" /></g>}
     </svg>
   );
 }
