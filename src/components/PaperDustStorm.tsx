@@ -26,6 +26,8 @@ export function PaperDustStorm() {
   const gameTime = useRef(0);
   const lastSoundCycle = useRef(-1);
   const screen = useGameStore((s) => s.screen);
+  const level = useGameStore((s) => s.currentLevel);
+  const enemyHitAt = useRef<Record<string, number>>({});
 
   useFrame((_, delta) => {
     if (screen !== "playing" || useGameStore.getState().tutorialOpen) {
@@ -36,18 +38,21 @@ export function PaperDustStorm() {
     }
     gameTime.current += Math.min(delta, 0.1);
     const elapsed = gameTime.current;
-    const cycle = Math.max(0, Math.floor((elapsed - 15) / 15));
-    const phase = elapsed < 15 ? -1 : (elapsed - 15) % 15;
+    const period = level >= 7 ? 16 : 18;
+    const warningSeconds = level >= 7 ? 5 : 6;
+    const activeSeconds = level >= 7 ? 5 : 4;
+    const cycle = Math.max(0, Math.floor((elapsed - period) / period));
+    const phase = elapsed < period ? -1 : (elapsed - period) % period;
     const region = regions[cycle % regions.length];
-    const warningActive = phase >= 0 && phase < 8;
-    const stormActive = phase >= 8 && phase < 13;
+    const warningActive = phase >= 0 && phase < warningSeconds;
+    const stormActive = phase >= warningSeconds && phase < warningSeconds + activeSeconds;
     if (stormActive && lastSoundCycle.current !== cycle) {
       lastSoundCycle.current = cycle;
       window.dispatchEvent(new CustomEvent("world-sfx", { detail: { kind: "paperWind", position: [region.x, 2, region.z] } }));
     }
-    const state = phase < 0 ? `PAPER STORM IN ${Math.ceil(15 - elapsed)}S · WATCH THE RED ZONE`
-      : warningActive ? `PAPER STORM IN ${Math.ceil(8 - phase)}S · LEAVE THE RED ZONE`
-        : stormActive ? `PAPER STORM ACTIVE · ${Math.ceil(13 - phase)}S LEFT` : "PAPER STORM CLEARED";
+    const state = phase < 0 ? `PAPER STORM IN ${Math.ceil(period - elapsed)}S · WATCH THE RED ZONE`
+      : warningActive ? `PAPER STORM IN ${Math.ceil(warningSeconds - phase)}S · LEAVE THE RED ZONE`
+        : stormActive ? `PAPER STORM ACTIVE · ${Math.ceil(warningSeconds + activeSeconds - phase)}S LEFT` : "PAPER STORM CLEARED";
     if (state !== noticePhase.current) {
       noticePhase.current = state;
       window.dispatchEvent(new CustomEvent("map-hazard-notice", { detail: { message: state } }));
@@ -59,7 +64,7 @@ export function PaperDustStorm() {
       warning.current.scale.set(region.w, 1, region.d);
     }
     if (warningFill.current) {
-      const urgency = phase / 8;
+      const urgency = phase / warningSeconds;
       warningFill.current.opacity = 0.31 + urgency * 0.2 + Math.abs(Math.sin(elapsed * (5 + urgency * 13))) * 0.19;
     }
     if (stormFloor.current) {
@@ -104,9 +109,16 @@ export function PaperDustStorm() {
 
     if (elapsed - hitAt.current < 0.8) return;
     const live = useGameStore.getState();
+    for (const [id, [ex, ey, ez]] of Object.entries(live.enemyPositions)) {
+      if (live.eliminated.includes(id) || elapsed - (enemyHitAt.current[id] ?? 0) < 1.5) continue;
+      if (Math.abs(ex - region.x) < region.w / 2 && Math.abs(ez - region.z) < region.d / 2 && ey < 8) {
+        enemyHitAt.current[id] = elapsed;
+        window.dispatchEvent(new CustomEvent("boss-hit", { detail: { id, damage: hazardDamage(11, live.currentLevel, live.ngPlusCycle) * .35, part: "body" } }));
+      }
+    }
     const [x, y, z] = live.playerPosition;
     if (Math.abs(x - region.x) < region.w / 2 && Math.abs(z - region.z) < region.d / 2 && y < 8) {
-      live.damagePlayer(hazardDamage(11, live.currentLevel, live.ngPlusCycle), [region.x, 0, region.z]);
+      live.damagePlayer(hazardDamage(11, live.currentLevel, live.ngPlusCycle), [region.x, 0, region.z], true);
       hitAt.current = elapsed;
     }
   });

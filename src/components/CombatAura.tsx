@@ -2,6 +2,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { useGameStore } from "../game/store";
+import { enemyHpScale } from "../game/levels";
 
 export function CombatAura() {
   const ring = useRef<THREE.Mesh>(null);
@@ -10,6 +11,7 @@ export function CombatAura() {
   const balls = useRef<(THREE.Group | null)[]>([]);
   const lastBurn = useRef(0);
   const lastNav = useRef(0);
+  const lastVisibleAt = useRef(0);
   const { camera } = useThree();
   const scanTargets = useGameStore((s) => s.scanTargets);
   const upgrades = useGameStore((s) => s.upgrades);
@@ -23,7 +25,9 @@ export function CombatAura() {
       const [px, py, pz] = state.playerPosition;
       Object.entries(state.enemyPositions).forEach(([id, [x, y, z]]) => {
         if (Math.hypot(px - x, pz - z) < 5 && Math.abs(py - y) < 4.5) {
-          window.dispatchEvent(new CustomEvent("boss-hit", { detail: { id, damage: 30, part: "body" } }));
+          const baseHp = id.startsWith("target") ? 250 : id.startsWith("paper") ? 105 : id.startsWith("pen") ? 145 : id.startsWith("statue") ? 300 : 120;
+          const damage = state.evolutions.includes("returnToSender") ? Math.min(65, 25 + baseHp * enemyHpScale(state.currentLevel, state.ngPlusCycle) * .05) : 20;
+          window.dispatchEvent(new CustomEvent("boss-hit", { detail: { id, damage, part: "body" } }));
         }
       });
     };
@@ -67,18 +71,31 @@ export function CombatAura() {
     }
     if (now - lastNav.current > 0.13) {
       lastNav.current = now;
-      const marks: { id: string; edge: string; offset: number }[] = [];
-      if (screen === "playing" && performance.now() < scanUntil) {
-        scanTargets.forEach((id) => {
+      const marks: { id: string; edge: string; offset: number; distance: number; vertical: string; scan: boolean }[] = [];
+      const liveTargets = Object.keys(live.enemyPositions).filter(id => !live.eliminated.includes(id));
+      const hasVisible = liveTargets.some(id => {
+        const point = new THREE.Vector3(...live.enemyPositions[id]);
+        const direction = point.clone().sub(camera.position);
+        return direction.dot(camera.getWorldDirection(new THREE.Vector3())) > 0 && Math.abs(point.project(camera).x) < .83 && Math.abs(point.y) < .7;
+      });
+      if (hasVisible) lastVisibleAt.current = performance.now();
+      const passive = liveTargets.length <= 3 || performance.now() - lastVisibleAt.current > 3000;
+      if (screen === "playing" && (performance.now() < scanUntil || passive)) {
+        const scanning = performance.now() < scanUntil;
+        const displayed = scanning ? scanTargets : liveTargets.sort((a, b) =>
+          new THREE.Vector3(...live.enemyPositions[a]).distanceTo(camera.position) - new THREE.Vector3(...live.enemyPositions[b]).distanceTo(camera.position)).slice(0, 1);
+        displayed.forEach((id) => {
           const pos = live.enemyPositions[id];
           if (!pos) return;
-          const target = new THREE.Vector3(...pos).project(camera);
-          if (target.z > 0 && Math.abs(target.x) < 0.83 && Math.abs(target.y) < 0.7) return;
           const direction = new THREE.Vector3(...pos).sub(camera.position).applyQuaternion(camera.quaternion.clone().invert());
-          const dx = direction.x * (direction.z > 0 ? -1 : 1);
-          const dy = direction.y * (direction.z > 0 ? -1 : 1);
+          const behind = direction.z > 0;
+          const target = new THREE.Vector3(...pos).project(camera);
+          if (!behind && Math.abs(target.x) < .83 && Math.abs(target.y) < .7) return;
+          const dx = direction.x * (behind ? -1 : 1);
+          const dy = direction.y * (behind ? -1 : 1);
           const edge = Math.abs(dx) > Math.abs(dy) ? dx < 0 ? "left" : "right" : dy > 0 ? "top" : "bottom";
-          marks.push({ id, edge, offset: Math.max(-38, Math.min(38, (edge === "left" || edge === "right" ? -target.y : target.x) * 35)) });
+          marks.push({ id, edge, offset: Math.max(-38, Math.min(38, (edge === "left" || edge === "right" ? -target.y : target.x) * 35)),
+            distance: Math.round(new THREE.Vector3(...pos).distanceTo(camera.position)), vertical: pos[1] - camera.position.y > 3 ? "↑" : pos[1] - camera.position.y < -3 ? "↓" : "", scan: scanning });
         });
       }
       window.dispatchEvent(new CustomEvent("scan-directions", { detail: marks.slice(0, 8) }));

@@ -1,16 +1,8 @@
 import { useState } from "react";
-import {
-  BookOpen,
-  Crosshair,
-  ChevronLeft,
-  Github,
-  LockKeyhole,
-  Play,
-  SlidersHorizontal,
-  ShoppingBag,
-} from "lucide-react";
+import { BookOpen, ChevronLeft, LockKeyhole, Play, SlidersHorizontal, Sparkles } from "lucide-react";
 import { LEVELS } from "../game/levels";
 import { useGameStore } from "../game/store";
+import { type UpgradeId } from "../game/progression";
 import { ControlsList } from "./ControlsList";
 import { GearShopScene } from "./GearShopScene";
 import { FullscreenToggle } from "./FullscreenToggle";
@@ -19,201 +11,107 @@ import { EquipmentHub } from "./EquipmentHub";
 import { Arsenal } from "./Arsenal";
 import { SkillTree } from "./SkillTree";
 import { ResetDataButton } from "./ResetDataButton";
+import { ProgressStrip } from "./ProgressStrip";
 import { enterStageAfterCurtain } from "../game/sceneTransition";
 
+type Scene = "home" | "stages" | "desk" | "archives" | "options";
+type DeskTab = "loadout" | "magic" | "shop" | "arsenal";
+type ArchiveTab = "story" | "bestiary";
+const deskTabs: DeskTab[] = ["loadout", "magic", "shop", "arsenal"];
+
 export function MainMenu() {
-  const startLevel = useGameStore((state) => state.startLevel);
-  const unlockedLevel = useGameStore((state) => state.unlockedLevel);
-  const hearts = useGameStore((state) => state.hearts);
-  const champion = useGameStore((state) => state.champion);
-  const ngPlusCycle = useGameStore((state) => state.ngPlusCycle);
-  const currentLevel = useGameStore((state) => state.currentLevel);
-  const startNewGamePlus = useGameStore((state) => state.startNewGamePlus);
-  const readComic = useGameStore((state) => state.readComic);
-  const sensitivity = useGameStore((state) => state.sensitivity);
-  const bgmVolume = useGameStore((state) => state.bgmVolume);
-  const sfxVolume = useGameStore((state) => state.sfxVolume);
-  const setSensitivity = useGameStore((state) => state.setSensitivity);
-  const setBgmVolume = useGameStore((state) => state.setBgmVolume);
-  const setSfxVolume = useGameStore((state) => state.setSfxVolume);
-  const [optionsOpen, setOptionsOpen] = useState(false);
-  const [levelSelectOpen, setLevelSelectOpen] = useState(false);
-  const [controlsOpen, setControlsOpen] = useState(false);
-  const [shopOpen, setShopOpen] = useState(false);
-  const [encyclopediaOpen, setEncyclopediaOpen] = useState(false);
-  const [equipmentOpen, setEquipmentOpen] = useState(false);
-  const [arsenalOpen, setArsenalOpen] = useState(false);
-  const [treeOpen, setTreeOpen] = useState(false);
-  const coins = useGameStore((state) => state.coins);
+  const state = useGameStore();
+  const [scene, setScene] = useState<Scene>(() => {
+    const landing = sessionStorage.getItem("sab-menu-scene"); sessionStorage.removeItem("sab-menu-scene");
+    return new URLSearchParams(location.search).has("arsenal") || landing === "desk" ? "desk" : landing === "stages" ? "stages" : "home";
+  });
+  const [returnTo, setReturnTo] = useState<"home" | "stages">(state.currentLevel > 1 ? "stages" : "home");
+  const [deskTab, setDeskTab] = useState<DeskTab>(new URLSearchParams(location.search).has("arsenal") ? "arsenal" : "loadout");
+  const [archiveTab, setArchiveTab] = useState<ArchiveTab>("story");
+  const [replayTopic, setReplayTopic] = useState<string | null>(null);
+  const back = () => setScene(scene === "desk" ? returnTo : "home");
+  const prepare = (origin: "home" | "stages", tab: DeskTab = "loadout") => { setReturnTo(origin); setDeskTab(tab); setScene("desk"); };
+  const activeCards = (Object.entries(state.upgrades) as [UpgradeId, number][]).filter(([, count]) => count > 0);
+  const selectedSpell = state.selectedMagic ? `${state.selectedMagic.toUpperCase()} · TIER ${state.magic[state.selectedMagic]}` : "NOT LEARNED";
 
-  if (shopOpen) return <GearShopScene onBack={() => { setShopOpen(false); window.dispatchEvent(new Event("ui-scene-open")); }} />;
-  if (treeOpen) return <SkillTree onBack={() => setTreeOpen(false)} />;
-  if (arsenalOpen) return <Arsenal onBack={() => setArsenalOpen(false)} />;
-  if (equipmentOpen) return <EquipmentHub onBack={() => setEquipmentOpen(false)} onShop={() => setShopOpen(true)} onStages={() => {setEquipmentOpen(false);setLevelSelectOpen(true);}} onTree={() => setTreeOpen(true)} onArsenal={() => setArsenalOpen(true)} />;
-  if (encyclopediaOpen) return <MonsterEncyclopedia onBack={() => setEncyclopediaOpen(false)} />;
-
-  return (
-    <main className="main-menu-shell">
-      <div className="main-menu-speed-lines" aria-hidden="true" />
-      {!levelSelectOpen && <div className="github-comic-bubble"><a href="https://github.com/medissl" target="_blank" rel="noreferrer">Checkout my github for more games!</a></div>}
-      <section
-        className={`main-menu-card ${levelSelectOpen ? "is-level-select" : ""}`}
-      >
-        {!levelSelectOpen ? (
-          <>
-            <p className="main-menu-kicker">AFTER HOURS // DREAM TERMINAL</p>
-            <h1>SHOOT<br />A BOSS</h1>
-            <p className="main-menu-copy">
-              The paperwork can wait. The dream is still running.
-            </p>
-
-            <div className="main-menu-actions">
-              <button
-                type="button"
-                onClick={() => {
-                  setOptionsOpen(false);
-                  setShopOpen(false);
-                  setLevelSelectOpen(true);
-                }}
-              >
-                <Play size={17} /> PLAY DREAM
-              </button>
-
-              {unlockedLevel >= 10 && champion && <button className="ng-plus-button" type="button" onClick={() => enterStageAfterCurtain(startNewGamePlus)}>
-                NG+ (surprised u made it this far) · {champion.ready ? `LOOP ${champion.cycle + 1}` : `CONTINUE LOOP ${champion.cycle}`}
-              </button>}
-
-              <button
-                type="button"
-                onClick={() => setOptionsOpen((value) => !value)}
-              >
-                <SlidersHorizontal size={17} /> OPTIONS
-              </button>
-
-              <button type="button" onClick={readComic}>
-                <BookOpen size={17} /> READ COMIC AGAIN
-              </button>
-
-              <button type="button" onClick={() => setEncyclopediaOpen(true)}>
-                <BookOpen size={17} /> MONSTER ENCYCLOPEDIA
-              </button>
-              <button type="button" onClick={() => setArsenalOpen(true)}><Crosshair size={17}/> THE ARSENAL</button>
-              <button type="button" onClick={() => setEquipmentOpen(true)}>✦ PLAYER EQUIPMENT</button>
-
-              <a href="https://github.com/medissl" target="_blank" rel="noreferrer">
-                <Github size={17} /> CREATOR ↗
-              </a>
-            </div>
-
-            {optionsOpen && (
-              <div className="main-menu-options">
-                <FullscreenToggle />
-                <button type="button" className="controls-toggle" onClick={() => setControlsOpen((value) => !value)}>
-                  CONTROLS {controlsOpen ? "−" : "+"}
-                </button>
-                {controlsOpen && <ControlsList />}
-                <label className="sensitivity-control">
-                  <span>CAMERA SENSITIVITY</span>
-                  <b>{sensitivity.toFixed(2)}×</b>
-                  <input
-                    type="range"
-                    min="0.25"
-                    max="1.6"
-                    step="0.05"
-                    value={sensitivity}
-                    onChange={(event) =>
-                      setSensitivity(Number(event.target.value))
-                    }
-                  />
-                </label>
-
-                <label className="sensitivity-control audio-control">
-                  <span>BGM VOLUME</span>
-                  <b>{Math.round(bgmVolume * 100)}%</b>
-                  <input
-                    type="range"
-                    min="0"
-                    max="1"
-                    step="0.05"
-                    value={bgmVolume}
-                    onChange={(event) =>
-                      setBgmVolume(Number(event.target.value))
-                    }
-                  />
-                </label>
-
-                <label className="sensitivity-control audio-control">
-                  <span>SFX VOLUME</span>
-                  <b>{Math.round(sfxVolume * 100)}%</b>
-                  <input
-                    type="range"
-                    min="0"
-                    max="1"
-                    step="0.05"
-                    value={sfxVolume}
-                    onChange={(event) =>
-                      setSfxVolume(Number(event.target.value))
-                    }
-                  />
-                </label>
-                <ResetDataButton />
-              </div>
-            )}
-
-            <div className="main-menu-note">
-              <span>WASD</span> move · <span>1–4</span> weapons · <span>LMB</span> attack · <span>RMB</span> aim · <span>G</span> paper bomb · <span>F</span> magic
-            </div>
-          </>
-        ) : (
-          <div className="stage-select">
-            <button
-              type="button"
-              className="stage-select__back"
-              onClick={() => setLevelSelectOpen(false)}
-            >
-              <ChevronLeft size={16} /> BACK
-            </button>
-            <p className="main-menu-kicker">DREAM MAP // 10 DEADLINES</p>
-            <div className="stage-select__wallet">
-              <span>HEARTS {"♥".repeat(hearts)}{"♡".repeat(5 - hearts)}</span>
-              <span><b className="doodle-coin" aria-hidden="true">◉</b> {coins} COINS</span>
-              <button type="button" onClick={() => { setShopOpen(true); window.dispatchEvent(new Event("ui-scene-open")); }}><ShoppingBag size={17} /> SHOP →</button>
-            </div>
-            <h2>CHOOSE<br />A STAGE</h2>
-            <p className="stage-select__copy">
-              Clear stages in order. Your cards and checkpoint carry forward when you return to the menu. A lost round spends a heart;
-              losing all five resets the dream to Level 1.
-            </p>
-
-            <div className="stage-road">
-              {LEVELS.map((level, index) => {
-                const unlocked = ngPlusCycle === 0 && level.level === currentLevel && level.level <= unlockedLevel && !champion?.ready;
-                const completed = level.level < currentLevel || (champion?.ready && level.level <= 10);
-                return (
-                  <button
-                    key={level.level}
-                    type="button"
-                    className={`stage-node stage-node--${level.theme} ${unlocked ? "is-unlocked" : completed ? "is-completed" : "is-locked"}`}
-                    style={{ "--stage-index": index } as React.CSSProperties}
-                    disabled={!unlocked}
-                    onClick={() => enterStageAfterCurtain(() => startLevel(level.level))}
-                  >
-                    <span className="stage-node__number">
-                      {completed ? "✓" : unlocked ? level.level : <LockKeyhole size={16} />}
-                    </span>
-                    <span className="stage-node__text">
-                      <strong>{level.name}</strong>
-                      <small>{completed ? "COMPLETED" : level.difficulty}</small>
-                    </span>
-                  </button>
-                );
-              })}
-              <span className="stage-road__line" aria-hidden="true" />
-            </div>
-          </div>
-        )}
-      </section>
-      <small className="creator-credit creator-credit--menu">Made by Medianto Susilo</small>
-    </main>
-  );
+  return <main className={`main-menu-shell main-menu-shell--${scene}`}>
+    <div className="main-menu-speed-lines" aria-hidden="true" />
+    {scene === "home" && <div className="github-comic-bubble"><a href="https://github.com/medissl" target="_blank" rel="noreferrer">Checkout my github for more games!</a></div>}
+    {scene === "home" && <section className="main-menu-card">
+      <p className="main-menu-kicker">AFTER HOURS // DREAM TERMINAL</p><h1>SHOOT<br />A BOSS</h1>
+      <p className="main-menu-copy">The paperwork can wait. The dream is still running.</p>
+      <ProgressStrip />
+      <div className="main-menu-actions">
+        <button onClick={() => setScene("stages")}><Play size={17} /> PLAY DREAM</button>
+        <button onClick={() => prepare("home")}><Sparkles size={17} /> DREAM DESK</button>
+        <button onClick={() => setScene("archives")}><BookOpen size={17} /> ARCHIVES</button>
+        <button onClick={() => setScene("options")}><SlidersHorizontal size={17} /> OPTIONS</button>
+      </div>
+      <div className="main-menu-note"><span>WASD</span> move · <span>1–4</span> weapons · <span>LMB</span> attack · <span>RMB</span> aim · <span>G</span> paper bomb</div>
+    </section>}
+    {scene === "stages" && <section className="main-menu-card is-level-select"><div className="stage-select">
+      <button className="stage-select__back" onClick={back}><ChevronLeft size={16} /> BACK</button>
+      <p className="main-menu-kicker">PLAY DREAM // TEN DEADLINES</p><h2>DREAM<br />MAP</h2>
+      <ProgressStrip compact />
+      <div className="stage-run-summary">
+        <span>RUN CARDS <b>{activeCards.reduce((sum, [, count]) => sum + count, 0)}</b></span>
+        <span>MAGIC <b>{selectedSpell}</b></span>
+        <span>GEAR <b>{state.equippedGear.length}/4 EQUIPPED</b></span>
+        <button onClick={() => prepare("stages")}>PREPARE →</button>
+      </div>
+      <p className="stage-select__copy">Continue your active dream. Clearing a stage unlocks the next deadline.</p>
+      {state.unlockedLevel >= 10 && state.champion && <button className="ng-plus-button" onClick={() => enterStageAfterCurtain(state.startNewGamePlus)}>
+        {state.champion.ready ? `START NG+ LOOP ${state.champion.cycle + 1}` : `CONTINUE NG+ LOOP ${state.champion.cycle}`}
+      </button>}
+      <div className="stage-road">{LEVELS.map((level, index) => {
+        const available = state.ngPlusCycle === 0 && level.level === state.currentLevel && level.level <= state.unlockedLevel && !state.champion?.ready;
+        const completed = level.level < state.currentLevel || Boolean(state.champion?.ready);
+        return <button key={level.level} className={`stage-node stage-node--${level.theme} ${available ? "is-unlocked" : completed ? "is-completed" : "is-locked"}`}
+          style={{ "--stage-index": index } as React.CSSProperties} disabled={!available}
+          onClick={() => enterStageAfterCurtain(() => state.startLevel(level.level))}>
+          <span className="stage-node__number">{completed ? "✓" : available ? level.level : <LockKeyhole size={16} />}</span>
+          <span className="stage-node__text"><strong>{level.name}</strong><small>{completed ? "COMPLETED" : level.difficulty}</small></span>
+        </button>;
+      })}<span className="stage-road__line" aria-hidden="true" /></div>
+    </div></section>}
+    {scene === "desk" && <div className="dream-desk">
+      <header className="dream-desk__header"><button onClick={back}><ChevronLeft size={17} /> {returnTo === "stages" ? "DREAM MAP" : "MENU"}</button><div><small>ONE HOME FOR YOUR BUILD</small><h1>DREAM DESK</h1></div><ProgressStrip compact /></header>
+      <nav className="dream-desk__tabs" aria-label="Dream Desk">{deskTabs.map(tab => <button key={tab} className={deskTab === tab ? "is-active" : ""} onClick={() => setDeskTab(tab)}>{tab.toUpperCase()}</button>)}</nav>
+      <div className="dream-desk__content">
+        {deskTab === "loadout" && <EquipmentHub />}
+        {deskTab === "magic" && <SkillTree onBack={back} />}
+        {deskTab === "shop" && <GearShopScene onBack={back} />}
+        {deskTab === "arsenal" && <Arsenal onBack={back} />}
+      </div>
+    </div>}
+    {scene === "archives" && <div className="dream-archives">
+      <header><button onClick={back}><ChevronLeft size={17} /> MENU</button><h1>ARCHIVES</h1></header>
+      <nav className="dream-desk__tabs" aria-label="Archives">{(["story", "bestiary"] as ArchiveTab[]).map(tab => <button key={tab} className={archiveTab === tab ? "is-active" : ""} onClick={() => setArchiveTab(tab)}>{tab.toUpperCase()}</button>)}</nav>
+      {archiveTab === "story" ? <div className="archive-story">{Array.from({ length: 6 }, (_, i) => <figure key={i}><img src={`/comicopening${i + 1}.png`} alt={`Opening comic panel ${i + 1}`} /><figcaption>PAGE {i + 1} / 6</figcaption></figure>)}</div> : <MonsterEncyclopedia onBack={back} />}
+    </div>}
+    {scene === "options" && <section className="main-menu-card main-menu-options-page">
+      <button className="stage-select__back" onClick={back}><ChevronLeft size={16} /> MENU</button><h1>OPTIONS</h1>
+      <div className="main-menu-options"><FullscreenToggle /><ControlsList />
+        <label className="sensitivity-control"><span>CAMERA SENSITIVITY</span><b>{state.sensitivity.toFixed(2)}×</b><input type="range" min=".25" max="1.6" step=".05" value={state.sensitivity} onChange={(e) => state.setSensitivity(Number(e.target.value))} /></label>
+        <label className="sensitivity-control audio-control"><span>BGM VOLUME</span><b>{Math.round(state.bgmVolume * 100)}%</b><input type="range" min="0" max="1" step=".05" value={state.bgmVolume} onChange={(e) => state.setBgmVolume(Number(e.target.value))} /></label>
+        <label className="sensitivity-control audio-control"><span>SFX VOLUME</span><b>{Math.round(state.sfxVolume * 100)}%</b><input type="range" min="0" max="1" step=".05" value={state.sfxVolume} onChange={(e) => state.setSfxVolume(Number(e.target.value))} /></label>
+        <h2>TUTORIAL REPLAY</h2><div className="tutorial-topic-list">{Object.keys(tutorials).map(topic => <button key={topic} onClick={() => setReplayTopic(topic)}>{topic}</button>)}</div>
+        {replayTopic && <p className="tutorial-topic-detail"><b>{replayTopic}</b> · {tutorials[replayTopic]} <button onClick={() => setReplayTopic(null)}>CLOSE</button></p>}
+        <ResetDataButton />
+      </div>
+    </section>}
+    <small className="creator-credit creator-credit--menu">Made by Medianto Susilo</small>
+  </main>;
 }
+
+const tutorials: Record<string, string> = {
+  CONTROLS: "WASD move, Shift sprint, C slide, Space jump, aim with RMB, fire with LMB, R reload, 1–4 switch weapons, G throw a paper bomb.",
+  CARDS: "Each cleared stage offers one card. Cards build the current dream run and can combine into evolutions.",
+  "XP & LEVELS": "Successful stage clears award XP. Every player level grants a Skill Point, with a bonus point every fifth level.",
+  MAGIC: "Spend Skill Points in the Magic tab. Equip an element there, then press F to cast in combat.",
+  GEAR: "Purchased gear is permanent. Equip up to four owned pieces in Loadout.",
+  SHOP: "Spend coins earned from successful clears on permanent gear or heart recovery.",
+  "SKINS & CRATES": "A crate costs 300 coins and guarantees a new cosmetic theme for its weapon. Skins do not change combat stats.",
+  "HEARTS / DREAM COLLAPSE": "A death costs one heart. When they run out, the dream returns to its latest anchor while permanent progress remains.",
+  "SCAN / TARGET MARKERS": "Press Q to mark nearby targets. Edge markers point toward enemies outside your view.",
+};

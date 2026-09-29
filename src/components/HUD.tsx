@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { WEAPONS, type WeaponId } from "../game/config";
 import { getLevelDefinition } from "../game/levels";
 import { UPGRADE_CARDS } from "../game/progression";
-import { useGameStore } from "../game/store";
+import { equippedGearRank, xpToNextLevel, useGameStore } from "../game/store";
 import { getSkin } from "../game/skins";
 
 const WEAPON_ORDER: WeaponId[] = ["sniper", "rifle", "shotgun", "knife"];
@@ -18,6 +18,7 @@ function shortWeaponLabel(id: WeaponId) {
 export function HUD() {
   const hp = useGameStore((state) => state.hp);
   const maxHp = useGameStore((state) => state.maxHp);
+  const guardHp = useGameStore((state) => state.guardHp);
   const weapon = useGameStore((state) => state.weapon);
   const ammo = useGameStore((state) => state.ammo);
   const grenades = useGameStore((state) => state.grenades);
@@ -37,18 +38,25 @@ export function HUD() {
   const scanCooldownUntil = useGameStore((state) => state.scanCooldownUntil);
   const upgrades = useGameStore((state) => state.upgrades);
   const coins = useGameStore((state) => state.coins);
+  const playerLevel = useGameStore((state) => state.playerLevel);
+  const xp = useGameStore((state) => state.xp);
+  const skillPoints = useGameStore((state) => state.skillPoints);
   const shieldCharges = useGameStore((state) => state.shieldCharges);
   const shieldReadyAt = useGameStore((state) => state.shieldReadyAt);
   const selectedMagic = useGameStore((state) => state.selectedMagic);
   const magicReadyAt = useGameStore((state) => state.magicReadyAt);
   const magic = useGameStore((state) => state.magic);
+  const fullReport = useGameStore((state) => equippedGearRank(state, "lens") >= 5);
+  const evolutions = useGameStore((state) => state.evolutions);
+  const crunchUntil = useGameStore((state) => state.crunchUntil);
+  const paperTrailUntil = useGameStore((state) => state.paperTrailUntil);
   const [now, setNow] = useState(() => performance.now());
   const [pickupNotice, setPickupNotice] = useState("");
   const [emptyAlert, setEmptyAlert] = useState(false);
   const [hazardNotice, setHazardNotice] = useState("");
   const [damageFlashKey, setDamageFlashKey] = useState(0);
   const [damageDirection, setDamageDirection] = useState("front");
-  const [scanDirections, setScanDirections] = useState<{ id: string; edge: string; offset: number }[]>([]);
+  const [scanDirections, setScanDirections] = useState<{ id: string; edge: string; offset: number; distance: number; vertical: string; scan: boolean }[]>([]);
   const [killPulseKey, setKillPulseKey] = useState(0);
   const emptyTimer = useRef<number | null>(null);
   const level = getLevelDefinition(currentLevel);
@@ -59,8 +67,8 @@ export function HUD() {
 
   useEffect(() => {
     const pickupHandler = (event: Event) => {
-      const kind = (event as CustomEvent<{ kind: "grenade" | "speed" }>).detail.kind;
-      setPickupNotice(kind === "grenade" ? "+ PAPER BOMBS" : "+ SPEED BOOST");
+      const kind = (event as CustomEvent<{ kind: "grenade" | "speed" | "health" | "ammo" }>).detail.kind;
+      setPickupNotice(({ grenade: "+ PAPER BOMB", speed: "+ SPEED BOOST", health: "+ HEALTH", ammo: "+ AMMO" })[kind]);
       window.setTimeout(() => setPickupNotice(""), 1450);
     };
 
@@ -82,7 +90,7 @@ export function HUD() {
       } else setDamageDirection("front");
       setDamageFlashKey((current) => current + 1);
     };
-    const scanHandler = (event: Event) => setScanDirections((event as CustomEvent<{ id: string; edge: string; offset: number }[]>).detail);
+    const scanHandler = (event: Event) => setScanDirections((event as CustomEvent<{ id: string; edge: string; offset: number; distance: number; vertical: string; scan: boolean }[]>).detail);
     const killHandler = () => setKillPulseKey((current) => current + 1);
     const hazardHandler = (event: Event) => setHazardNotice((event as CustomEvent<{ message: string }>).detail.message);
 
@@ -113,6 +121,7 @@ export function HUD() {
       <div className="hud-level">
         <span>{ngPlusCycle ? `NG+ ${ngPlusCycle} · ` : ""}LEVEL {currentLevel}/10</span>
         <strong>{level.name}</strong>
+        <div className="hud-xp"><span>LV {playerLevel} · {xp}/{xpToNextLevel(playerLevel)} XP · {skillPoints} SP</span><i><b style={{ width: `${Math.min(100, xp / xpToNextLevel(playerLevel) * 100)}%` }} /></i></div>
         <span className="hud-hearts" aria-label={`${hearts} hearts remaining`}>
           {Array.from({ length: 5 }, (_, index) => <b key={index} className={index < hearts ? "is-full" : ""}>{index < hearts ? "♥" : "♡"}</b>)}
         </span>
@@ -132,6 +141,9 @@ export function HUD() {
         <span>targets left</span>
         <strong>{Math.max(0, targetCount - eliminated)}</strong>
       </div>
+      {now < crunchUntil && <div className="evolution-hud">✳ CRUNCH TIME · {Math.ceil((crunchUntil - now) / 1000)}S</div>}
+      {now < paperTrailUntil && <div className="evolution-hud">╱ PAPER TRAIL · {Math.ceil((paperTrailUntil - now) / 1000)}S</div>}
+      {evolutions.length > 0 && <div className="hud-evolution-count">✳ {evolutions.length} EVOLUTION{evolutions.length === 1 ? "" : "S"}</div>}
       {selectedMagic && <div className="hud-magic"><span>F · {selectedMagic.toUpperCase()} LV {magic[selectedMagic]}</span><strong>{now < magicReadyAt ? `${Math.ceil((magicReadyAt - now)/1000)}s` : "READY ✦"}</strong></div>}
 
       <div className="hud-health">
@@ -140,6 +152,7 @@ export function HUD() {
           <div style={{ width: `${Math.min(100, (hp / maxHp) * 100)}%` }} />
         </div>
         <strong>{Math.round(hp)}</strong>
+        {guardHp > 0 && <small>+{Math.round(guardHp)} GUARD</small>}
       </div>
 
       <div className="hud-ammo-main">
@@ -185,7 +198,7 @@ export function HUD() {
       <div className="hud-scan">Q · {scanTargets.length ? `MARKED ${scanTargets.length}` : scanCooldownUntil > now ? `RECHARGE ${Math.ceil((scanCooldownUntil - now) / 1000)}S` : "MARK ENEMY"}</div>
       <div className="hud-coins"><span className="doodle-coin" aria-hidden="true">◉</span> {coins} COINS</div>
       {Boolean(shieldCharges > 0 || upgrades.shieldOrbit) && <div className="hud-shield">⬡ SHIELD {shieldCharges > 0 ? `×${shieldCharges}` : now < shieldReadyAt ? `${Math.ceil((shieldReadyAt - now) / 1000)}S` : "READY"}</div>}
-      {scanDirections.map((mark) => <div key={mark.id} className={`scan-edge scan-edge--${mark.edge}`} style={{ "--edge-offset": `${mark.offset}px` } as CSSProperties}>◆<small>TARGET</small></div>)}
+      {scanDirections.map((mark) => <div key={mark.id} className={`scan-edge scan-edge--${mark.edge} ${mark.scan ? "" : "scan-edge--passive"}`} style={{ "--edge-offset": `${mark.offset}px` } as CSSProperties}>◆<small>{mark.scan ? "TARGET" : "NEAREST"} {mark.vertical} {fullReport ? `${mark.distance}M` : ""}</small></div>)}
 
       {!scoped && (
         <div className="doodle-crosshair">

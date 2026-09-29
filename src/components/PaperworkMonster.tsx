@@ -6,7 +6,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { PAPER_MONSTER_MAX_HP } from "../game/config";
 import { enemyMotionFactor } from "../game/effects";
-import { getEnemyTuning } from "../game/levels";
+import { enemyHpScale, getEnemyTuning } from "../game/levels";
+import { claimAttack } from "../game/attackDirector";
 import { paperBlastDamage, type PaperBlast } from "../game/hazards";
 import {
   hasEnemyLineOfSight,
@@ -36,7 +37,7 @@ export function PaperworkMonster({
 }) {
   const root = useRef<THREE.Group>(null);
   const material = useRef<THREE.MeshBasicMaterial>(null);
-  const maxHp = Math.round(PAPER_MONSTER_MAX_HP * (1 + (useGameStore.getState().currentLevel + useGameStore.getState().ngPlusCycle * 10 - 1) * 0.085));
+  const maxHp = Math.round(PAPER_MONSTER_MAX_HP * enemyHpScale(useGameStore.getState().currentLevel, useGameStore.getState().ngPlusCycle));
   const hpRef = useRef(maxHp);
   const nextAttackAt = useRef(0);
   const lastStepSound = useRef(0);
@@ -191,7 +192,7 @@ export function PaperworkMonster({
       if (
         seesPlayer &&
         playerDistance < 1.45 &&
-        now >= nextAttackAt.current
+        now >= nextAttackAt.current && claimAttack(id, useGameStore.getState().runId, currentLevel, 650)
       ) {
         nextAttackAt.current = now + Math.max(0.54, 0.78 - (effectiveLevel - 1) * 0.027);
         damagePlayer(Math.round(10 * tuning.damage), [here.x, here.y + 1.1, here.z]);

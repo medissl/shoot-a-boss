@@ -1,14 +1,24 @@
-import { ArrowLeft, ShoppingBag, Map, Sparkles, Crosshair } from "lucide-react";
-import { MAGIC_TYPES, useGameStore } from "../game/store";
-import { getUpgradeCard, type UpgradeId } from "../game/progression";
+import { GEAR, satchelBonus, useGameStore } from "../game/store";
+import { getUpgradeCard, getUpgradeStats, type UpgradeId } from "../game/progression";
 
-export function EquipmentHub({ onBack, onShop, onStages, onTree, onArsenal }: { onBack: () => void; onShop: () => void; onStages: () => void; onTree: () => void; onArsenal: () => void }) {
-  const { magic, selectedMagic, selectMagic, upgrades, coins, playerLevel } = useGameStore();
-  return <main className="equipment-scene"><header><button onClick={onBack}><ArrowLeft size={18}/> MENU</button><div><small>DREAM LOADOUT // LEVEL {playerLevel}</small><h1>PLAYER EQUIPMENT</h1></div><b>◉ {coins} COINS</b></header>
-    <div className="equipment-layout"><section className="equipment-arsenal-link"><h2>YOUR WEAPONS</h2><p>Explore 22 theme families across rifle, shotgun, sniper and knife. Each build has its own body, sight, effects and sound.</p><button onClick={onArsenal}><Crosshair size={18}/> OPEN THE ARSENAL →</button></section>
-    <div className="equipment-avatar" aria-label="Player stick figure"><div className="equipment-head">PLAYER</div><div className="equipment-body"/><div className="equipment-arm left"/><div className="equipment-arm right"/><div className="equipment-leg left"/><div className="equipment-leg right"/></div>
-    <section><h2>ELEMENTAL MAGIC</h2><p>Cast with F or the mobile magic button.</p>{MAGIC_TYPES.map((kind) => <button key={kind} className={selectedMagic === kind ? "is-equipped" : ""} disabled={!magic[kind]} onClick={() => selectMagic(kind)}>✦ {kind.toUpperCase()} {magic[kind] ? `RANK ${magic[kind]}` : "LOCKED"} {selectedMagic === kind ? "✓" : ""}</button>)}<button onClick={onTree}><Sparkles size={16}/> OPEN SKILL TREE</button></section></div>
-    <div className="equipment-cards"><h2>YOUR CARDS</h2><div>{(Object.entries(upgrades) as [UpgradeId,number][]).filter(([,amount]) => amount > 0).map(([id,amount]) => <span key={id}>{getUpgradeCard(id).glyph} {getUpgradeCard(id).name} ×{amount}</span>)}{Object.values(upgrades).every((amount) => amount === 0) && <span>No cards yet. Clear a stage.</span>}</div></div>
-    <nav><button onClick={onShop}><ShoppingBag size={16}/> SHOP</button><button onClick={onTree}><Sparkles size={16}/> SKILL TREE</button><button onClick={onStages}><Map size={16}/> GO TO STAGES</button></nav>
-  </main>;
+export function EquipmentHub() {
+  const state = useGameStore();
+  const cards = (Object.entries(state.upgrades) as [UpgradeId, number][]).filter(([, count]) => count > 0);
+  const effectiveGear = (id: "vest" | "satchel") => state.equippedGear.includes(id) ? state.gear[id] : 0;
+  const maxHp = getUpgradeStats(state.upgrades).maxHp + effectiveGear("vest") * 8;
+  const bombs = getUpgradeStats(state.upgrades).grenadeCapacity + satchelBonus(effectiveGear("satchel"));
+  return <section className="loadout-page">
+    <div className="loadout-hero"><div className="equipment-avatar" aria-label="Player stick figure"><div className="equipment-head">PLAYER</div><div className="equipment-body"/><div className="equipment-arm left"/><div className="equipment-arm right"/><div className="equipment-leg left"/><div className="equipment-leg right"/></div>
+      <div><small>ACTIVE DREAM // STAGE {state.currentLevel}</small><h2>YOUR LOADOUT</h2><p>Choose up to four permanent gear pieces for the next stage. Your run cards stay with this dream.</p>
+        <div className="loadout-stats"><span>♥ {maxHp} HP</span><span>◌ {bombs} BOMBS</span><span>✦ {cards.reduce((n, [, count]) => n + count, 0)} CARDS</span><span>✧ {state.selectedMagic?.toUpperCase() ?? "NO SPELL"}</span></div></div></div>
+    <h3>PERMANENT GEAR <small>{state.equippedGear.length}/4 EQUIPPED</small></h3>
+    <div className="loadout-gear">{GEAR.map(item => {
+      const rank = state.gear[item.id]; const equipped = state.equippedGear.includes(item.id);
+      return <button key={item.id} disabled={!rank || (!equipped && state.equippedGear.length >= 4)} className={equipped ? "is-equipped" : ""} onClick={() => state.toggleGear(item.id)}>
+        <b>{item.name} · RANK {rank}</b><span>{item.detail}</span><strong>{!rank ? "BUY IN SHOP" : equipped ? "✓ EQUIPPED" : "EQUIP"}</strong>
+      </button>;
+    })}</div>
+    <h3>RUN CARDS <small>{cards.length} TYPES</small></h3>
+    <div className="loadout-cards">{cards.length ? cards.map(([id, count]) => <span key={id}><b>{getUpgradeCard(id).glyph} {getUpgradeCard(id).name}</b> ×{count}<small>{getUpgradeCard(id).description}</small></span>) : <p>Clear a stage to draft your first card.</p>}</div>
+  </section>;
 }

@@ -1,7 +1,7 @@
 export const GRENADE_COUNT = 3;
-export const BOSS_MAX_HP = 240;
-export const PAPER_MONSTER_MAX_HP = BOSS_MAX_HP / 2;
-export const PEN_MONSTER_MAX_HP = 150;
+export const BOSS_MAX_HP = 250;
+export const PAPER_MONSTER_MAX_HP = 105;
+export const PEN_MONSTER_MAX_HP = 145;
 export const ARENA_HALF_SIZE = 52;
 
 export type WeaponId = "sniper" | "rifle" | "shotgun" | "knife";
@@ -27,8 +27,8 @@ export const WEAPONS: Record<WeaponId, WeaponConfig> = {
     label: "PAPER SNIPER",
     magazine: 5,
     reserve: 25,
-    damage: 160,
-    cooldownMs: 1450,
+    damage: 175,
+    cooldownMs: 1250,
     aimDelayMs: 380,
     pellets: 1,
     hipSpread: 0.24,
@@ -41,8 +41,8 @@ export const WEAPONS: Record<WeaponId, WeaponConfig> = {
     label: "REPORT RIFLE",
     magazine: 35,
     reserve: 175,
-    damage: 32,
-    cooldownMs: 98,
+    damage: 26,
+    cooldownMs: 105,
     aimDelayMs: 100,
     pellets: 1,
     hipSpread: 0.015,
@@ -54,13 +54,13 @@ export const WEAPONS: Record<WeaponId, WeaponConfig> = {
     id: "shotgun",
     label: "STAPLE SHOTGUN",
     magazine: 5,
-    reserve: 35,
-    damage: 36,
-    cooldownMs: 850,
+    reserve: 30,
+    damage: 34,
+    cooldownMs: 820,
     aimDelayMs: 130,
-    pellets: 5,
-    hipSpread: 0.16,
-    aimedSpread: 0.11,
+    pellets: 6,
+    hipSpread: 0.14,
+    aimedSpread: 0.095,
     scopedFov: 64,
     maxRange: 32,
   },
@@ -69,14 +69,14 @@ export const WEAPONS: Record<WeaponId, WeaponConfig> = {
     label: "PAPER KNIFE",
     magazine: 0,
     reserve: 0,
-    damage: 88,
-    cooldownMs: 520,
+    damage: 100,
+    cooldownMs: 500,
     aimDelayMs: 0,
     pellets: 1,
     hipSpread: 0,
     aimedSpread: 0,
     scopedFov: 70,
-    maxRange: 2.75,
+    maxRange: 2.7,
   },
 };
 

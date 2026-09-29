@@ -7,7 +7,6 @@ import { hazardDamage } from "../game/hazards";
 import { useGameStore } from "../game/store";
 
 const colors = ["#00f9ee", "#ea3aff", "#ffe254", "#55ff8e", "#528bff"];
-const LASER_RADIUS = 12;
 const landmarkGems: [number, number, number][] = [
   [-42, 1, 5], [43, 1, -18], [-12, 1, 38], [18, 1, 37], [-38, 1, -30],
   [-23, 1, -5], [-13, 1, -15], [8, 1, -6], [18, 1, 11], [2, 1, -28],
@@ -57,8 +56,8 @@ function Crystal({ id, position }: { id: number; position: [number, number, numb
   </group>;
 }
 
-function selectedGems(cycle: number, target: [number, number, number]) {
-  const count = 3 + ((cycle * 7 + 11) % 5);
+function selectedGems(cycle: number, target: [number, number, number], level: number) {
+  const count = (level <= 3 ? 2 : level <= 6 ? 3 : 4) + cycle % 2;
   const indices = gems.map((_, index) => index);
   // The first crystal threatens the player's predicted position. The others
   // still vary by cycle, so the warning tells them where to dodge.
@@ -83,11 +82,14 @@ function GemLasers() {
   const beams = useRef<(THREE.Group | null)[]>([]);
   const elapsed = useRef(0);
   const lastHit = useRef(0);
+  const enemyHitAt = useRef<Record<string, number>>({});
   const notice = useRef("");
   const cycleCache = useRef({ cycle: -1, indices: [] as number[] });
   const lastPlayer = useRef<[number, number, number] | null>(null);
   const lastSoundPhase = useRef("");
   const screen = useGameStore((state) => state.screen);
+  const level = useGameStore((state) => state.currentLevel);
+  const radius = level <= 3 ? 7 : level <= 6 ? 8 : 9;
   useFrame((_, delta) => {
     if (screen !== "playing" || useGameStore.getState().tutorialOpen) {
       warnings.current.forEach((item) => { if (item) item.visible = false; });
@@ -103,18 +105,18 @@ function GemLasers() {
       const previous = lastPlayer.current ?? position;
       const lead = 1.6;
       const predict = (axis: 0 | 2) => THREE.MathUtils.clamp(position[axis] + THREE.MathUtils.clamp((position[axis] - previous[axis]) / Math.max(delta, 0.016), -9, 9) * lead, -49, 49);
-      cycleCache.current = { cycle, indices: selectedGems(cycle, [predict(0), position[1], predict(2)]) };
+      cycleCache.current = { cycle, indices: selectedGems(cycle, [predict(0), position[1], predict(2)], level) };
     }
     lastPlayer.current = [...position];
-    const warning = cycle > 0 && phase < 2;
-    const active = cycle > 0 && phase >= 2 && phase < 5;
+    const warning = cycle > 0 && phase < 2.5;
+    const active = cycle > 0 && phase >= 2.5 && phase < 5.3;
     const soundPhase = warning ? `${cycle}:warning` : active ? `${cycle}:active` : "idle";
     if (soundPhase !== lastSoundPhase.current) {
       lastSoundPhase.current = soundPhase;
       if (warning || active) window.dispatchEvent(new CustomEvent("world-sfx", { detail: { kind: warning ? "gemCharge" : "gemLaser", position: gems[cycleCache.current.indices[0]] } }));
     }
-    const message = warning ? `GEM LASERS IN ${Math.ceil(2 - phase)}S · LEAVE THE MARKED AREAS`
-      : active ? `GEM LASERS ACTIVE · ${Math.ceil(5 - phase)}S LEFT`
+    const message = warning ? `GEM LASERS IN ${Math.ceil(2.5 - phase)}S · LEAVE THE MARKED AREAS`
+      : active ? `GEM LASERS ACTIVE · ${Math.ceil(5.3 - phase)}S LEFT`
         : `NEXT GEM LASERS IN ${Math.ceil(10 - phase)}S`;
     if (message !== notice.current) {
       notice.current = message;
@@ -133,28 +135,36 @@ function GemLasers() {
         if (point) beam.position.set(point[0], point[1] + 8, point[2]);
       }
     }
-    if (!active || time - lastHit.current < 0.72) return;
+    if (!active) return;
+    const live = useGameStore.getState();
+    for (const [id, [ex, ey, ez]] of Object.entries(live.enemyPositions)) {
+      if (live.eliminated.includes(id) || time - (enemyHitAt.current[id] ?? 0) < 1.3) continue;
+      if (cycleCache.current.indices.some(index => Math.hypot(ex - gems[index][0], ez - gems[index][2]) < radius && Math.abs(ey - gems[index][1]) < 8)) {
+        enemyHitAt.current[id] = time;
+        window.dispatchEvent(new CustomEvent("boss-hit", { detail: { id, damage: hazardDamage(9, live.currentLevel, live.ngPlusCycle) * .35, part: "body" } }));
+      }
+    }
+    if (time - lastHit.current < 0.72) return;
     const [x, y, z] = useGameStore.getState().playerPosition;
     if (cycleCache.current.indices.some((index) => {
       const gem = gems[index];
-      return Math.hypot(x - gem[0], z - gem[2]) < LASER_RADIUS && Math.abs(y - gem[1]) < 8;
+      return Math.hypot(x - gem[0], z - gem[2]) < radius && Math.abs(y - gem[1]) < 8;
     })) {
       const closest = cycleCache.current.indices.map((index) => gems[index]).sort((a, b) => Math.hypot(x - a[0], z - a[2]) - Math.hypot(x - b[0], z - b[2]))[0];
-      const live = useGameStore.getState();
-      live.damagePlayer(hazardDamage(9, live.currentLevel, live.ngPlusCycle), closest);
+      live.damagePlayer(hazardDamage(9, live.currentLevel, live.ngPlusCycle), closest, true);
       lastHit.current = time;
     }
   });
   return <group userData={{ ignoreProjectile: true }}>
     {Array.from({ length: 7 }, (_, slot) => <group key={`warning-${slot}`} ref={(node) => { warnings.current[slot] = node; }} visible={false}>
-      <mesh rotation={[-Math.PI / 2, 0, 0]}><circleGeometry args={[LASER_RADIUS, 32]} /><meshBasicMaterial color="#f9d34a" transparent opacity={0.24} depthWrite={false} side={THREE.DoubleSide} /></mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}><ringGeometry args={[LASER_RADIUS - 0.45, LASER_RADIUS, 32]} /><meshBasicMaterial color="#fff4a0" side={THREE.DoubleSide} /></mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]}><circleGeometry args={[radius, 32]} /><meshBasicMaterial color="#f9d34a" transparent opacity={0.24} depthWrite={false} side={THREE.DoubleSide} /></mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}><ringGeometry args={[radius - 0.45, radius, 32]} /><meshBasicMaterial color="#fff4a0" side={THREE.DoubleSide} /></mesh>
     </group>)}
     {Array.from({ length: 7 }, (_, slot) => <group key={`laser-${slot}`} ref={(node) => { beams.current[slot] = node; }} visible={false}>
-      <mesh><cylinderGeometry args={[LASER_RADIUS, LASER_RADIUS, 16, 24, 1, true]} /><meshBasicMaterial color={colors[slot % colors.length]} transparent opacity={0.48} side={THREE.DoubleSide} depthWrite={false} toneMapped={false} /></mesh>
-      <mesh><cylinderGeometry args={[LASER_RADIUS * 0.54, LASER_RADIUS * 0.54, 16, 24, 1, true]} /><meshBasicMaterial color="#ffffff" transparent opacity={0.16} side={THREE.DoubleSide} depthWrite={false} toneMapped={false} /></mesh>
+      <mesh><cylinderGeometry args={[radius, radius, 16, 24, 1, true]} /><meshBasicMaterial color={colors[slot % colors.length]} transparent opacity={0.48} side={THREE.DoubleSide} depthWrite={false} toneMapped={false} /></mesh>
+      <mesh><cylinderGeometry args={[radius * 0.54, radius * 0.54, 16, 24, 1, true]} /><meshBasicMaterial color="#ffffff" transparent opacity={0.16} side={THREE.DoubleSide} depthWrite={false} toneMapped={false} /></mesh>
       <mesh><cylinderGeometry args={[0.35, 0.35, 16, 8]} /><meshBasicMaterial color="#fffaf0" transparent opacity={0.85} depthWrite={false} /></mesh>
-      <mesh position={[0, -7.8, 0]} rotation={[-Math.PI / 2, 0, 0]}><ringGeometry args={[LASER_RADIUS - 1, LASER_RADIUS, 32]}/><meshBasicMaterial color="#ffffff" side={THREE.DoubleSide} toneMapped={false} transparent opacity={0.75} depthWrite={false}/></mesh>
+      <mesh position={[0, -7.8, 0]} rotation={[-Math.PI / 2, 0, 0]}><ringGeometry args={[radius - 1, radius, 32]}/><meshBasicMaterial color="#ffffff" side={THREE.DoubleSide} toneMapped={false} transparent opacity={0.75} depthWrite={false}/></mesh>
     </group>)}
   </group>;
 }

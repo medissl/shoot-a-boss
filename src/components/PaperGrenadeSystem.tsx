@@ -151,16 +151,23 @@ export function PaperGrenadeSystem() {
     const state = useGameStore.getState();
     const stats = getUpgradeStats(state.upgrades);
     const effectiveLevel = state.currentLevel + state.ngPlusCycle * 10;
-    const radius = 8.2 * stats.grenadePower;
+    const radius = 6.5 * (1 + state.upgrades.grenadePower * .08);
+    const before = state.eliminated.length;
     window.dispatchEvent(
       new CustomEvent("paper-grenade-explode", {
         detail: {
           position,
           radius,
-          damage: 205 * (1 + (effectiveLevel - 1) * 0.05) * stats.grenadePower,
+          damage: 150 * (1 + (effectiveLevel - 1) * 0.035) * stats.grenadePower,
         },
       }),
     );
+    const after = useGameStore.getState();
+    if (after.evolutions.includes("expenseReport") && after.eliminated.length - before >= 3 && performance.now() >= after.expenseCooldownUntil) {
+      after.refillGrenades(1);
+      useGameStore.setState({ expenseCooldownUntil: performance.now() + 20000 });
+      window.dispatchEvent(new CustomEvent("map-hazard-notice", { detail: { message: "APPROVED · BOMB REFUNDED" } }));
+    }
     setGrenades((current) => current.filter((grenade) => grenade.id !== id));
     setBursts((current) => [...current, { id, position, radius }]);
   }

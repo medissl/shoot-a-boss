@@ -2,10 +2,10 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { magicHit, magicSplash, magicTrails, magicPools, magicVisuals, tickMagic } from "../game/magicEffects";
-import { type MagicType, useGameStore } from "../game/store";
+import { equippedGearRank, type MagicType, useGameStore } from "../game/store";
 
 const colors: Record<MagicType,string> = {fire:"#fb433b", crystal:"#ae65ff", ice:"#5ce6ff", water:"#3c97ff", thunder:"#ffe63f"};
-type Shot = { id:number; kind:MagicType; rank:number; position:THREE.Vector3; direction:THREE.Vector3; born:number };
+type Shot = { id:number; kind:MagicType; rank:number; overtime:boolean; position:THREE.Vector3; direction:THREE.Vector3; born:number };
 type Link = {id:number;from:[number,number,number];to:[number,number,number];color:string;until:number};
 function GroundedCrystalTrail({position}:{position:[number,number,number]}) {
   const {scene}=useThree();
@@ -25,7 +25,7 @@ function Ball({shot,onDone}:{shot:Shot;onDone:(id:number)=>void}) {
     if (!root.current) return;
     const state = useGameStore.getState();
     if (state.screen !== "playing") return;
-    const step = shot.direction.clone().multiplyScalar(Math.min(delta,.06)*27);
+    const step = shot.direction.clone().multiplyScalar(Math.min(delta,.06)*27*(equippedGearRank(state,"arcana") >= 5 ? 1.11 : 1));
     root.current.position.add(step); root.current.rotation.y += delta*8;
     if (performance.now()-lastCheck.current < 28) return;
     lastCheck.current = performance.now();
@@ -33,7 +33,7 @@ function Ball({shot,onDone}:{shot:Shot;onDone:(id:number)=>void}) {
     for (const [id, point] of Object.entries(state.enemyPositions)) {
       if (state.eliminated.includes(id)) continue;
       if (Math.hypot(pos.x-point[0],pos.z-point[2]) < (id.startsWith("target") ? 2.2 : id.startsWith("statue") ? 2.1 : 1.5) && Math.abs(pos.y-(point[1]+(id.startsWith("fly") ? 0 : 1))) < 2.7) {
-        magicHit(shot.kind,shot.rank,id,[pos.x,pos.y,pos.z]); onDone(shot.id); return;
+        magicHit(shot.kind,shot.rank,id,[pos.x,pos.y,pos.z],shot.overtime); onDone(shot.id); return;
       }
     }
     if (pos.y < .08 || Math.max(Math.abs(pos.x),Math.abs(pos.z)) > 82 || performance.now()-shot.born > 3800) {magicSplash(shot.kind,shot.rank,[pos.x,pos.y,pos.z]);onDone(shot.id);}
@@ -51,10 +51,10 @@ export function MagicSystem() {
   const nextVisual = useRef(0);
   useEffect(() => {
     const cast = (event: Event) => {
-      const {kind,rank} = (event as CustomEvent<{kind:MagicType;rank:number}>).detail;
+      const {kind,rank,overtime} = (event as CustomEvent<{kind:MagicType;rank:number;overtime:boolean}>).detail;
       const direction = new THREE.Vector3();camera.getWorldDirection(direction);
       const position = camera.getWorldPosition(new THREE.Vector3()).addScaledVector(direction,1.5);
-      setShots((current) => [...current,{id:++counter.current,kind,rank,position,direction,born:performance.now()}]);
+      setShots((current) => [...current,{id:++counter.current,kind,rank,overtime,position,direction,born:performance.now()}]);
     };
     const connect=(event:Event)=>{const detail=(event as CustomEvent<Omit<Link,"id"|"until">>).detail;setLinks((current)=>[...current.slice(-7),{...detail,id:++counter.current,until:performance.now()+420}]);};
     window.addEventListener("magic-cast",cast);window.addEventListener("magic-link",connect);

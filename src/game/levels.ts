@@ -65,7 +65,7 @@ export const LEVELS: LevelDefinition[] = [
     subtitle: "warm-up shift",
     theme: "playground",
     difficulty: "VERY EASY",
-    enemy: { speed: 0.68, vision: 0.72, damage: 0.55, bosses: 4, paperwork: 0, pens: 0 },
+    enemy: { speed: 0.78, vision: 0.8, damage: 0.65, bosses: 4, paperwork: 0, pens: 0 },
   },
   {
     level: 2,
@@ -73,7 +73,7 @@ export const LEVELS: LevelDefinition[] = [
     subtitle: "lost in the green",
     theme: "jungle",
     difficulty: "EASY",
-    enemy: { speed: 0.96, vision: 0.98, damage: 0.82, bosses: 6, paperwork: 1, pens: 0 },
+    enemy: { speed: 0.9, vision: 0.9, damage: 0.78, bosses: 5, paperwork: 1, pens: 1 },
   },
   {
     level: 3,
@@ -81,7 +81,7 @@ export const LEVELS: LevelDefinition[] = [
     subtitle: "shiny deadlines",
     theme: "gems",
     difficulty: "EASY +",
-    enemy: { speed: 1.06, vision: 1.04, damage: 0.93, bosses: 6, paperwork: 2, pens: 1, flying: 1 },
+    enemy: { speed: 1, vision: 0.98, damage: 0.9, bosses: 4, paperwork: 1, pens: 1, flying: 1 },
   },
   {
     level: 4,
@@ -89,7 +89,7 @@ export const LEVELS: LevelDefinition[] = [
     subtitle: "back to the office",
     theme: "playground",
     difficulty: "NORMAL",
-    enemy: { speed: 1.15, vision: 1.1, damage: 1.02, bosses: 7, paperwork: 2, pens: 1, statues: 1 },
+    enemy: { speed: 1.06, vision: 1.04, damage: 1, bosses: 6, paperwork: 2, pens: 2, statues: 1 },
   },
   {
     level: 5,
@@ -97,7 +97,7 @@ export const LEVELS: LevelDefinition[] = [
     subtitle: "the jungle noticed you",
     theme: "jungle",
     difficulty: "NORMAL +",
-    enemy: { speed: 1.25, vision: 1.16, damage: 1.14, bosses: 7, paperwork: 2, pens: 2, flying: 1, statues: 1 },
+    enemy: { speed: 1.12, vision: 1.1, damage: 1.08, bosses: 6, paperwork: 2, pens: 2, flying: 2, statues: 1 },
   },
   {
     level: 6,
@@ -105,7 +105,7 @@ export const LEVELS: LevelDefinition[] = [
     subtitle: "nothing stays calm",
     theme: "gems",
     difficulty: "HARD",
-    enemy: { speed: 1.36, vision: 1.22, damage: 1.26, bosses: 8, paperwork: 2, pens: 2, flying: 2, statues: 1 },
+    enemy: { speed: 1.18, vision: 1.15, damage: 1.16, bosses: 5, paperwork: 2, pens: 2, flying: 2, statues: 1 },
   },
   {
     level: 7,
@@ -113,7 +113,7 @@ export const LEVELS: LevelDefinition[] = [
     subtitle: "the shift fights back",
     theme: "playground",
     difficulty: "HARD +",
-    enemy: { speed: 1.47, vision: 1.28, damage: 1.39, bosses: 8, paperwork: 3, pens: 2, flying: 2, statues: 2 },
+    enemy: { speed: 1.24, vision: 1.2, damage: 1.24, bosses: 7, paperwork: 3, pens: 3, flying: 2, statues: 2 },
   },
   {
     level: 8,
@@ -121,7 +121,7 @@ export const LEVELS: LevelDefinition[] = [
     subtitle: "no quiet path left",
     theme: "jungle",
     difficulty: "VERY HARD",
-    enemy: { speed: 1.59, vision: 1.35, damage: 1.52, bosses: 9, paperwork: 3, pens: 2, flying: 2, statues: 2 },
+    enemy: { speed: 1.3, vision: 1.25, damage: 1.32, bosses: 7, paperwork: 3, pens: 3, flying: 3, statues: 3 },
   },
   {
     level: 9,
@@ -129,7 +129,7 @@ export const LEVELS: LevelDefinition[] = [
     subtitle: "everything is hunting",
     theme: "gems",
     difficulty: "BRUTAL",
-    enemy: { speed: 1.74, vision: 1.42, damage: 1.68, bosses: 9, paperwork: 3, pens: 3, flying: 3, statues: 2 },
+    enemy: { speed: 1.36, vision: 1.3, damage: 1.4, bosses: 7, paperwork: 3, pens: 3, flying: 3, statues: 2 },
   },
   {
     level: 10,
@@ -137,7 +137,7 @@ export const LEVELS: LevelDefinition[] = [
     subtitle: "final deadline",
     theme: "hell",
     difficulty: "ALMOST IMPOSSIBLE",
-    enemy: { speed: 1.95, vision: 1.55, damage: 1.88, bosses: 10, paperwork: 4, pens: 3, flying: 3, statues: 3 },
+    enemy: { speed: 1.42, vision: 1.35, damage: 1.48, bosses: 8, paperwork: 4, pens: 4, flying: 4, statues: 3 },
   },
 ];
 
@@ -148,17 +148,14 @@ export function getLevelDefinition(level: number) {
 export function getEnemyTuning(level: number, cycle = 0): EnemyTuning {
   const enemy = getLevelDefinition(level).enemy;
   if (cycle === 0) return enemy;
-  const previousFinal = LEVELS[9].enemy;
-  const difficulty = 1 + 0.035 * ((cycle - 1) * 10 + level);
   return {
-    speed: previousFinal.speed * difficulty,
-    vision: previousFinal.vision * difficulty,
-    damage: previousFinal.damage * difficulty,
-    bosses: Math.max(enemy.bosses, previousFinal.bosses),
-    paperwork: Math.max(enemy.paperwork, previousFinal.paperwork),
-    pens: Math.max(enemy.pens, previousFinal.pens),
-    flying: Math.max(enemy.flying ?? 0, previousFinal.flying ?? 0),
-    statues: Math.max(enemy.statues ?? 0, previousFinal.statues ?? 0),
+    ...enemy,
+    speed: Math.min(1.55, enemy.speed * (1 + cycle * .015)),
+    vision: Math.min(1.4, enemy.vision * (1 + cycle * .01)),
+    damage: enemy.damage * (1 + cycle * .07),
+    bosses: enemy.bosses + (level <= 3 ? Math.min(2, cycle) : 0),
+    paperwork: enemy.paperwork + (level >= 4 ? Math.min(2, cycle) : 0),
+    pens: enemy.pens + (level >= 7 ? Math.min(1, cycle) : 0),
   };
 }
 
@@ -270,3 +267,5 @@ export function getEnemySpawnPool(level: number, runId = 0, cycle = 0): [number,
   }
   return selected;
 }
+
+export function enemyHpScale(level: number, cycle = 0) { return 1 + .07 * Math.min(level + cycle * 10 - 1, 9) + .045 * Math.max(level + cycle * 10 - 10, 0); }

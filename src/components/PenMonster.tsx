@@ -6,7 +6,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { PEN_MONSTER_MAX_HP } from "../game/config";
 import { enemyMotionFactor } from "../game/effects";
-import { getEnemyTuning } from "../game/levels";
+import { enemyHpScale, getEnemyTuning } from "../game/levels";
+import { claimAttack } from "../game/attackDirector";
 import { paperBlastDamage, type PaperBlast } from "../game/hazards";
 import {
   hasEnemyLineOfSight,
@@ -106,7 +107,7 @@ export function PenMonster({
 }) {
   const root = useRef<THREE.Group>(null);
   const warning = useRef<THREE.Mesh>(null);
-  const maxHp = Math.round(PEN_MONSTER_MAX_HP * (1 + (useGameStore.getState().currentLevel + useGameStore.getState().ngPlusCycle * 10 - 1) * 0.085));
+  const maxHp = Math.round(PEN_MONSTER_MAX_HP * enemyHpScale(useGameStore.getState().currentLevel, useGameStore.getState().ngPlusCycle));
   const hpRef = useRef(maxHp);
   const rechargeUntil = useRef(0);
   const shotsLeft = useRef(0);
@@ -262,7 +263,7 @@ export function PenMonster({
       if (
         seesPlayer &&
         shotsLeft.current === 0 &&
-        now >= rechargeUntil.current
+        now >= rechargeUntil.current && claimAttack(id, useGameStore.getState().runId, currentLevel, 2500)
       ) {
         shotsLeft.current = 5;
         target.current.copy(player).add(new THREE.Vector3(0, 0.35, 0));

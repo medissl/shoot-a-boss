@@ -19,5 +19,5 @@ export function paperBlastDamage(blast: PaperBlast, enemy: [number, number, numb
     blast.position[2] - enemy[2],
   );
   if (distance > blast.radius) return 0;
-  return blast.damage * (1 - 0.65 * distance / blast.radius);
+  return blast.damage * (1 - 0.7 * distance / blast.radius);
 }

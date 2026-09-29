@@ -8,7 +8,7 @@ import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { getLevelDefinition, getLevelLadders, getPlayerSpawn, ZIPLINES } from "../game/levels";
 import { getUpgradeStats } from "../game/progression";
-import { useGameStore } from "../game/store";
+import { equippedGearRank, useGameStore } from "../game/store";
 import { isTouchMode, touchInput } from "../game/touch";
 import { prefersFullscreen, restorePreferredFullscreen } from "../game/fullscreen";
 
@@ -28,6 +28,9 @@ export function PlayerController() {
   const keys = useRef<Record<string, boolean>>({});
   const jumpQueued = useRef(false);
   const slideUntil = useRef(0);
+  const slideStartedAt = useRef(0);
+  const wasSliding = useRef(false);
+  const sprintStartedAt = useRef(0);
   const slideDirection = useRef(new THREE.Vector3());
   const lastCrouchAt = useRef(-Infinity);
   const wasGrounded = useRef(true);
@@ -210,6 +213,7 @@ export function PlayerController() {
         if (nearGround && direction.lengthSq() > 0) {
           slideDirection.current.copy(direction);
           slideUntil.current = performance.now() + SLIDE_MS;
+          slideStartedAt.current = performance.now();
         }
       }
     };
@@ -287,19 +291,26 @@ export function PlayerController() {
     const climbing = Boolean(ladder && (climbingUp || climbingDown));
 
     const sliding = !climbing && now < slideUntil.current;
+    if (wasSliding.current && !sliding && now - slideStartedAt.current >= SLIDE_MS - 30 && equippedGearRank(useGameStore.getState(), "skates") >= 5)
+      useGameStore.setState({ skateBoostUntil: now + 1500 });
+    wasSliding.current = sliding;
     const crouching = Boolean(keys.current.KeyC) && !sliding && !climbing;
     const sprinting =
       Boolean(keys.current.ShiftLeft || keys.current.ShiftRight || (isTouchMode() && touchInput.sprint)) &&
       !crouching &&
       !sliding &&
       !climbing;
+    if (sprinting && input.lengthSq() > .1) { if (!sprintStartedAt.current) sprintStartedAt.current = now; }
+    else sprintStartedAt.current = 0;
 
     const upgradeStats = getUpgradeStats(upgrades);
     const pickupSpeed =
-      now < useGameStore.getState().speedBoostUntil ? 1.62 : 1;
+      now < useGameStore.getState().speedBoostUntil ? 1.25 : 1;
     const knifeSpeed = weapon === "knife" ? 1.2 : 1;
     const speedMultiplier =
-      pickupSpeed * upgradeStats.movement * knifeSpeed * (1 + useGameStore.getState().gear.boots * 0.05);
+      pickupSpeed * upgradeStats.movement * knifeSpeed * (now < useGameStore.getState().paperTrailUntil ? 1.2 : 1) *
+      (1 + equippedGearRank(useGameStore.getState(), "boots") * 0.025 + (equippedGearRank(useGameStore.getState(), "boots") >= 5 && sprintStartedAt.current && now - sprintStartedAt.current >= 2000 ? .05 : 0) +
+      (now < useGameStore.getState().skateBoostUntil ? .08 : 0));
 
     const nearGround =
       position.y <= 1.52 ||
@@ -325,7 +336,7 @@ export function PlayerController() {
     if (sliding) {
       const remaining = Math.max(0, (slideUntil.current - now) / SLIDE_MS);
       const slideStrength =
-        THREE.MathUtils.lerp(WALK_SPEED, SLIDE_SPEED * (1 + useGameStore.getState().gear.skates * 0.09), remaining) *
+        THREE.MathUtils.lerp(WALK_SPEED, SLIDE_SPEED * (1 + equippedGearRank(useGameStore.getState(), "skates") * 0.05), remaining) *
         speedMultiplier;
 
       horizontal = slideDirection.current

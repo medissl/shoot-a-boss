@@ -3,7 +3,8 @@ import { Html } from "@react-three/drei";
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { enemyMotionFactor } from "../game/effects";
-import { getEnemyTuning } from "../game/levels";
+import { enemyHpScale, getEnemyTuning } from "../game/levels";
+import { claimAttack } from "../game/attackDirector";
 import { paperBlastDamage, type PaperBlast } from "../game/hazards";
 import { hasEnemyLineOfSight, moveWithAvoidance, safeEnemySpawn } from "../game/navigation";
 import { useGameStore } from "../game/store";
@@ -42,7 +43,7 @@ export function ExtraMonster({ id, spawn, kind }: { id: string; spawn: [number, 
   const tuning = getEnemyTuning(level, cycle);
   const effectiveLevel = level + cycle * 10;
   const index = Number(id.split("-")[1]) || 0;
-  const maxHp = Math.round((kind === "statue" ? 280 : 125) * (1 + (effectiveLevel - 1) * 0.085));
+  const maxHp = Math.round((kind === "statue" ? 300 : 120) * enemyHpScale(level, cycle));
   const hp = useRef(maxHp);
   const [dead, setDead] = useState(false);
   const deadAt = useRef(0);
@@ -114,7 +115,7 @@ export function ExtraMonster({ id, spawn, kind }: { id: string; spawn: [number, 
         const direction = new THREE.Vector3(target.x - mesh.position.x, 0, target.z - mesh.position.z);
         const distance = direction.length();
         if (dive.current === "recover" && now >= recoveryUntil.current && mesh.position.y > py + 4.3) dive.current = "cruise";
-        if (dive.current === "cruise" && seesPlayer && distance < 8 && now - lastAttack.current > Math.max(2.1, 3.9 - effectiveLevel * 0.09)) dive.current = "dive";
+        if (dive.current === "cruise" && seesPlayer && distance < 8 && now - lastAttack.current > Math.max(2.1, 3.9 - effectiveLevel * 0.09) && claimAttack(id, live.runId, level, 1500)) dive.current = "dive";
         const desiredDistance = dive.current === "dive" ? 1.6 : 3.8;
         if (distance > desiredDistance) {
           const stride = direction.normalize().multiplyScalar(Math.min(distance - desiredDistance, (3.4 + effectiveLevel * 0.16) * tuning.speed * motion * delta));

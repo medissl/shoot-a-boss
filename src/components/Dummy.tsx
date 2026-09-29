@@ -6,7 +6,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { BOSS_MAX_HP } from "../game/config";
 import { enemyMotionFactor } from "../game/effects";
-import { getEnemyTuning } from "../game/levels";
+import { enemyHpScale, getEnemyTuning } from "../game/levels";
+import { claimAttack } from "../game/attackDirector";
 import { paperBlastDamage, type PaperBlast } from "../game/hazards";
 import {
   hasEnemyLineOfSight,
@@ -326,9 +327,19 @@ export function Dummy({
   const group = useRef<THREE.Group>(null);
   const warningRef = useRef<THREE.Mesh>(null);
   const shotRef = useRef<THREE.Mesh>(null);
-  const maxHp = Math.round(BOSS_MAX_HP * (1 + (useGameStore.getState().currentLevel + useGameStore.getState().ngPlusCycle * 10 - 1) * 0.085));
+  const elite = useGameStore((state) => state.eventTarget === id);
+  const eliteSeen = useRef(false);
+  const initialState = useGameStore.getState();
+  const finale = initialState.currentLevel === 10 && id === `target-${getEnemyTuning(10, initialState.ngPlusCycle).bosses - 1}`;
+  const baseHp = Math.round(BOSS_MAX_HP * enemyHpScale(initialState.currentLevel, initialState.ngPlusCycle) * (finale ? 2 : 1));
+  const maxHp = Math.round(baseHp * (eliteSeen.current ? 1.2 : 1));
   const [hp, setHp] = useState(maxHp);
   const hpRef = useRef(maxHp);
+  useEffect(() => {
+    if (!elite || eliteSeen.current) return;
+    const timer = window.setTimeout(() => { if (eliteSeen.current) return; eliteSeen.current = true; hpRef.current += Math.round(baseHp * .2); setHp(hpRef.current); }, 0);
+    return () => window.clearTimeout(timer);
+  }, [elite, baseHp]);
   const [pose, setPose] = useState<Pose>("idle");
   const [hitFlash, setHitFlash] = useState(false);
   const [damagePops, setDamagePops] = useState<DamagePop[]>([]);
@@ -373,7 +384,8 @@ export function Dummy({
   const currentLevel = useGameStore((state) => state.currentLevel);
   const ngPlusCycle = useGameStore((state) => state.ngPlusCycle);
   const effectiveLevel = currentLevel + ngPlusCycle * 10;
-  const tuning = getEnemyTuning(currentLevel, ngPlusCycle);
+  const baseline = getEnemyTuning(currentLevel, ngPlusCycle);
+  const tuning = eliteSeen.current ? { ...baseline, speed: baseline.speed * 1.12, damage: baseline.damage * 1.15 } : baseline;
   const safeSpawn = useMemo(
     () => safeEnemySpawn(spawn, ENEMY_RADIUS, currentLevel),
     [currentLevel, spawn],
@@ -607,7 +619,8 @@ export function Dummy({
         } else if (
           seesPlayer &&
           playerDistance < 2.0 &&
-          now - lastPunch.current > Math.max(0.73, 1.08 - (effectiveLevel - 1) * 0.04)
+          now - lastPunch.current > Math.max(0.73, 1.08 - (effectiveLevel - 1) * 0.04) &&
+          claimAttack(id, useGameStore.getState().runId, currentLevel, 650)
         ) {
           lastPunch.current = now;
           punchUntil.current = now + 0.36;
@@ -671,7 +684,7 @@ export function Dummy({
             );
             desiredPose = "walk";
 
-            if (seesPlayer && now >= nextRangedShot.current) {
+            if (seesPlayer && now >= nextRangedShot.current && claimAttack(id, useGameStore.getState().runId, currentLevel, 1200)) {
               telegraphTarget.current.copy(player).addScaledVector(
                 playerVelocity, Math.min(0.32, playerDistance / 75) * (effectiveLevel - 1) / 9,
               );

@@ -44,7 +44,8 @@ export function ControlsPopup() {
   if (!open) return null;
   return <div className={`controls-popup ${closing ? "is-closing" : ""}`} onClick={dismiss} role="button" tabIndex={0} onKeyDown={(event) => { if (event.key === "Enter" || event.key === "Escape") dismiss(); }}>
     <div className="controls-popup__card">
-      <p>LEVEL 1 · FIRST SHIFT</p><h2>THE CONTROLS</h2><ControlsList />
+      <p>LEVEL 1 · FIRST SHIFT</p><h2>START YOUR DREAM</h2>
+      <div className="controls-list">{touch ? <><div><b>MOVE</b><span>Left pad</span></div><div><b>AIM</b><span>Swipe the right side</span></div><div><b>SHOOT</b><span>Tap FIRE</span></div><div><b>RELOAD</b><span>Tap the reload icon</span></div><div><b>SWITCH</b><span>Tap a weapon in the bar</span></div></> : <><div><b>MOVE</b><span>W A S D</span></div><div><b>AIM</b><span>Mouse / hold right button</span></div><div><b>SHOOT</b><span>Left mouse button</span></div><div><b>RELOAD</b><span>R</span></div><div><b>SWITCH</b><span>1–4 or mouse wheel</span></div></>}</div>
       <strong>{touch ? "TAP ANYWHERE TO START" : "CLICK ANYWHERE TO START"}</strong>
     </div>
   </div>;

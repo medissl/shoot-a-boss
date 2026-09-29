@@ -3,9 +3,11 @@ import { useFrame } from "@react-three/fiber";
 import { useRef, useState } from "react";
 import * as THREE from "three";
 import { getPickupSpawns } from "../game/levels";
+import { WEAPONS } from "../game/config";
+import { equippedGearRank } from "../game/store";
 import { useGameStore } from "../game/store";
 
-type PickupKind = "grenade" | "speed";
+type PickupKind = "grenade" | "speed" | "health" | "ammo";
 
 function Pickup({
   position,
@@ -37,8 +39,16 @@ function Pickup({
 
     const player = new THREE.Vector3(...useGameStore.getState().playerPosition);
     if (root.position.distanceTo(player) < 1.25) {
-      if (kind === "grenade") refillGrenades(2);
-      else grantSpeedBoost(12000);
+      const live = useGameStore.getState();
+      if (kind === "health" && live.hp >= live.maxHp) return;
+      if (kind === "ammo" && live.weapon !== "knife" && live.ammo[live.weapon].reserve >= WEAPONS[live.weapon].reserve) return;
+      if (kind === "grenade") refillGrenades(equippedGearRank(live, "satchel") >= 5 && index % 3 === 0 ? 2 : 1);
+      else if (kind === "speed") grantSpeedBoost(8000);
+      else if (kind === "health") useGameStore.setState({ hp: Math.min(live.maxHp, live.hp + Math.ceil(live.maxHp * .20)) });
+      else {
+        const weapon = live.weapon === "knife" ? "rifle" : live.weapon;
+        useGameStore.setState({ ammo: { ...live.ammo, [weapon]: { ...live.ammo[weapon], reserve: Math.min(WEAPONS[weapon].reserve, live.ammo[weapon].reserve + Math.ceil(WEAPONS[weapon].reserve * .32)) } } });
+      }
 
       window.dispatchEvent(
         new CustomEvent("pickup-collected", {
@@ -46,7 +56,7 @@ function Pickup({
         }),
       );
       setAvailable(false);
-      respawnAt.current = performance.now() + 14000 + index * 900;
+      respawnAt.current = performance.now() + 20000 + index * 900;
     }
   });
 
@@ -61,7 +71,7 @@ function Pickup({
           <octahedronGeometry args={[0.48, 0]} />
         )}
         <meshStandardMaterial color="#fbfaf4" roughness={1} />
-        <Edges color={kind === "grenade" ? "#d77b16" : "#2548b8"} threshold={7} />
+        <Edges color={kind === "grenade" ? "#d77b16" : kind === "health" ? "#d34b62" : kind === "ammo" ? "#609862" : "#2548b8"} threshold={7} />
       </mesh>
 
       {kind === "grenade" ? (
@@ -75,7 +85,7 @@ function Pickup({
             <meshBasicMaterial color="#fbfaf4" transparent opacity={0.88} />
           </mesh>
         </>
-      ) : (
+      ) : kind === "health" || kind === "ammo" ? <mesh position={[0, 0, .1]}><boxGeometry args={[.55, .12, .05]} /><meshBasicMaterial color={kind === "health" ? "#d34b62" : "#609862"} /></mesh> : (
         <group rotation={[0, 0, -0.1]}>
           <mesh position={[-0.16, 0, 0.04]}>
             <boxGeometry args={[0.11, 0.82, 0.04]} />
@@ -97,12 +107,12 @@ export function PickupSystem() {
 
   return (
     <>
-      {spawns.map((position, index) => (
+      {spawns.slice(0, 6).map((position, index) => (
         <Pickup
           key={index}
           position={position}
           index={index}
-          kind={index % 2 === 0 ? "grenade" : "speed"}
+          kind={(["health", "ammo", "grenade", "speed"] as PickupKind[])[index % 4]}
         />
       ))}
     </>

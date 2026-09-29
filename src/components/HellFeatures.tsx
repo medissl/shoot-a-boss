@@ -54,6 +54,7 @@ export function HellHazards() {
   const markerRefs = useRef<(THREE.Group | null)[]>([]);
   const burstRefs = useRef<(THREE.Mesh | null)[]>([]);
   const lastDamage = useRef(0);
+  const enemyHitAt = useRef<Record<string, number>>({});
   const notice = useRef("");
   const gameTime = useRef(0);
   const soundPhase = useRef("");
@@ -70,14 +71,14 @@ export function HellHazards() {
     const t = gameTime.current;
     const cycle = Math.max(0, Math.floor((t - 10) / 10));
     const phase = t < 10 ? -1 : (t - 10) % 10;
-    const audioPhase = phase < 0 ? "idle" : phase < 4 ? `${cycle}:warning` : phase < 7.1 ? `${cycle}:active` : "idle";
+    const audioPhase = phase < 0 ? "idle" : phase < 3 ? `${cycle}:warning` : phase < 6 ? `${cycle}:active` : "idle";
     if (audioPhase !== soundPhase.current) {
       soundPhase.current = audioPhase;
-      if (phase >= 0 && phase < 7.1) window.dispatchEvent(new CustomEvent("world-sfx", { detail: { kind: phase < 4 ? "hellWarning" : "hellErupt", position: [0, 22, -4] } }));
+      if (phase >= 0 && phase < 6) window.dispatchEvent(new CustomEvent("world-sfx", { detail: { kind: phase < 3 ? "hellWarning" : "hellErupt", position: [0, 22, -4] } }));
     }
     const message = phase < 0 ? `VOLCANO WARNING IN ${Math.ceil(10 - t)}S · USE STONE BRIDGES`
-      : phase < 4 ? `LAVA STRIKES IN ${Math.ceil(4 - phase)}S · DODGE RED CIRCLES`
-        : phase < 7.1 ? `LAVA STRIKES ACTIVE · ${Math.ceil(7.1 - phase)}S LEFT`
+      : phase < 3 ? `LAVA STRIKES IN ${Math.ceil(3 - phase)}S · DODGE RED CIRCLES`
+        : phase < 6 ? `LAVA STRIKES ACTIVE · ${Math.ceil(6 - phase)}S LEFT`
           : `NEXT ERUPTION IN ${Math.ceil(10 - phase)}S · RIVERS BURN`;
     if (message !== notice.current) {
       notice.current = message;
@@ -89,27 +90,37 @@ export function HellHazards() {
       if (marker) {
         marker.position.set(positions[i].x, 0.08, positions[i].z);
         marker.scale.setScalar(positions[i].radius);
-        marker.visible = phase >= 0 && phase < 7.1;
-        ((marker.children[0] as THREE.Mesh).material as THREE.MeshBasicMaterial).opacity = phase < 4 ? 0.35 + Math.sin(t * 12) * 0.14 : 0.85;
+        marker.visible = phase >= 0 && phase < 6;
+        ((marker.children[0] as THREE.Mesh).material as THREE.MeshBasicMaterial).opacity = phase < 3 ? 0.35 + Math.sin(t * 12) * 0.14 : 0.85;
       }
       for (let j = 0; j < 9; j++) {
         const mesh = burstRefs.current[i * 9 + j];
         if (!mesh) continue;
-        mesh.visible = phase >= 4 && phase < 7.1;
-        const travel = Math.min(1, Math.max(0, (phase - 4) / 1.35));
+        mesh.visible = phase >= 3 && phase < 6;
+        const travel = Math.min(1, Math.max(0, (phase - 3) / 1.35));
         const spread = (j - 4) * 0.43;
         mesh.position.set(positions[i].x * travel + Math.sin(j * 13) * spread, 22 + Math.sin(travel * Math.PI) * 16 - travel * 21, -4 + (positions[i].z + 4) * travel + Math.cos(j * 7) * spread);
         mesh.scale.setScalar(0.55 + (j % 3) * 0.2);
       }
     }
+    if (phase >= 3 && phase < 6) {
+      const live = useGameStore.getState();
+      for (const [id, [ex, ey, ez]] of Object.entries(live.enemyPositions)) {
+        if (live.eliminated.includes(id) || t - (enemyHitAt.current[id] ?? 0) < 1.3) continue;
+        if (ey < 4 && positions.some(({ x, z, radius }) => Math.hypot(ex - x, ez - z) < radius)) {
+          enemyHitAt.current[id] = t;
+          window.dispatchEvent(new CustomEvent("boss-hit", { detail: { id, damage: hazardDamage(14, live.currentLevel, live.ngPlusCycle) * .35, part: "body" } }));
+        }
+      }
+    }
     if (t - lastDamage.current < 0.65) return;
     const [px, py, pz] = playerPosition;
     const inRiver = lavaX.some((x) => Math.abs(px - (x + Math.sin(pz * 0.11) * 0.65)) < 2.45 && py < 1.9 && !bridgeZ.some((z, i) => bridgeX[i] === x && Math.abs(pz - z) < 2.65));
-    const inImpact = phase >= 4 && phase < 7.1 && positions.some(({ x, z, radius }) => Math.hypot(px - x, pz - z) < radius && py < 4);
+    const inImpact = phase >= 3 && phase < 6 && positions.some(({ x, z, radius }) => Math.hypot(px - x, pz - z) < radius && py < 4);
     if (inRiver || inImpact) {
       const source = inImpact ? positions.find(({ x, z, radius }) => Math.hypot(px - x, pz - z) < radius) : null;
       const live = useGameStore.getState();
-      live.damagePlayer(hazardDamage(inImpact ? 14 : 7, live.currentLevel, live.ngPlusCycle), [source?.x ?? lavaX.reduce((a, b) => Math.abs(px - a) < Math.abs(px - b) ? a : b), 0, source?.z ?? pz]);
+      live.damagePlayer(hazardDamage(inImpact ? 14 : 7, live.currentLevel, live.ngPlusCycle), [source?.x ?? lavaX.reduce((a, b) => Math.abs(px - a) < Math.abs(px - b) ? a : b), 0, source?.z ?? pz], true);
       lastDamage.current = t;
     }
   });

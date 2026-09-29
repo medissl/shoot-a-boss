@@ -5,7 +5,7 @@ import { WEAPONS, type WeaponId } from "../game/config";
 import { applyEnemyStatus } from "../game/effects";
 import { getUpgradeStats } from "../game/progression";
 import { getSkin, skinColor, type SkinId } from "../game/skins";
-import { useGameStore } from "../game/store";
+import { equippedGearRank, useGameStore } from "../game/store";
 import { weaponMuzzleWorldPosition } from "../game/weaponMuzzle";
 
 type Trace = {
@@ -257,13 +257,13 @@ export function CombatSystem() {
       lastShot.current = now;
 
       const raycaster = new THREE.Raycaster();
-      raycaster.far = WEAPONS.knife.maxRange;
+      raycaster.far = WEAPONS.knife.maxRange * (now < state.paperTrailUntil ? 1.25 : 1);
       raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
 
       const intersections = raycaster.intersectObjects(projectileMeshes(scene), false);
       const first = firstProjectileIntersection(intersections);
 
-      if (first && first.distance <= WEAPONS.knife.maxRange) {
+      if (first && first.distance <= WEAPONS.knife.maxRange * (now < state.paperTrailUntil ? 1.25 : 1)) {
         const targetId = inheritedUserData(first.object, "targetId");
         const propId = inheritedUserData(first.object, "propId");
         const destructibleId = inheritedUserData(
@@ -285,9 +285,9 @@ export function CombatSystem() {
               ? rawPart
               : "body";
           const partMultiplier =
-            part === "head" ? 1.5 : part === "leg" ? 0.3 : 1;
+            part === "head" ? 1.6 : part === "leg" ? 0.65 : 1;
           const damage =
-            WEAPONS.knife.damage *
+            WEAPONS.knife.damage * (now < state.crunchUntil ? 1.10 : 1) *
             stats.damage *
             stats.knifeDamage *
             partMultiplier;
@@ -362,9 +362,9 @@ export function CombatSystem() {
         return;
       }
 
-      const cooldown = config.cooldownMs *
-        (currentWeapon === "sniper" ? Math.pow(0.82, state.upgrades.sniperBolt) : stats.fireCooldown) *
-        (currentWeapon === "rifle" ? Math.pow(0.88, state.upgrades.rifleOverclock) : 1);
+      const cooldown = config.cooldownMs * (now < state.crunchUntil ? .85 : 1) *
+        (currentWeapon === "sniper" ? Math.pow(0.85, state.upgrades.sniperBolt) : stats.fireCooldown) *
+        (currentWeapon === "rifle" ? Math.pow(0.90, state.upgrades.rifleOverclock) : 1);
 
       if (now - lastShot.current < cooldown) return;
 
@@ -382,14 +382,14 @@ export function CombatSystem() {
       const spread =
         (aimed ? config.aimedSpread : config.hipSpread) *
         stats.spread *
-        (currentWeapon === "rifle" ? Math.pow(0.78, state.upgrades.riflePrecision) : 1) *
-        (currentWeapon === "shotgun" ? Math.pow(0.75, state.upgrades.shotgunChoke) : 1);
+        (currentWeapon === "rifle" ? Math.pow(0.82, state.upgrades.riflePrecision) : 1) *
+        (currentWeapon === "shotgun" ? Math.pow(0.8, state.upgrades.shotgunChoke) : 1);
       const hits = new Map<string, HitSummary>();
       const candidates = projectileMeshes(scene);
       const muzzle = weaponMuzzleWorldPosition(camera, gl.domElement, currentWeapon, aimed);
 
       const pelletCount = currentWeapon === "sniper" && state.upgrades.sniperTwin ? 2 :
-        Math.round((config.pellets + (currentWeapon === "shotgun" ? state.upgrades.shotgunPellets * 2 : 0)) * (currentWeapon === "shotgun" && state.upgrades.shotgunDouble ? 1.3 : 1));
+        config.pellets + (currentWeapon === "shotgun" ? state.upgrades.shotgunPellets + state.upgrades.shotgunDouble * 2 : 0);
       for (let pellet = 0; pellet < pelletCount; pellet += 1) {
         const raycaster = new THREE.Raycaster();
         const spreadX = (Math.random() - 0.5) * spread;
@@ -502,32 +502,32 @@ export function CombatSystem() {
 
         const partMultiplier =
           targetPart === "head"
-            ? 1.5
+            ? 1.6
             : targetPart === "leg"
-              ? 0.3
+              ? 0.65
               : 1;
 
         let damage =
           config.damage *
-          (currentWeapon === "sniper" && pellet === 1 ? 0.65 : 1) *
+          (currentWeapon === "sniper" && pellet === 1 ? 0.45 : 1) *
           partMultiplier *
-          stats.damage * (1 + state.gear.barrel * 0.06) *
-          (currentWeapon === "sniper" ? (aimed ? 1 + state.upgrades.sniperFocus * 0.2 : 1) : 1) *
-          (currentWeapon === "rifle" ? 1 + state.upgrades.riflePower * 0.18 : 1);
+          stats.damage * (now < state.crunchUntil ? 1.10 : 1) * (1 + equippedGearRank(state, "barrel") * 0.03) * (state.freshPrintShots > 0 ? 1.05 : 1) *
+          (currentWeapon === "sniper" ? (aimed ? 1 + state.upgrades.sniperFocus * 0.15 : 1) : 1) *
+          (currentWeapon === "rifle" ? 1 + state.upgrades.riflePower * 0.12 : 1);
 
         if (currentWeapon === "shotgun") {
-          const fullDamageDistance = 4.5;
+          const fullDamageDistance = 5.5;
           const falloffDistance = Math.max(
             0,
             first.distance - fullDamageDistance,
           );
           const falloff = THREE.MathUtils.clamp(
-            1 - falloffDistance / 12,
-            0.06,
+            1 - falloffDistance / 18,
+            0.16,
             1,
           );
           damage *= falloff;
-          if (first.distance < 6) damage *= 1 + state.upgrades.shotgunClose * 0.25;
+          if (first.distance < 6) damage *= 1 + state.upgrades.shotgunClose * 0.20;
         }
 
         const previous = hits.get(targetId);
@@ -555,14 +555,14 @@ export function CombatSystem() {
           if (!id) break;
           if (seen.has(id)) continue;
           seen.add(id);
-          hits.set(id, { damage: config.damage * stats.damage * 0.65 * state.upgrades.sniperPierce, part: "body" });
+          hits.set(id, { damage: config.damage * stats.damage * 0.55 * state.upgrades.sniperPierce, part: "body" });
           addImpact(intersection.point);
           break;
         }
       }
 
-      if (currentWeapon === "rifle" && state.upgrades.rifleSurge && rifleShots.current % 5 === 0) {
-        hits.forEach((summary) => { summary.damage *= 1.75; });
+      if (currentWeapon === "rifle" && state.upgrades.rifleSurge && rifleShots.current % 6 === 0) {
+        hits.forEach((summary) => { summary.damage *= 1.65; });
       }
       hits.forEach((summary, id) => {
         window.dispatchEvent(
@@ -575,10 +575,10 @@ export function CombatSystem() {
           }),
         );
         if (currentWeapon === "rifle" && state.upgrades.rifleFreeze) {
-          applyEnemyStatus(id, state.runId, 360 + state.upgrades.rifleFreeze * 180);
+          applyEnemyStatus(id, state.runId, 800);
         }
         if (currentWeapon === "shotgun" && state.upgrades.shotgunSlow) {
-          applyEnemyStatus(id, state.runId, 0, 1200 + state.upgrades.shotgunSlow * 800);
+          applyEnemyStatus(id, state.runId, 0, 1500, .65, 2500);
         }
         if (currentWeapon === "sniper" && state.upgrades.sniperFire) {
           for (let tick = 1; tick <= 4; tick += 1) {
@@ -586,7 +586,7 @@ export function CombatSystem() {
               const live = useGameStore.getState();
               if (live.runId !== state.runId || live.screen !== "playing" || live.eliminated.includes(id)) return;
               window.dispatchEvent(new CustomEvent("boss-hit", {
-                detail: { id, damage: 8 * state.upgrades.sniperFire, part: "body" },
+                detail: { id, damage: 6 * state.upgrades.sniperFire, part: "body" },
               }));
             }, tick * 1000);
           }
@@ -642,7 +642,7 @@ export function CombatSystem() {
         const stats = getUpgradeStats(state.upgrades);
         const interval = Math.max(
           55,
-          WEAPONS.rifle.cooldownMs * stats.fireCooldown * Math.pow(0.88, state.upgrades.rifleOverclock),
+          WEAPONS.rifle.cooldownMs * stats.fireCooldown * Math.pow(0.90, state.upgrades.rifleOverclock),
         );
 
         autoFire.current = window.setInterval(() => {

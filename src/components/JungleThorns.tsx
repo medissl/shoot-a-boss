@@ -25,12 +25,12 @@ function isThornSafe(x: number, z: number, player: [number, number, number]) {
     return distanceToSegment(x, z, [player[0], player[2]], [nearest[0], nearest[2]]) < 9.8;
 }
 
-function thornPatches(wave: number, player: [number, number, number]): Patch[] {
+function thornPatches(wave: number, player: [number, number, number], level: number): Patch[] {
   const patches: Patch[] = [];
   for (let x = -42; x <= 42; x += 12) for (let z = -42; z <= 42; z += 12) {
     // Each wave leaves a pocket and a clear corridor to the nearest ladder.
     if (isThornSafe(x, z, player)) continue;
-    if ((Math.sin(x * 7.7 + z * 11.3 + wave * 17.9) + 1) * 0.5 < 0.04) continue;
+    if ((Math.sin(x * 7.7 + z * 11.3 + wave * 17.9) + 1) * 0.5 < (level <= 2 ? .65 : level <= 5 ? .42 : .18)) continue;
     patches.push({ x, z, expires: wave * 30 + 60 });
   }
   return patches;
@@ -49,8 +49,10 @@ export function JungleThorns() {
   const elapsed = useRef(0);
   const lastWave = useRef(0);
   const lastDamage = useRef(0);
+  const enemyHitAt = useRef<Record<string, number>>({});
   const lastNotice = useRef("");
   const screen = useGameStore((state) => state.screen);
+  const level = useGameStore((state) => state.currentLevel);
 
   useLayoutEffect(() => {
     const object = new THREE.Object3D();
@@ -81,7 +83,7 @@ export function JungleThorns() {
   }, [warnedPatches]);
 
   useFrame((_, delta) => {
-    if (screen !== "playing" || useGameStore.getState().tutorialOpen) {
+    if (screen !== "playing" || useGameStore.getState().tutorialOpen || performance.now() < useGameStore.getState().hazardSuppressedUntil) {
       if (warningGround.current) warningGround.current.visible = false;
       return;
     }
@@ -92,7 +94,7 @@ export function JungleThorns() {
     const untilWave = 30 - time % 30;
     if (untilWave <= 6 && warnedWave.current !== upcomingWave) {
       warnedWave.current = upcomingWave;
-      warnedRef.current = thornPatches(upcomingWave, useGameStore.getState().playerPosition);
+      warnedRef.current = thornPatches(upcomingWave, useGameStore.getState().playerPosition, level);
       setWarnedPatches(warnedRef.current);
     }
     if (wave > lastWave.current) {
@@ -123,11 +125,18 @@ export function JungleThorns() {
       window.dispatchEvent(new CustomEvent("map-hazard-notice", { detail: { message } }));
     }
     if (time - lastDamage.current < 0.8) return;
+    const live = useGameStore.getState();
+    for (const [id, [ex, ey, ez]] of Object.entries(live.enemyPositions)) {
+      if (live.eliminated.includes(id) || time - (enemyHitAt.current[id] ?? 0) < 1.6 || ey >= 2.1) continue;
+      if (patchesRef.current.some(({ x, z }) => Math.abs(x - ex) < 5.8 && Math.abs(z - ez) < 5.8)) {
+        enemyHitAt.current[id] = time;
+        window.dispatchEvent(new CustomEvent("boss-hit", { detail: { id, damage: hazardDamage(2.5, live.currentLevel, live.ngPlusCycle) * .35, part: "body" } }));
+      }
+    }
     const [px, py, pz] = useGameStore.getState().playerPosition;
     const patch = patchesRef.current.find(({ x, z }) => Math.abs(x - px) < 5.8 && Math.abs(z - pz) < 5.8);
     if (py < 2.1 && patch) {
-      const live = useGameStore.getState();
-      live.damagePlayer(hazardDamage(2.5, live.currentLevel, live.ngPlusCycle), [patch.x, 0, patch.z]);
+      live.damagePlayer(hazardDamage(2.5, live.currentLevel, live.ngPlusCycle), [patch.x, 0, patch.z], true);
       lastDamage.current = time;
     }
   });

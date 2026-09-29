@@ -18,12 +18,15 @@ const gearGlyphs: Record<GearId, string> = {
   vest: "♥", boots: "↝", barrel: "✦", medallion: "✚",
   skates: "➜", aegis: "⬡", lens: "◎", satchel: "◌", arcana: "✧",
 };
+const masterwork: Record<GearId, string> = { vest: "FIRST AID · 10 GUARD BELOW 30% HP", boots: "RUSH HOUR · +5% AFTER 2S SPRINT", barrel: "FRESH PRINT · FIRST 5 SHOTS +5%", medallion: "GOOD NEWS · EVERY 5TH KILL +4 HEAL", skates: "CARBON SLIDE · BRIEF +8% SPEED", aegis: "THICKER PAGE · +5 GUARD ON BLOCK", lens: "FULL REPORT · SHOW TARGET DISTANCE", satchel: "DOUBLE POCKET · SELECT BOMBS +2", arcana: "SHARP NIB · +11% SPELL SPEED" };
 
 export function GearShopScene({ onBack }: { onBack: () => void }) {
   const coins = useGameStore((s) => s.coins);
   const gear = useGameStore((s) => s.gear);
+  const equippedGear = useGameStore((s) => s.equippedGear);
   const buyGear = useGameStore((s) => s.buyGear);
   const buyHeart = useGameStore((s) => s.buyHeart);
+  const refillHearts = useGameStore((s) => s.refillHearts);
   const hearts = useGameStore((s) => s.hearts);
   const skins = useGameStore((s) => s.skins);
   const [category, setCategory] = useState<"gear" | "crates">("gear");
@@ -57,7 +60,7 @@ export function GearShopScene({ onBack }: { onBack: () => void }) {
         <p>ISSUE 02 // THE SUPPLY CLOSET</p>
         <h1>THE<br />DOODLE<br />SHOP</h1>
         <div className="gear-scene__stamp">STICKMAN<br />APPROVED ✓</div>
-        <p className="gear-scene__note">Spend coins earned from cleared stages. Gear and skins carry across stages; a dream purge resets them.</p>
+        <p className="gear-scene__note">Spend coins earned from cleared stages. Gear and skins carry across stages; your dream returns to an anchor.</p>
       </div>
       <section className="gear-shelf" aria-label="Gear for sale">
         <nav className="shop-tabs"><button className={category === "gear" ? "is-active" : ""} onClick={() => setCategory("gear")}>GEAR & HEARTS</button><button className={category === "crates" ? "is-active" : ""} onClick={() => setCategory("crates")}>SKIN CRATES</button></nav>
@@ -69,12 +72,12 @@ export function GearShopScene({ onBack }: { onBack: () => void }) {
           const cost = gearCost(item.id, rank);
           return <article key={item.id} className="gear-item">
             <span className="gear-item__glyph" aria-hidden="true">{gearGlyphs[item.id]}</span>
-            <div className="gear-item__copy"><h3>{item.name}</h3><p>{item.detail}</p><small>RANK {rank}/{maxRank} · {"●".repeat(rank)}{"○".repeat(maxRank - rank)}</small></div>
+            <div className="gear-item__copy"><h3>{item.name}</h3><p>{item.detail}</p><small>RANK {rank}/{maxRank} · {"●".repeat(rank)}{"○".repeat(maxRank - rank)} · {equippedGear.includes(item.id) ? "EQUIPPED" : rank ? "STORED" : "UNOWNED"}</small><small>{rank < maxRank ? `NEXT RANK ${rank + 1}: ${item.detail}` : `MASTERWORK · ${masterwork[item.id]}`}</small></div>
             <button type="button" disabled={rank >= maxRank || coins < cost} onClick={() => purchase(item.id, item.name)}>
               {rank >= maxRank ? "MAXED" : `◉ ${cost} · BUY`}
             </button>
           </article>;
-        })}<article className="gear-item"><span className="gear-item__glyph">♥</span><div className="gear-item__copy"><h3>ONE MORE CHANCE</h3><p>Refill one campaign heart for the next stage.</p><small>HEARTS {hearts}/5 · SPECIAL STOCK</small></div><button disabled={hearts >= 5 || coins < 1000} onClick={buyHeart}>{hearts >= 5 ? "FULL HEARTS" : "◉ 1000 · BUY"}</button></article></div></> : <><h2>THEME CRATES <small>◉ 300 EACH</small></h2><p>Twenty-two complete builds per weapon: ten rare, seven epic, five legendary. New themes are guaranteed until that weapon's collection is complete.</p><div className="crate-list">{(["rifle","sniper","shotgun","knife"] as WeaponId[]).map((weapon) => <button key={weapon} disabled={coins < 300 || skins[weapon].length>=23} onClick={() => setCrate(weapon)}><span>✦ ◆ ✧</span><b>{weapon.toUpperCase()} CRATE</b><small>{skins[weapon].length-1}/22 OWNED · {skins[weapon].length>=23?"COLLECTION COMPLETE":"◉ 300 · OPEN"}</small></button>)}</div></>}
+        })}<article className="gear-item"><span className="gear-item__glyph">♥</span><div className="gear-item__copy"><h3>ONE MORE CHANCE</h3><p>Refill one campaign heart for the next stage.</p><small>HEARTS {hearts}/5 · SPECIAL STOCK</small></div><button disabled={hearts >= 5 || coins < 275} onClick={buyHeart}>{hearts >= 5 ? "FULL HEARTS" : "◉ 275 · BUY"}</button></article><article className="gear-item"><span className="gear-item__glyph">♥♥</span><div className="gear-item__copy"><h3>FULL REFILL</h3><p>Restore all five hearts.</p></div><button disabled={hearts >= 5 || coins < 700} onClick={refillHearts}>{hearts >= 5 ? "FULL HEARTS" : "◉ 700 · BUY"}</button></article></div></> : <><h2>THEME CRATES <small>◉ 300 EACH</small></h2><p>Twenty-two complete builds per weapon: ten rare, seven epic, five legendary. New themes are guaranteed until that weapon's collection is complete.</p><div className="crate-list">{(["rifle","sniper","shotgun","knife"] as WeaponId[]).map((weapon) => <button key={weapon} disabled={coins < 300 || skins[weapon].length>=23} onClick={() => setCrate(weapon)}><span>✦ ◆ ✧</span><b>{weapon.toUpperCase()} CRATE</b><small>{skins[weapon].length-1}/22 OWNED · {skins[weapon].length>=23?"COLLECTION COMPLETE":"◉ 300 · OPEN"}</small></button>)}</div></>}
       </section>
       <aside className="shopkeeper" aria-label="Stickman shopkeeper">
         <div className="shopkeeper__bubble" aria-live="polite">{dialogue}</div>

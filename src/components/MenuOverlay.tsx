@@ -3,7 +3,7 @@ import { Home, RotateCcw } from "lucide-react";
 import { ControlsList } from "./ControlsList";
 import { FullscreenToggle } from "./FullscreenToggle";
 import { getUpgradeCard, type UpgradeId } from "../game/progression";
-import { useGameStore } from "../game/store";
+import { GEAR, useGameStore } from "../game/store";
 import { restorePreferredFullscreen } from "../game/fullscreen";
 
 export function MenuOverlay() {
@@ -21,7 +21,12 @@ export function MenuOverlay() {
   const setBgmVolume = useGameStore((state) => state.setBgmVolume);
   const setSfxVolume = useGameStore((state) => state.setSfxVolume);
   const upgrades = useGameStore((state) => state.upgrades);
-  const [panel, setPanel] = useState<"settings" | "cards" | "controls">("settings");
+  const equippedGear = useGameStore((state) => state.equippedGear);
+  const gear = useGameStore((state) => state.gear);
+  const selectedMagic = useGameStore((state) => state.selectedMagic);
+  const magic = useGameStore((state) => state.magic);
+  const evolutions = useGameStore((state) => state.evolutions);
+  const [panel, setPanel] = useState<"settings" | "cards" | "controls">("cards");
   const [selectedCard, setSelectedCard] = useState<UpgradeId | null>(null);
 
   if (!["paused", "purged"].includes(screen)) return null;
@@ -50,18 +55,18 @@ export function MenuOverlay() {
           )}
 
           <button type="button" onClick={restart}>
-            <RotateCcw size={15} /> {screen === "purged" ? "START AGAIN · OPENING COMIC" : "RESTART THIS ROUND"}
+            <RotateCcw size={15} /> RESTART STAGE
           </button>
 
           {screen === "won" && champion && <button type="button" onClick={startNewGamePlus}>
             NG+ · CONTINUE WITH YOUR CARDS →
           </button>}
 
-          <button type="button" onClick={goToMenu}>
-            <Home size={15} /> MAIN MENU
+          <button type="button" onClick={() => { sessionStorage.setItem("sab-menu-scene", "stages"); goToMenu(); }}>
+            <Home size={15} /> RETURN TO DREAM MAP
           </button>
           <div className="pause-tabs">
-            <button type="button" onClick={() => setPanel("cards")}>CARD INVENTORY</button>
+            <button type="button" onClick={() => setPanel("cards")}>RUN SHEET</button>
             <button type="button" onClick={() => setPanel("controls")}>CONTROLS</button>
             <button type="button" onClick={() => setPanel("settings")}>OPTIONS</button>
           </div>
@@ -109,6 +114,9 @@ export function MenuOverlay() {
           </>}
           {panel === "controls" && <ControlsList />}
           {panel === "cards" && <div className="inventory-panel">
+            <p>MAGIC: {selectedMagic ? `${selectedMagic.toUpperCase()} · TIER ${magic[selectedMagic]}` : "NOT EQUIPPED"}</p>
+            <p>GEAR: {equippedGear.length ? equippedGear.map(id => `${GEAR.find(item => item.id === id)?.name} R${gear[id]}`).join(" · ") : "NONE EQUIPPED"}</p>
+            <p>EVOLUTIONS: {evolutions.length ? evolutions.join(" · ") : "NONE YET"}</p>
             {Object.entries(upgrades).filter(([, count]) => count > 0).length === 0 && <p>No cards yet. Clear a stage to pick one.</p>}
             <div className="inventory-grid">
               {(Object.entries(upgrades) as [UpgradeId, number][]).filter(([, count]) => count > 0).map(([id, count]) => {

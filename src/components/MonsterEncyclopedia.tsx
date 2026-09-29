@@ -2,6 +2,7 @@ import { Canvas } from "@react-three/fiber";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react";
 import * as THREE from "three";
+import { enemyHpScale } from "../game/levels";
 import { BOSS_MAX_HP, PAPER_MONSTER_MAX_HP, PEN_MONSTER_MAX_HP } from "../game/config";
 import { getEnemyTuning } from "../game/levels";
 import { drawBoss } from "./Dummy";
@@ -12,8 +13,8 @@ const entries: { kind: Kind; name: string; slogan: string; description: string; 
   { kind: "ranged", name: "The Feedback Manager", slogan: "Just one more revision.", description: "The same boss, but armed with either a handgun or a bow. A red line shows the shot he is lining up. Break his line of sight or sidestep before it fires.", attack: "Telegraphed shot", hp: BOSS_MAX_HP, baseDamage: 12 },
   { kind: "paper", name: "Paper Cutlet", slogan: "Small form. Big attitude.", description: "A living sheet of paperwork that slips through narrow hiding places. It chases at ground level and attacks up close. Watch your feet when a pack gathers.", attack: "Close-range cut", hp: PAPER_MONSTER_MAX_HP, baseDamage: 10 },
   { kind: "pen", name: "The Inktern", slogan: "Five shots, then a coffee break.", description: "This little pen fires five ink shots in a burst. Each shot gives you a red warning line. It needs time to refill, so rush it after the fifth shot.", attack: "Five ink projectiles", hp: PEN_MONSTER_MAX_HP, baseDamage: 8 },
-  { kind: "fly", name: "Airmail Menace", slogan: "Special delivery to your face.", description: "A flying courier that cruises above the arena. It dives to face level for one hard bite, then climbs away to recover before attacking again. Track it overhead.", attack: "Single diving strike", hp: 125, baseDamage: 11 },
-  { kind: "statue", name: "Burn the Deadline Statue", slogan: "Your deadline follows you.", description: "A monument with long sight. A red line from its head warns you for five seconds before its laser strikes a fixed area for five seconds. Break line of sight or leave the marked circle.", attack: "Targeted red laser", hp: 280, baseDamage: 8 },
+  { kind: "fly", name: "Airmail Menace", slogan: "Special delivery to your face.", description: "A flying courier that cruises above the arena. It dives to face level for one hard bite, then climbs away to recover before attacking again. Track it overhead.", attack: "Single diving strike", hp: 120, baseDamage: 11 },
+  { kind: "statue", name: "Burn the Deadline Statue", slogan: "Your deadline follows you.", description: "A monument with long sight. A red line from its head warns you for five seconds before its laser strikes a fixed area for five seconds. Break line of sight or leave the marked circle.", attack: "Targeted red laser", hp: 300, baseDamage: 8 },
 ];
 
 function BossImage({ ranged }: { ranged: boolean }) {
@@ -70,7 +71,7 @@ export function MonsterEncyclopedia({ onBack }: { onBack: () => void }) {
   const [level, setLevel] = useState(1);
   const entry = entries[index];
   const tuning = getEnemyTuning(level);
-  const hp = Math.round(entry.hp * (1 + (level - 1) * 0.085));
+  const hp = Math.round(entry.hp * enemyHpScale(level));
   const damage = Math.round(entry.baseDamage * tuning.damage);
   return <main className="encyclopedia-scene">
     <div className="encyclopedia-paper">
