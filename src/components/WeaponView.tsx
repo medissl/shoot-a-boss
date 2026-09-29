@@ -170,7 +170,6 @@ function ScopedWeaponArt({ weapon, skin }: { weapon: WeaponId; skin: SkinId }) {
       )}
       <ScopedSkinArt weapon={weapon} id={skin}/>
       {weapon !== "knife" && <circle data-weapon-muzzle={weapon} cx={muzzle[0]} cy={muzzle[1]} r="0" />}
-      {weapon !== "knife" && <g className="muzzle-spark" transform={`translate(${muzzle[0]} ${muzzle[1]})`}><path d="M0 0 l-16 -15 M0 0 v-22 M0 0 l16 -15" /></g>}
     </svg>
   );
 }
