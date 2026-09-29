@@ -10,6 +10,10 @@ export function CrateOpening({ weapon, onBack }: { weapon: WeaponId; onBack: () 
   const equipSkin = useGameStore((s) => s.equipSkin);
   const [phase, setPhase] = useState<"drop" | "unlock" | "unlocking" | "spin" | "reveal">("drop");
   const [prize, setPrize] = useState<SkinColor | null>(null);
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent("crate-scene-active", { detail: true }));
+    return () => window.dispatchEvent(new CustomEvent("crate-scene-active", { detail: false }));
+  }, []);
   useEffect(() => { window.dispatchEvent(new Event("crate-drop")); const timer = setTimeout(() => setPhase("unlock"), 2200); return () => clearTimeout(timer); }, []);
   const open = () => {
     if (phase !== "unlock") return;
