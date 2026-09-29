@@ -89,6 +89,11 @@ function ThemeSilhouette({theme,weapon}:{theme:SkinTheme;weapon:WeaponId}){
     {m==='clock'&&<><circle cx="514" cy="334" r="21" fill={theme.base}/><path d="M502 328v-18h22v19"/></>}
     {m==='hazard'&&<path d={knife?'M481 365 522 348 554 386 512 420Z':'M476 333 511 317 580 355 550 373Z'} fill={theme.color}/>}
     {m==='cassette'&&<path d="M493 313 536 298 582 344 542 359Z" fill={theme.color}/>}
+    {m==='stars'&&<><path d="M479 356q50-48 108 24l-35 37-73-43Z" fill="#11112a" stroke={theme.color} strokeWidth="6"/><path d="M631 497q89-20 187 51l13 36-95-28-87-27Z" fill="#1b1833" stroke={theme.color} strokeWidth="5"/></>}
+    {m==='eye'&&<><path d="M429 331q14-38 33 2t38 4q30-33 46 8l-18 30-54-10Z" fill="#f6f6ee"/><path d="M646 490q42-18 85 21t95 42l-22 41-112-32-61-33Z" fill="#f3f4ee"/></>}
+    {m==='redaction'&&<><path d="M431 309h68v16h-68Zm28 23h76v14h-76ZM637 480h68v17h-68Zm52 17h83v15h-83Zm73 17h54v15h-54Z" fill="#171c28" stroke={theme.color} strokeWidth="3"/></>}
+    {m==='prism'&&<><path d="M412 299 437 268 455 312 481 289 504 347 465 362Z" fill="#b2fbef"/><path d="M640 490 676 466 690 506 721 481 735 525 783 515 822 559 746 544Z" fill="#e7c2f7"/></>}
+    {m==='dragon'&&<><path d="M412 297q18-52 34 1l22-21 38 58-34 27Z" fill={theme.accent}/><path d="M640 487q18-58 37 2l36-20 31 43 29-12 39 54-56-12-87-14Z" fill={theme.accent}/></>}
   </g>;
 }
 
@@ -104,7 +109,8 @@ function SkinAttack({theme,weapon}:{theme:SkinTheme;weapon:WeaponId}){
 export function SkinWeaponArt({weapon,id,firing=false,reloading=false}:{weapon:WeaponId;id:SkinId;firing?:boolean;reloading?:boolean}){
   const theme=getSkin(id);if(!theme)return null;
   const uid=`${weapon}-${id}`;
-  const paints={shell:theme.base,dark:theme.accent,metal:theme.color,light:'#fffdf4',core:theme.color};
+  const darkMaterial:Partial<Record<SkinTheme['motif'],string>>={stars:'#22203e',eye:'#263849',redaction:'#1b202b',prism:'#2a365b',dragon:'#20253a',flame:'#292631',abyss:'#122a3e',circuit:'#13263d'};
+  const paints={shell:theme.base,dark:darkMaterial[theme.motif]??theme.accent,metal:theme.color,light:theme.motif==='stars'?'#51477a':theme.base,core:theme.color};
   return <g className={`skin-render skin-render--${theme.motif} skin-render--${theme.rarity} ${reloading?'skin-render--reload':''}`} style={{'--skin-color':theme.color,'--skin-accent':theme.accent} as React.CSSProperties}>
     <defs>
       <linearGradient id={`${uid}-surface`} x1="0" y1="0" x2="1" y2="1"><stop stopColor={theme.base}/><stop offset=".55" stopColor={theme.color}/><stop offset="1" stopColor={theme.accent}/></linearGradient>
