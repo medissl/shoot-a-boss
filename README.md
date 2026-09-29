@@ -96,3 +96,5 @@ npm run build
 
 - [`V2_BUILD_GUIDE.md`](./V2_BUILD_GUIDE.md) — the notebook-FPS refactor checklist
 - [`GAME_DESIGN.md`](./GAME_DESIGN.md) — current narrative, systems, map, weapons, and remaining polish
+
+<!-- Clean baseline redeploy: 2026-09-29 -->
