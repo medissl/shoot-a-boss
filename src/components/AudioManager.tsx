@@ -264,9 +264,9 @@ export function AudioManager() {
 
       if (state.screen === "playing") {
         const path = cocking[state.weapon];
-        if (state.weapon === "knife") playOne(A.knifeTakeout, 0.72);
-        else if (path) playOne(path, 0.72);
-        if (useGameStore.getState().equippedSkins[state.weapon] !== "default") playTheme(state.weapon,"equip");
+        if (useGameStore.getState().equippedSkins[state.weapon] === "default") {
+          if (path) playOne(path, 0.72);
+        } else playTheme(state.weapon,"equip");
       }
     };
 
@@ -375,8 +375,8 @@ export function AudioManager() {
     if (!reloading || !reloadingWeapon) return;
     const path = reloads[reloadingWeapon];
     if (!path) return;
-    playOne(path, reloadGain[reloadingWeapon] ?? 0.25);
-    if (useGameStore.getState().equippedSkins[reloadingWeapon] !== "default") playTheme(reloadingWeapon,"reload");
+    if (useGameStore.getState().equippedSkins[reloadingWeapon] === "default") playOne(path, reloadGain[reloadingWeapon] ?? 0.25);
+    else playTheme(reloadingWeapon,"reload");
   }, [playOne, reloading, reloadingWeapon, playTheme]);
 
   useEffect(() => {
@@ -422,22 +422,21 @@ export function AudioManager() {
       const selected = (event as CustomEvent<{ weapon: WeaponId }>).detail.weapon;
       if (useGameStore.getState().screen === "playing") {
         const path = cocking[selected];
-        if (selected === "knife") playOne(A.knifeTakeout, 0.72);
-        else if (path) playOne(path, 0.72);
-        if (useGameStore.getState().equippedSkins[selected] !== "default") playTheme(selected, selected === "knife" ? "equip" : "cock");
+        if (useGameStore.getState().equippedSkins[selected] === "default") { if (path) playOne(path, 0.72); }
+        else playTheme(selected,"cock");
       }
     };
 
     const weaponFire = (event: Event) => {
       const fired = (event as CustomEvent<{ weapon: WeaponId }>).detail.weapon;
       const themed = useGameStore.getState().equippedSkins[fired] !== "default";
+      if (themed) { playTheme(fired,"fire"); return; }
       if (fired === "sniper") playOne(A.sniperShoot, 0.95, 1.6);
       if (fired === "shotgun") playOne(A.shotgunShoot, 0.85);
-      if (themed) playTheme(fired,"fire");
     };
 
     const rifleDown = () => {
-      if (!unlocked.current || rifleHeld.current) return;
+      if (!unlocked.current || rifleHeld.current || useGameStore.getState().equippedSkins.rifle !== "default") return;
       rifleHeld.current = true;
       playOne(A.rifleOne, 0.75);
 
@@ -448,10 +447,8 @@ export function AudioManager() {
     };
 
     const rifleUp = () => stopRifleBurst();
-    const knifeImpact = () => {
-      playOne(A.knifeStab, 0.82);
-      if (useGameStore.getState().equippedSkins.knife !== "default") playTheme("knife","knife-hit");
-    };
+    const knifeImpact = () => playTheme("knife","knife-hit");
+    const knifeEnemyHit = () => playOne(A.knifeStab, 0.82);
     const grenadeCock = () => playOne(A.grenadeCock, 0.75);
     const grenadeExplode = () => playOne(A.grenadeExplode, 1.35);
     const magicCast = (event: Event) => playOne(A.magic[(event as CustomEvent<{kind:MagicType}>).detail.kind], 1);
@@ -488,7 +485,8 @@ export function AudioManager() {
     window.addEventListener("weapon-fired", weaponFire as EventListener);
     window.addEventListener("rifle-trigger-down", rifleDown);
     window.addEventListener("rifle-trigger-up", rifleUp);
-    window.addEventListener("knife-enemy-hit", knifeImpact);
+    window.addEventListener("knife-impact", knifeImpact);
+    window.addEventListener("knife-enemy-hit", knifeEnemyHit);
     window.addEventListener("grenade-cocked", grenadeCock);
     window.addEventListener("magic-cast", magicCast);
     window.addEventListener("scan-started", reveal);
@@ -511,7 +509,8 @@ export function AudioManager() {
       window.removeEventListener("weapon-fired", weaponFire as EventListener);
       window.removeEventListener("rifle-trigger-down", rifleDown);
       window.removeEventListener("rifle-trigger-up", rifleUp);
-      window.removeEventListener("knife-enemy-hit", knifeImpact);
+      window.removeEventListener("knife-impact", knifeImpact);
+      window.removeEventListener("knife-enemy-hit", knifeEnemyHit);
       window.removeEventListener("grenade-cocked", grenadeCock);
       window.removeEventListener("magic-cast", magicCast);
       window.removeEventListener("scan-started", reveal);
