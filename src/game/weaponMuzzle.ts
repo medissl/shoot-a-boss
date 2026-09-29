@@ -8,7 +8,7 @@ export function weaponMuzzleWorldPosition(
   canvas: HTMLCanvasElement,
   weapon: Exclude<WeaponId, "knife">,
   scoped: boolean,
-): THREE.Vector3 {
+): THREE.Vector3 | null {
   const forward = new THREE.Vector3();
   camera.getWorldDirection(forward);
   const cameraPosition = camera.getWorldPosition(new THREE.Vector3());
@@ -36,11 +36,7 @@ export function weaponMuzzleWorldPosition(
     }
   }
 
-  // The weapon overlay may be mounting during a stage transition. This stays
-  // off the crosshair until its SVG anchor is available on the next frame.
-  const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
-  const up = new THREE.Vector3(0, 1, 0).applyQuaternion(camera.quaternion);
-  return cameraPosition.addScaledVector(forward, depth)
-    .addScaledVector(right, scoped ? 0 : .42)
-    .addScaledVector(up, scoped ? -.28 : -.34);
+  // During a weapon or ADS transition, skip this visual rather than create a
+  // false origin beside the crosshair. The camera raycast still deals damage.
+  return null;
 }

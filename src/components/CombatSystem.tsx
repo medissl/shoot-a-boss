@@ -11,7 +11,6 @@ import { weaponMuzzleWorldPosition } from "../game/weaponMuzzle";
 type Trace = {
   id: number;
   color: string;
-  skin: SkinId;
   from: [number, number, number];
   to: [number, number, number];
   hit: boolean;
@@ -43,12 +42,10 @@ const PART_PRIORITY: Record<HitPart, number> = {
 function TraceLine({ trace }: { trace: Trace }) {
   const group = useRef<THREE.Group>(null);
   const core = useRef<THREE.MeshBasicMaterial>(null);
+  const glow = useRef<THREE.MeshBasicMaterial>(null);
   const from = useMemo(() => new THREE.Vector3(...trace.from), [trace.from]);
   const to = useMemo(() => new THREE.Vector3(...trace.to), [trace.to]);
   const length = from.distanceTo(to);
-  const skin = getSkin(trace.skin);
-  const motif = skin?.motif;
-  const streak = Math.min(1.15, Math.max(.25, length * .11));
   const direction = useMemo(() => to.clone().sub(from).normalize(), [from, to]);
   const quaternion = useMemo(
     () =>
@@ -62,41 +59,24 @@ function TraceLine({ trace }: { trace: Trace }) {
   useFrame(() => {
     if (!group.current) return;
     const progress = THREE.MathUtils.clamp((performance.now() - trace.startedAt) / trace.durationMs, 0, 1);
-    const traveled = progress * length;
-    const visibleLength = Math.min(streak, traveled);
-    group.current.position.copy(from).addScaledVector(direction, traveled - visibleLength / 2);
-    group.current.scale.set(1, Math.max(.001, visibleLength / streak), 1);
-    if (core.current) core.current.opacity = (trace.hit ? .94 : .72) * (1 - progress * .8);
+    const traveled = length * (1 - (1 - progress) * (1 - progress));
+    // Keep the back of both cylinders exactly on the muzzle throughout the
+    // animation. No detached tip geometry is allowed near the crosshair.
+    group.current.position.copy(from).addScaledVector(direction, traveled / 2);
+    group.current.scale.set(1, Math.max(.001, traveled), 1);
+    if (core.current) core.current.opacity = (trace.hit ? .85 : .65) * (1 - progress * .85);
+    if (glow.current) glow.current.opacity = .18 * (1 - progress);
   });
 
   return (
     <group ref={group} position={from} quaternion={quaternion} scale={[1, .001, 1]} userData={{ ignoreProjectile: true }}>
       <mesh>
-        <cylinderGeometry args={[0.005, 0.014, streak, 5]} />
-        <meshBasicMaterial
-          ref={core}
-          color={trace.color}
-          transparent
-          opacity={trace.hit ? 0.9 : 0.52}
-          depthWrite={false}
-        />
+        <cylinderGeometry args={[.004, .008, 1, 6]} />
+        <meshBasicMaterial ref={core} color={trace.color} transparent opacity={.85} depthWrite={false} />
       </mesh>
-      {skin && <mesh>
-        <cylinderGeometry args={[skin.rarity === "legendary" ? .016 : .011, .003, streak * .72, motif === "pixel" || motif === "redaction" ? 4 : 5]} />
-        <meshBasicMaterial color={trace.color} transparent opacity={skin.rarity === "rare" ? .24 : .45} depthWrite={false} />
-      </mesh>}
-      {skin && [0, 1, 2].map((i) => (
-        <mesh key={i} position={[Math.sin(i*2.4)*.035, (i - 1) * streak * .23, Math.cos(i*2.4)*.035]} rotation={[i*.7,0,i*.8]}>
-          {(["pixel","redaction","circuit","hazard","cassette","blueprint"].includes(motif!)) ? <boxGeometry args={[.045, .09, .045]} />
-           : (["ice","prism","fold","storm"].includes(motif!)) ? <tetrahedronGeometry args={[.05]} />
-           : (["void","stars","eye","clock"].includes(motif!)) ? <torusGeometry args={[.055,.01,4,9]} />
-           : <octahedronGeometry args={[.043,0]} />}
-          <meshBasicMaterial color={i===1?skin.accent:trace.color} transparent opacity={skin.rarity==="rare"?.6:.9} depthWrite={false} />
-        </mesh>
-      ))}
-      <mesh position={[0, streak / 2, 0]}>
-        {motif === "ice" || motif === "prism" ? <tetrahedronGeometry args={[trace.hit ? .12 : .07]} /> : motif === "redaction" || motif === "pixel" ? <boxGeometry args={[.12,.065,.065]}/> : <octahedronGeometry args={[trace.hit ? .05 : .03, 0]} />}
-        <meshBasicMaterial color={trace.color} depthWrite={false} />
+      <mesh>
+        <cylinderGeometry args={[.018, .024, 1, 6]} />
+        <meshBasicMaterial ref={glow} color={trace.color} transparent opacity={.18} depthWrite={false} />
       </mesh>
     </group>
   );
@@ -212,7 +192,6 @@ export function CombatSystem() {
         {
           id,
           color: color === "default" ? hit ? "#ff6ea8" : "#5978e8" : skinColor(color),
-          skin: color,
           from: [from.x, from.y, from.z],
           to: [to.x, to.y, to.z],
           hit,
@@ -443,7 +422,7 @@ export function CombatSystem() {
           ? inheritedUserData(first.object, "destructibleId")
           : undefined;
 
-        if (currentWeapon !== "shotgun" || pellet < 3) {
+        if (muzzle && (currentWeapon !== "shotgun" || pellet < 3)) {
           addTrace(muzzle, end, Boolean(targetId || propId || destructibleId));
         }
 
