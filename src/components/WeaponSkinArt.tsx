@@ -100,8 +100,33 @@ function ThemeSilhouette({theme,weapon}:{theme:SkinTheme;weapon:WeaponId}){
 function SkinAttack({theme,weapon}:{theme:SkinTheme;weapon:WeaponId}){
   const knife=weapon==='knife';const motif=theme.motif;
   const x=knife?305:weapon==='sniper'?277:295,y=knife?202:226;
+  const signature:Record<SkinTheme['motif'],string>={
+    nib:'M-8 0q-30-36-54-10t-35-4q24 24 62 19t27-5',
+    ruler:'M-12-33h-77v13h13v13h-13v14h77',
+    hazard:'M-7-10-30-43-43-11-78-19-54 13-87 29-37 20Z',
+    fold:'M-6-1-33-42-49-8-80-20-51 14-85 32-26 13Z',
+    pixel:'M-5-12h-25v-19h-22v17h-24v26h24v17h22V12h25Z',
+    clip:'M-8-8q-24-35-42-19t-21 36q5 21 19 7t-2-24',
+    graffiti:'M-6-16q-24-35-30 5t-26-5q-15-21-22 18t-25 4',
+    comic:'M-5-7-25-39-34-16-57-48-57-13-92-18-63 11-78 32-35 20-15 30Z',
+    blueprint:'M-6-32h-95M-54-53v103m-25-87 50 73',
+    cassette:'M-6-13q-22-29-44 0t-42 0M-6 4q-22-29-44 0t-42 0',
+    circuit:'M-5-2h-20v-23h-24v-16h-27m51 39v20h-34v24h-27',
+    ice:'M-7-3-24-49-39-11-71-32-51 4-83 21-30 23-38 53Z',
+    flame:'M-7 0q-20-59-34-23t-33-15q13 28-27 43 34-7 29 35 18-19 32-5Z',
+    vial:'M-8-7q-25-30-49-10t-33 2q12 23 34 18t48-10m-62-26v-10m-10 3v-8',
+    storm:'M-7-7-27-41-34-7-60-29-46 7-86 35-41 21Z',
+    clock:'M-4-4a42 42 0 1 0-84 0 42 42 0 0 0 84 0m-42-27v27l22 15',
+    abyss:'M-8-11q-25-36-53 4t-49 13m38-46q-22 15-15 34m32 12q-11 34-38 34',
+    eye:'M-7-5q-46-53-91 0 45 50 91 0Zm-45-22v44',
+    stars:'M-8-5q-60-49-103 0 50 50 103 0Zm-42-35v70m-32-50 72 30',
+    redaction:'M-5-24h-81v14h81M-16-2h-91v17h91M-7 25h-67v11h67',
+    prism:'M-8 0-33-50-45-6-87-28-55 9-95 27-37 18-51 53Z',
+    dragon:'M-8-6q-28-64-52-19l-37-23 19 47-28 22 47-7 18 39 19-43Z',
+  };
   return <g className={`skin-attack skin-attack--${motif}`} transform={`translate(${x} ${y})`} fill="none" stroke={theme.color} strokeLinecap="round">
     {knife?<><path d="M0 0Q-95-92-162-78M0 5Q-91-48-153-45M0 11Q-85-19-138-13" strokeWidth="7"/><path d="M-106-55q-35-24-56-4" stroke={theme.accent} strokeWidth="4"/></>:<><path d={motif==='stars'?'M0 0Q-80-48-115 0Q-80 48 0 0Z':motif==='flame'||motif==='dragon'?'M0 0Q-18-75-54-78Q-43-37-103-43Q-71-10-120 16Q-65 10-38 56Z':motif==='ice'||motif==='prism'?'M0 0-92-55-63-5-110 16-47 18-72 66Z':motif==='pixel'||motif==='redaction'?'M0-14h-33v-21h-26v24h-44v28h56v29h33V14H0Z':'M0 0-91-47-57-8-113 8-50 16-74 52Z'} fill={theme.color} fillOpacity=".75" stroke={theme.accent} strokeWidth="4"/><circle r={theme.rarity==='legendary'?33:theme.rarity==='epic'?23:16} strokeWidth="4"/><path d="M-35-35-65-65M-40 27-78 52" strokeWidth="5"/></>}
+    <path d={signature[motif]} stroke={theme.accent} strokeWidth={knife?4:5} fill="none"/>
     {Array.from({length:theme.rarity==='legendary'?9:theme.rarity==='epic'?6:4},(_,i)=><circle key={i} cx={-22-i*13} cy={Math.sin(i*2.4)*34} r={2+i%3} fill={i%2?theme.accent:theme.color} stroke="none"/>)}
   </g>;
 }
