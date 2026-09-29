@@ -294,6 +294,7 @@ export function CombatSystem() {
             stats.knifeDamage *
             partMultiplier;
           state.recordWeaponHit(targetId, "knife", damage);
+          window.dispatchEvent(new Event("knife-enemy-hit"));
 
           window.dispatchEvent(
             new CustomEvent("boss-impact", {
