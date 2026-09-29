@@ -1,6 +1,10 @@
 import * as THREE from "three";
 import type { WeaponId } from "./config";
 
+export const SKIN_MUZZLES: Record<WeaponId, readonly [number, number]> = {
+  rifle: [292, 232], shotgun: [286, 229], sniper: [269, 219], knife: [305, 202],
+};
+
 /** The drawn weapon is an SVG overlay. Project its transformed muzzle anchor
  * into the world so the Three.js tracer begins at the visible barrel tip. */
 export function weaponMuzzleWorldPosition(

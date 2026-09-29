@@ -1,4 +1,5 @@
 import type { WeaponId } from '../game/config';
+import { SKIN_MUZZLES } from '../game/weaponMuzzle';
 import { getSkin, type SkinId, type SkinTheme } from '../game/skins';
 
 type Part={name:string;d:string;layer:'shell'|'dark'|'metal'|'light'|'core'};
@@ -97,7 +98,7 @@ function ThemeSilhouette({theme,weapon}:{theme:SkinTheme;weapon:WeaponId}){
 
 function SkinAttack({theme,weapon}:{theme:SkinTheme;weapon:WeaponId}){
   const knife=weapon==='knife';const motif=theme.motif;
-  const x=knife?305:weapon==='sniper'?277:295,y=knife?202:226;
+  const [x,y]=SKIN_MUZZLES[weapon];
   const signature:Record<SkinTheme['motif'],string>={
     nib:'M-8 0q-30-36-54-10t-35-4q24 24 62 19t27-5',
     ruler:'M-12-33h-77v13h13v13h-13v14h77',
@@ -122,11 +123,11 @@ function SkinAttack({theme,weapon}:{theme:SkinTheme;weapon:WeaponId}){
     prism:'M-8 0-33-50-45-6-87-28-55 9-95 27-37 18-51 53Z',
     dragon:'M-8-6q-28-64-52-19l-37-23 19 47-28 22 47-7 18 39 19-43Z',
   };
-  return <g className={`skin-attack skin-attack--${motif}`} transform={`translate(${x} ${y})`} fill="none" stroke={theme.color} strokeLinecap="round">
+  return <g transform={`translate(${x} ${y})`}><g className={`skin-attack skin-attack--${motif}`} fill="none" stroke={theme.color} strokeLinecap="round">
     {knife?<><path d="M0 0Q-95-92-162-78M0 5Q-91-48-153-45M0 11Q-85-19-138-13" strokeWidth="7"/><path d="M-106-55q-35-24-56-4" stroke={theme.accent} strokeWidth="4"/></>:<><path d={motif==='stars'?'M0 0Q-80-48-115 0Q-80 48 0 0Z':motif==='flame'||motif==='dragon'?'M0 0Q-18-75-54-78Q-43-37-103-43Q-71-10-120 16Q-65 10-38 56Z':motif==='ice'||motif==='prism'?'M0 0-92-55-63-5-110 16-47 18-72 66Z':motif==='pixel'||motif==='redaction'?'M0-14h-33v-21h-26v24h-44v28h56v29h33V14H0Z':'M0 0-91-47-57-8-113 8-50 16-74 52Z'} fill={theme.color} fillOpacity=".75" stroke={theme.accent} strokeWidth="4"/><circle r={theme.rarity==='legendary'?33:theme.rarity==='epic'?23:16} strokeWidth="4"/><path d="M-35-35-65-65M-40 27-78 52" strokeWidth="5"/></>}
     <path d={signature[motif]} stroke={theme.accent} strokeWidth={knife?4:5} fill="none"/>
     {Array.from({length:theme.rarity==='legendary'?9:theme.rarity==='epic'?6:4},(_,i)=><circle key={i} cx={-22-i*13} cy={Math.sin(i*2.4)*34} r={2+i%3} fill={i%2?theme.accent:theme.color} stroke="none"/>)}
-  </g>;
+  </g></g>;
 }
 
 export function SkinWeaponArt({weapon,id,firing=false,reloading=false}:{weapon:WeaponId;id:SkinId;firing?:boolean;reloading?:boolean}){

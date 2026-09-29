@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type CSSProperties } from "react";
 import type { WeaponId } from "../game/config";
 import { useGameStore } from "../game/store";
 import { getSkin, skinColor, type SkinId } from "../game/skins";
+import { SKIN_MUZZLES } from "../game/weaponMuzzle";
 import { ScopedSkinArt, SkinWeaponArt } from "./WeaponSkinArt";
 
 function RifleHipArt() {
@@ -100,7 +101,7 @@ function KnifeHipArt() {
 function HipWeaponArt({ weapon, skin, firing, reloading, preview=false }: { weapon: WeaponId; skin: SkinId; firing:boolean; reloading:boolean; preview?:boolean }) {
   const muzzle = skin === "default"
     ? { rifle: [310, 245], shotgun: [297, 235], sniper: [281, 220], knife: [0, 0] }[weapon]
-    : { rifle: [292, 232], shotgun: [286, 229], sniper: [269, 219], knife: [0, 0] }[weapon];
+    : SKIN_MUZZLES[weapon];
   return (
     <svg viewBox={preview ? "255 173 615 452" : "0 0 900 620"} role="presentation">
       <defs>
