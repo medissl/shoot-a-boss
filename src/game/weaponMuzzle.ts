@@ -16,16 +16,14 @@ export function weaponMuzzleWorldPosition(
   const anchor = document.querySelector<SVGCircleElement>(
     `.weapon-view--${weapon}.${scoped ? "is-scoped" : "is-hip"} [data-weapon-muzzle]`,
   );
-  const matrix = anchor?.getScreenCTM();
   const viewport = canvas.getBoundingClientRect();
 
-  if (anchor && matrix && viewport.width > 0 && viewport.height > 0) {
-    const tip = new DOMPoint(
-      Number(anchor.getAttribute("cx")),
-      Number(anchor.getAttribute("cy")),
-    ).matrixTransform(matrix);
-    const ndcX = ((tip.x - viewport.left) / viewport.width) * 2 - 1;
-    const ndcY = 1 - ((tip.y - viewport.top) / viewport.height) * 2;
+  if (anchor && viewport.width > 0 && viewport.height > 0) {
+    // getBoundingClientRect includes the SVG viewBox, layout, and animated CSS
+    // transforms on every parent. A zero-radius circle yields the exact tip.
+    const tip = anchor.getBoundingClientRect();
+    const ndcX = ((tip.left + tip.width / 2 - viewport.left) / viewport.width) * 2 - 1;
+    const ndcY = 1 - ((tip.top + tip.height / 2 - viewport.top) / viewport.height) * 2;
     if (Number.isFinite(ndcX) && Number.isFinite(ndcY)) {
       // A point on the camera's view plane at a fixed muzzle depth projects
       // back to the exact pixel occupied by the transformed SVG anchor.
