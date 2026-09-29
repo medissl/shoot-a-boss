@@ -97,7 +97,7 @@ export function MainMenu() {
               <button type="button" onClick={() => setEncyclopediaOpen(true)}>
                 <BookOpen size={17} /> MONSTER ENCYCLOPEDIA
               </button>
-              <button type="button" onClick={() => setArsenalOpen(true)}><Crosshair size={17}/> THE ARSENAL · 88 SKINS</button>
+              <button type="button" onClick={() => setArsenalOpen(true)}><Crosshair size={17}/> THE ARSENAL</button>
               <button type="button" onClick={() => setEquipmentOpen(true)}>✦ PLAYER EQUIPMENT</button>
 
               <a href="https://github.com/medissl" target="_blank" rel="noreferrer">

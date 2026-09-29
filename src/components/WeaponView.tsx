@@ -147,7 +147,7 @@ function ScopedWeaponArt({ weapon, skin }: { weapon: WeaponId; skin: SkinId }) {
       {skin === "default" && weapon === "rifle" && (
         <g className="ads-drawing ads-drawing--rifle">
           <path className="ads-fill" d="M405 456 L595 456 L670 600 H330 Z" />
-          <path className="ads-fill ads-optic-frame" d="M438 230 L562 230 L578 368 L422 368 Z" />
+          <path className="ads-fill ads-optic-frame" fillRule="evenodd" d="M438 230 L562 230 L578 368 L422 368 Z M462 268 L462 332 L538 332 L538 268 Z" />
           <rect className="ads-lens" x="462" y="268" width="76" height="64" rx="9" />
           <circle className="ads-dot" cx="500" cy="300" r="5" />
           <path className="ads-line ads-line--thin" d="M447 400 H553" />
@@ -157,9 +157,8 @@ function ScopedWeaponArt({ weapon, skin }: { weapon: WeaponId; skin: SkinId }) {
       {skin === "default" && weapon === "shotgun" && (
         <g className="ads-drawing ads-drawing--shotgun">
           <path className="ads-fill" d="M418 452 L582 452 L650 600 H350 Z" />
-          <path className="ads-line" d="M500 452 V306" />
-          <path className="ads-line ads-line--thin" d="M470 330 H530" />
-          <circle className="ads-dot" cx="500" cy="300" r="5" />
+          <path className="ads-line" d="M500 452 V390" />
+          <path className="ads-line ads-line--thin" d="M470 409 H530" />
         </g>
       )}
       <ScopedSkinArt weapon={weapon} id={skin}/>

@@ -14,6 +14,8 @@ type Trace = {
   from: [number, number, number];
   to: [number, number, number];
   hit: boolean;
+  startedAt: number;
+  durationMs: number;
 };
 
 type Impact = {
@@ -38,15 +40,14 @@ const PART_PRIORITY: Record<HitPart, number> = {
 };
 
 function TraceLine({ trace }: { trace: Trace }) {
+  const group = useRef<THREE.Group>(null);
+  const core = useRef<THREE.MeshBasicMaterial>(null);
   const from = useMemo(() => new THREE.Vector3(...trace.from), [trace.from]);
   const to = useMemo(() => new THREE.Vector3(...trace.to), [trace.to]);
-  const midpoint = useMemo(
-    () => from.clone().add(to).multiplyScalar(0.5),
-    [from, to],
-  );
   const length = from.distanceTo(to);
   const skin = getSkin(trace.skin);
   const motif = skin?.motif;
+  const streak = Math.min(1.15, Math.max(.25, length * .11));
   const quaternion = useMemo(
     () =>
       new THREE.Quaternion().setFromUnitVectors(
@@ -56,11 +57,20 @@ function TraceLine({ trace }: { trace: Trace }) {
     [from, to],
   );
 
+  useFrame(() => {
+    if (!group.current) return;
+    const progress = THREE.MathUtils.clamp((performance.now() - trace.startedAt) / trace.durationMs, 0, 1);
+    group.current.position.copy(from).lerp(to, progress);
+    group.current.scale.setScalar(Math.max(.18, 1 - progress * .58));
+    if (core.current) core.current.opacity = (trace.hit ? .94 : .72) * (1 - progress * .8);
+  });
+
   return (
-    <group position={midpoint} quaternion={quaternion} userData={{ ignoreProjectile: true }}>
+    <group ref={group} position={from} quaternion={quaternion} userData={{ ignoreProjectile: true }}>
       <mesh>
-        <cylinderGeometry args={[0.005, 0.01, length, 5]} />
+        <cylinderGeometry args={[0.005, 0.014, streak, 5]} />
         <meshBasicMaterial
+          ref={core}
           color={trace.color}
           transparent
           opacity={trace.hit ? 0.9 : 0.52}
@@ -68,11 +78,11 @@ function TraceLine({ trace }: { trace: Trace }) {
         />
       </mesh>
       {skin && <mesh>
-        <cylinderGeometry args={[skin.rarity === "legendary" ? .016 : .011, .003, length * .68, motif === "pixel" || motif === "redaction" ? 4 : 5]} />
+        <cylinderGeometry args={[skin.rarity === "legendary" ? .016 : .011, .003, streak * .72, motif === "pixel" || motif === "redaction" ? 4 : 5]} />
         <meshBasicMaterial color={trace.color} transparent opacity={skin.rarity === "rare" ? .24 : .45} depthWrite={false} />
       </mesh>}
       {skin && [0, 1, 2].map((i) => (
-        <mesh key={i} position={[Math.sin(i*2.4)*.035, (i - 1) * Math.min(length * .24, .55), Math.cos(i*2.4)*.035]} rotation={[i*.7,0,i*.8]}>
+        <mesh key={i} position={[Math.sin(i*2.4)*.035, (i - 1) * streak * .23, Math.cos(i*2.4)*.035]} rotation={[i*.7,0,i*.8]}>
           {(["pixel","redaction","circuit","hazard","cassette","blueprint"].includes(motif!)) ? <boxGeometry args={[.045, .09, .045]} />
            : (["ice","prism","fold","storm"].includes(motif!)) ? <tetrahedronGeometry args={[.05]} />
            : (["void","stars","eye","clock"].includes(motif!)) ? <torusGeometry args={[.055,.01,4,9]} />
@@ -80,7 +90,7 @@ function TraceLine({ trace }: { trace: Trace }) {
           <meshBasicMaterial color={i===1?skin.accent:trace.color} transparent opacity={skin.rarity==="rare"?.6:.9} depthWrite={false} />
         </mesh>
       ))}
-      <mesh position={[0, length / 2, 0]}>
+      <mesh position={[0, streak / 2, 0]}>
         {motif === "ice" || motif === "prism" ? <tetrahedronGeometry args={[trace.hit ? .12 : .07]} /> : motif === "redaction" || motif === "pixel" ? <boxGeometry args={[.12,.065,.065]}/> : <octahedronGeometry args={[trace.hit ? .05 : .03, 0]} />}
         <meshBasicMaterial color={trace.color} depthWrite={false} />
       </mesh>
@@ -191,6 +201,7 @@ export function CombatSystem() {
   useEffect(() => {
     function addTrace(from: THREE.Vector3, to: THREE.Vector3, hit: boolean) {
       const id = nextTraceId.current++;
+      const durationMs = Math.min(210, Math.max(95, from.distanceTo(to) * 9));
       const color = useGameStore.getState().equippedSkins[useGameStore.getState().weapon];
       setTraces((current) => [
         ...current.slice(-10),
@@ -201,12 +212,14 @@ export function CombatSystem() {
           from: [from.x, from.y, from.z],
           to: [to.x, to.y, to.z],
           hit,
+          startedAt: performance.now(),
+          durationMs,
         },
       ]);
 
       window.setTimeout(() => {
         setTraces((current) => current.filter((trace) => trace.id !== id));
-      }, hit ? 74 : 48);
+      }, durationMs);
     }
 
     function addImpact(position: THREE.Vector3) {
@@ -275,7 +288,10 @@ export function CombatSystem() {
           "destructibleId",
         );
 
-        addImpact(first.point);
+        if (targetId || propId || destructibleId) {
+          addImpact(first.point);
+          window.dispatchEvent(new Event("knife-impact"));
+        }
 
         if (targetId) {
           const rawPart = first.object.userData.targetPart as
@@ -426,11 +442,9 @@ export function CombatSystem() {
           ? inheritedUserData(first.object, "destructibleId")
           : undefined;
 
-        addTrace(
-          origin,
-          end,
-          Boolean(targetId || propId || destructibleId),
-        );
+        if (currentWeapon !== "shotgun" || pellet < 3) {
+          addTrace(origin, end, Boolean(targetId || propId || destructibleId));
+        }
 
         if (!first) continue;
 

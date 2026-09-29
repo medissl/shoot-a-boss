@@ -138,13 +138,13 @@ export function AudioManager() {
     [sfxLevel],
   );
 
-  const skinAccent = useCallback((weapon:WeaponId,action:"fire"|"equip"|"reload") => {
+  const playTheme = useCallback((weapon:WeaponId,action:"fire"|"equip"|"reload"|"knife-hit") => {
     if (!unlocked.current || useGameStore.getState().screen!=="playing" || typeof AudioContext==="undefined")return;
     const skin=useGameStore.getState().equippedSkins[weapon];
     if(skin==="default")return;
     const context=boostedContext.current??new AudioContext();boostedContext.current=context;
     void context.resume().catch(()=>undefined);
-    playSkinSound(context,skin,action,sfxLevel(.85),weapon);
+    playSkinSound(context,skin,action,sfxLevel(.92),weapon);
   },[sfxLevel]);
 
   const playMenuSound = useCallback((kind: "open" | "select" | "confirm") => {
@@ -223,7 +223,7 @@ export function AudioManager() {
 
       const audio = new Audio(A.rifleBurst);
       audio.preload = "auto";
-      audio.volume = sfxLevel(useGameStore.getState().equippedSkins.rifle === "default" ? 0.8 : 0.16);
+      audio.volume = sfxLevel(0.8);
       rifleBursts.current.add(audio);
 
       const scheduleNext = () => {
@@ -262,7 +262,9 @@ export function AudioManager() {
 
       if (state.screen === "playing") {
         const path = cocking[state.weapon];
-        if (path) playOne(path, 0.72);
+        if (useGameStore.getState().equippedSkins[state.weapon] === "default") {
+          if (path) playOne(path, 0.72);
+        } else playTheme(state.weapon,"equip");
       }
     };
 
@@ -277,7 +279,7 @@ export function AudioManager() {
       window.removeEventListener("pointerdown", unlock);
       window.removeEventListener("keydown", unlock);
     };
-  }, [playOne, requestBgm]);
+  }, [playOne, playTheme, requestBgm]);
 
   useEffect(() => {
     requestBgm(bgmFor(screen, currentLevel));
@@ -371,9 +373,9 @@ export function AudioManager() {
     if (!reloading || !reloadingWeapon) return;
     const path = reloads[reloadingWeapon];
     if (!path) return;
-    playOne(path, useGameStore.getState().equippedSkins[reloadingWeapon] === "default" ? (reloadGain[reloadingWeapon] ?? 0.25) : 0.11);
-    skinAccent(reloadingWeapon,"reload");
-  }, [playOne, reloading, reloadingWeapon, skinAccent]);
+    if (useGameStore.getState().equippedSkins[reloadingWeapon] === "default") playOne(path, reloadGain[reloadingWeapon] ?? 0.25);
+    else playTheme(reloadingWeapon,"reload");
+  }, [playOne, reloading, reloadingWeapon, playTheme]);
 
   useEffect(() => {
     const wanted: string | null =
@@ -418,23 +420,23 @@ export function AudioManager() {
       const selected = (event as CustomEvent<{ weapon: WeaponId }>).detail.weapon;
       if (useGameStore.getState().screen === "playing") {
         const path = cocking[selected];
-        if (path) playOne(path, useGameStore.getState().equippedSkins[selected] === "default" ? 0.72 : 0.18);
-        skinAccent(selected,"equip");
+        if (useGameStore.getState().equippedSkins[selected] === "default") { if (path) playOne(path, 0.72); }
+        else playTheme(selected,"equip");
       }
     };
 
     const weaponFire = (event: Event) => {
       const fired = (event as CustomEvent<{ weapon: WeaponId }>).detail.weapon;
       const themed = useGameStore.getState().equippedSkins[fired] !== "default";
-      if (fired === "sniper") playOne(A.sniperShoot, themed ? 0.18 : 0.95, themed ? 1 : 1.6);
-      if (fired === "shotgun") playOne(A.shotgunShoot, themed ? 0.16 : 0.85);
-      skinAccent(fired,"fire");
+      if (themed) { playTheme(fired,"fire"); return; }
+      if (fired === "sniper") playOne(A.sniperShoot, 0.95, 1.6);
+      if (fired === "shotgun") playOne(A.shotgunShoot, 0.85);
     };
 
     const rifleDown = () => {
-      if (!unlocked.current || rifleHeld.current) return;
+      if (!unlocked.current || rifleHeld.current || useGameStore.getState().equippedSkins.rifle !== "default") return;
       rifleHeld.current = true;
-      playOne(A.rifleOne, useGameStore.getState().equippedSkins.rifle === "default" ? 0.75 : 0.15);
+      playOne(A.rifleOne, 0.75);
 
       rifleHoldTimer.current = window.setTimeout(() => {
         if (!rifleHeld.current || !unlocked.current) return;
@@ -443,6 +445,7 @@ export function AudioManager() {
     };
 
     const rifleUp = () => stopRifleBurst();
+    const knifeImpact = () => playTheme("knife","knife-hit");
     const grenadeCock = () => playOne(A.grenadeCock, 0.75);
     const grenadeExplode = () => playOne(A.grenadeExplode, 1.35);
     const magicCast = (event: Event) => playOne(A.magic[(event as CustomEvent<{kind:MagicType}>).detail.kind], 1);
@@ -476,6 +479,7 @@ export function AudioManager() {
     window.addEventListener("weapon-fired", weaponFire as EventListener);
     window.addEventListener("rifle-trigger-down", rifleDown);
     window.addEventListener("rifle-trigger-up", rifleUp);
+    window.addEventListener("knife-impact", knifeImpact);
     window.addEventListener("grenade-cocked", grenadeCock);
     window.addEventListener("magic-cast", magicCast);
     window.addEventListener("scan-started", reveal);
@@ -496,6 +500,7 @@ export function AudioManager() {
       window.removeEventListener("weapon-fired", weaponFire as EventListener);
       window.removeEventListener("rifle-trigger-down", rifleDown);
       window.removeEventListener("rifle-trigger-up", rifleUp);
+      window.removeEventListener("knife-impact", knifeImpact);
       window.removeEventListener("grenade-cocked", grenadeCock);
       window.removeEventListener("magic-cast", magicCast);
       window.removeEventListener("scan-started", reveal);
@@ -510,7 +515,7 @@ export function AudioManager() {
       window.removeEventListener("pickup-collected", pickup as EventListener);
       window.removeEventListener("boss-killed", killed as EventListener);
     };
-  }, [playOne, skinAccent, startSmoothRifleBurst, stopRifleBurst]);
+  }, [playOne, playTheme, startSmoothRifleBurst, stopRifleBurst]);
 
   useEffect(() => {
     if (screen !== "playing") stopRifleBurst();

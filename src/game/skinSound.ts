@@ -1,6 +1,6 @@
 import { getSkin, type SkinId } from './skins';
 import type { WeaponId } from './config';
-type Action='fire'|'equip'|'reload';
+type Action='fire'|'equip'|'reload'|'knife-hit';
 type Wave=OscillatorType;
 type Timbre={pitch:number;fall:number;wave:Wave;noise:number;filter:BiquadFilterType;cut:number;echo:number;harmonic:number;attack:number};
 /** Individually tuned timbres. The same family is processed separately for each weapon. */
@@ -31,18 +31,49 @@ const voices:Record<string,Timbre>={
 const noiseCache=new WeakMap<AudioContext,AudioBuffer>();
 const last=new Map<string,number>();
 function noiseBuffer(ctx:AudioContext){let b=noiseCache.get(ctx);if(b)return b;b=ctx.createBuffer(1,Math.ceil(ctx.sampleRate*.65),ctx.sampleRate);const out=b.getChannelData(0);for(let i=0;i<out.length;i++)out[i]=Math.random()*2-1;noiseCache.set(ctx,b);return b;}
+/** Complete theme sound. No original weapon recording is mixed into this signal. */
 export function playSkinSound(ctx:AudioContext,id:SkinId,action:Action,volume:number,weapon:WeaponId){
  const theme=getSkin(id);if(!theme||volume<=0)return;
- const key=`${id}:${weapon}:${action}`,now=performance.now();if(now-(last.get(key)??-Infinity)<(action==='fire'?(weapon==='rifle'?68:120):300))return;last.set(key,now);
+ const key=`${id}:${weapon}:${action}`,now=performance.now();
+ if(now-(last.get(key)??-Infinity)<(action==='fire'?(weapon==='rifle'?67:100):action==='knife-hit'?90:300))return;
+ last.set(key,now);
  const t=voices[theme.sound];if(!t)return;
- const w={rifle:{pitch:1.16,length:.78,body:.72},shotgun:{pitch:.67,length:1.4,body:1.35},sniper:{pitch:.48,length:1.9,body:1.5},knife:{pitch:1.7,length:.65,body:.75}}[weapon];
- const a=action==='fire'?1:action==='reload'?.65:.55;
- const duration=(action==='fire'?.17:action==='reload'?.3:.23)*w.length;
- const at=ctx.currentTime,amp=Math.min(.32,volume*.32*w.body*a);
- const bus=ctx.createGain();bus.gain.setValueAtTime(.0001,at);bus.gain.linearRampToValueAtTime(amp,at+t.attack);bus.gain.exponentialRampToValueAtTime(.0001,at+duration);bus.connect(ctx.destination);
- const filter=ctx.createBiquadFilter();filter.type=t.filter;filter.frequency.setValueAtTime(t.cut*w.pitch,at);filter.frequency.exponentialRampToValueAtTime(Math.max(80,t.cut*.37*w.pitch),at+duration);filter.Q.value=.72;filter.connect(bus);
- const spawn=(ratio:number,gain:number,delay=0)=>{const o=ctx.createOscillator(),g=ctx.createGain();o.type=t.wave;o.frequency.setValueAtTime(t.pitch*w.pitch*ratio,at+delay);o.frequency.exponentialRampToValueAtTime(Math.max(24,t.fall*w.pitch*ratio),at+delay+duration);g.gain.value=gain;o.connect(g).connect(filter);o.start(at+delay);o.stop(at+delay+duration+.01);o.onended=()=>{o.disconnect();g.disconnect()}};
- spawn(1,.85);spawn(t.harmonic,.33,action==='fire'?.006:.014);
- const n=ctx.createBufferSource(),ng=ctx.createGain();n.buffer=noiseBuffer(ctx);ng.gain.value=t.noise;n.connect(ng).connect(filter);n.start(at);n.stop(at+duration+.015);n.onended=()=>{n.disconnect();ng.disconnect();filter.disconnect();bus.disconnect()};
- if(t.echo>0){const o=ctx.createOscillator(),g=ctx.createGain();o.type='sine';o.frequency.setValueAtTime(t.pitch*w.pitch*(weapon==='sniper'?2:1.5),at+t.echo);o.frequency.exponentialRampToValueAtTime(Math.max(40,t.fall*w.pitch),at+t.echo+.09);g.gain.setValueAtTime(.0001,at+t.echo);g.gain.exponentialRampToValueAtTime(amp*.18,at+t.echo+.008);g.gain.exponentialRampToValueAtTime(.0001,at+t.echo+.15);o.connect(g).connect(ctx.destination);o.start(at+t.echo);o.stop(at+t.echo+.16);o.onended=()=>{o.disconnect();g.disconnect()};}
+ const profile={rifle:{pitch:1.08,length:.30,body:.72},shotgun:{pitch:.65,length:.49,body:1.08},sniper:{pitch:.46,length:.75,body:1.22},knife:{pitch:1.67,length:.29,body:.72}}[weapon];
+ const at=ctx.currentTime+.002;
+ const master=ctx.createGain();master.gain.value=Math.min(.78,Math.max(.02,volume*.7*profile.body));
+ const limiter=ctx.createDynamicsCompressor();limiter.threshold.value=-11;limiter.knee.value=9;limiter.ratio.value=5;limiter.attack.value=.002;limiter.release.value=.18;
+ master.connect(limiter).connect(ctx.destination);
+ const duration=action==='fire'?profile.length:action==='knife-hit'?.35:action==='reload'?.64:.37;
+ const trigger=(delay:number,strength:number,tail:number,pitch:number,cut:number)=>{
+   const start=at+delay;
+   const bus=ctx.createGain();bus.gain.setValueAtTime(.0001,start);bus.gain.exponentialRampToValueAtTime(Math.max(.01,strength),start+.005);bus.gain.exponentialRampToValueAtTime(.0001,start+tail);bus.connect(master);
+   const filter=ctx.createBiquadFilter();filter.type=t.filter;filter.frequency.setValueAtTime(Math.max(120,cut),start);filter.frequency.exponentialRampToValueAtTime(Math.max(80,cut*.32),start+tail);filter.Q.value=.7;filter.connect(bus);
+   const noise=ctx.createBufferSource();noise.buffer=noiseBuffer(ctx);const grit=ctx.createGain();grit.gain.value=action==='fire'?Math.max(.23,t.noise):Math.max(.18,t.noise*.72);noise.connect(grit).connect(filter);noise.start(start);noise.stop(start+Math.min(tail,.62));
+   const low=ctx.createOscillator();low.type=t.wave;low.frequency.setValueAtTime(Math.max(45,t.pitch*profile.pitch*pitch),start);low.frequency.exponentialRampToValueAtTime(Math.max(28,t.fall*profile.pitch*pitch),start+tail);const lowGain=ctx.createGain();lowGain.gain.value=.85;low.connect(lowGain).connect(filter);low.start(start);low.stop(start+tail);
+   const overtone=ctx.createOscillator();overtone.type=theme.sound==='arcade'||theme.sound==='circuit'?'square':'sine';overtone.frequency.setValueAtTime(Math.max(60,t.pitch*t.harmonic*profile.pitch*pitch),start);overtone.frequency.exponentialRampToValueAtTime(Math.max(45,t.fall*t.harmonic*profile.pitch),start+tail);const upper=ctx.createGain();upper.gain.value=.27;overtone.connect(upper).connect(filter);overtone.start(start);overtone.stop(start+tail);
+   noise.onended=()=>{noise.disconnect();grit.disconnect()};overtone.onended=()=>{overtone.disconnect();upper.disconnect()};low.onended=()=>{low.disconnect();lowGain.disconnect();filter.disconnect();bus.disconnect()};
+ };
+ if(action==='fire'){
+   if(weapon==='knife'){
+     trigger(0,.65,.21,2.2,t.cut*1.9);
+     trigger(.075,.55,.16,.77,t.cut*.8);
+   }else{
+     // Mechanical crack, pressure body, and the theme's tail form one complete shot.
+     trigger(0,1,.095,1.9,t.cut*2.1);
+     trigger(.018,.82,duration,.77,t.cut);
+     trigger(Math.min(.1,duration*.31),.34,Math.min(.32,duration*.65),t.harmonic,t.cut*1.25);
+   }
+ }else if(action==='reload'){
+   trigger(0,.66,.13,2.4,t.cut*1.55);
+   trigger(.19,.55,.17,1.3,t.cut);
+   trigger(.41,.83,.22,.72,t.cut*.68);
+ }else if(action==='equip'){
+   trigger(0,.6,.13,1.7,t.cut*1.3);
+   trigger(.12,.75,.24,.68,t.cut*.75);
+ }else{
+   trigger(0,.8,.11,2.1,t.cut*1.6);
+   trigger(.04,.72,.28,.5,t.cut*.65);
+ }
+ const release=at+Math.max(duration,.68)+.15;
+ window.setTimeout(()=>{master.disconnect();limiter.disconnect()},Math.max(800,(release-at)*1000));
 }

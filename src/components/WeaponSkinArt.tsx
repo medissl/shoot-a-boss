@@ -81,9 +81,7 @@ function Motif({theme,weapon}:{theme:SkinTheme;weapon:WeaponId}){
 
 function ThemeSilhouette({theme,weapon}:{theme:SkinTheme;weapon:WeaponId}){
   const m=theme.motif,knife=weapon==='knife';
-  const tips:Record<string,string>={nib:'M278 216 294 198 306 224Z',ruler:'M279 216 300 209 305 238 282 233Z',hazard:'M273 211 296 202 310 235 279 239Z',fold:'M270 203 308 213 305 244Z',pixel:'M277 211h25v10h-9v14h-16Z',clip:'M275 211 296 204 306 238 281 237Z',graffiti:'M272 207q25-20 34 21l-20 13Z',comic:'M272 217 281 202 292 218 305 207 301 242Z',blueprint:'M274 212 301 208 302 240 276 236Z',cassette:'M275 214h26v26h-26Z',circuit:'M279 216 296 198 309 239 279 240Z',ice:'M273 216 291 190 308 218 300 240Z',flame:'M273 221q8-35 21-32t12 48Z',vial:'M273 208q18-14 28 5l2 29-28-5Z',storm:'M273 218 301 192 290 221 306 232 282 246Z',clock:'M274 209h27v29h-27Z',abyss:'M269 217q23-25 36 13l-26 15Z',eye:'M268 221q18-29 37 9l-24 20Z',stars:'M269 217q17-23 39 9l-26 21Z',redaction:'M273 208 303 208 303 239 273 239Z',prism:'M271 211 287 187 304 221 286 247Z',dragon:'M268 216q14-35 26-24l14 44-18-7-11 21Z'};
   return <g className="skin-silhouette" fill={theme.base} stroke={theme.accent} strokeWidth="4" strokeLinejoin="round">
-    {!knife&&<path d={tips[m]} fill={theme.color}/>}
     {knife&&<path d={m==='dragon'?'M289 175 314 182 328 200 304 231Z':m==='ice'||m==='prism'?'M281 176 317 194 347 244 303 228Z':'M289 180 315 187 347 229 305 232Z'} fill={theme.color}/>}
     {['ice','prism','dragon','flame','storm','abyss','stars','eye'].includes(m)&&<path d={knife?'M346 231q45-42 51 38l38-13 47 105-84-64Z':'M371 257q27-45 37 17l36-22 31 84-66-43Z'} fill={theme.base} opacity=".9"/>}
     {m==='clock'&&<><circle cx="514" cy="334" r="21" fill={theme.base}/><path d="M502 328v-18h22v19"/></>}
@@ -155,7 +153,7 @@ export function ScopedSkinArt({weapon,id}:{weapon:WeaponId;id:SkinId}){
   return <g className={`skin-scoped skin-scoped--${theme.motif}`} fill="none" stroke={theme.color} strokeWidth="5" strokeLinejoin="round">
     <path d="M399 520Q500 466 601 520L652 600H348Z" fill={theme.base} stroke={theme.accent} strokeWidth="8"/>
     <path d="M415 519Q500 477 585 519M377 587H623" stroke={theme.color} strokeWidth="5"/>
-    {weapon==='rifle'?<><path d="M435 231 565 231 583 370 417 370Z" fill={theme.accent}/><path d="M456 254h88v91h-88Z" fill={theme.base} stroke={theme.color}/></>:weapon==='shotgun'?<><path d="M490 451V305M469 330h62" strokeWidth="9"/><path d="M477 309 500 281 523 309Z" fill={theme.accent}/></>:<><ellipse cx="500" cy="520" rx="112" ry="49" stroke={theme.accent} strokeWidth="9"/><path d="M472 491h56"/></>}
+    {weapon==='rifle'?<><path d="M435 231 565 231 583 370 417 370Z M464 260 464 340 536 340 536 260Z" fill={theme.accent} fillRule="evenodd"/><path d="M464 260h72v80h-72Z" stroke={theme.color}/></>:weapon==='shotgun'?<><path d="M490 451V390M469 408h62" strokeWidth="9"/><path d="M477 390 500 366 523 390Z" fill={theme.accent}/></>:<><ellipse cx="500" cy="520" rx="112" ry="49" stroke={theme.accent} strokeWidth="9"/><path d="M472 491h56"/></>}
     <path d="M421 535q79-48 158 0" stroke={theme.color} strokeWidth="3" strokeDasharray="9 8" className="skin-flow"/>
   </g>;
 }
