@@ -18,12 +18,9 @@ export const MAGIC_TYPES = ELEMENTS;
 export type MagicType = Element;
 export type SkinColor = SkinId;
 export const SKIN_COLORS = SKIN_IDS;
-// Temporary cosmetic showroom: all themes are selectable without changing saved ownership.
-const COSMETIC_PREVIEW_ALL = true;
 export type Skins = Record<WeaponId, SkinId[]>;
 export type EquippedSkins = Record<WeaponId, SkinId>;
 const emptySkins = (): Skins => ({ sniper: ["default"], rifle: ["default"], shotgun: ["default"], knife: ["default"] });
-const previewSkins = (): Skins => ({ sniper: ["default", ...SKIN_IDS], rifle: ["default", ...SKIN_IDS], shotgun: ["default", ...SKIN_IDS], knife: ["default", ...SKIN_IDS] });
 const defaultSkins = (): EquippedSkins => ({ sniper: "default", rifle: "default", shotgun: "default", knife: "default" });
 const emptyMagic = (): Record<MagicType, number> => ({ fire: 0, crystal: 0, ice: 0, water: 0, thunder: 0 });
 export const xpToNextLevel = (level: number) => Math.round((120 + level * 42 + Math.floor(level / 10) * 160) * (1 + level * 0.035));
@@ -51,7 +48,7 @@ function persist(state: GameStore) {
   const level = ["stageClear", "upgrade"].includes(state.screen) && state.currentLevel < 10 ? state.currentLevel + 1 : state.currentLevel;
   localStorage.setItem(SAVE_KEY, JSON.stringify({ level, cycle: state.ngPlusCycle, upgrades: state.upgrades,
     xp: state.xp, playerLevel: state.playerLevel, skillPoints: state.skillPoints, magic: state.magic, magicChoices: state.magicChoices, selectedMagic: state.selectedMagic,
-    skins: COSMETIC_PREVIEW_ALL ? (readSave().skins ?? emptySkins()) : state.skins, equippedSkins: state.equippedSkins }));
+    skins: state.skins, equippedSkins: state.equippedSkins }));
 }
 function restoredUpgrades(): UpgradeLevels {
   const upgrades = emptyUpgrades();
@@ -75,7 +72,6 @@ function restoredMagicChoices(): MagicChoices {
   return choices;
 }
 function restoredSkins(): Skins {
-  if (COSMETIC_PREVIEW_ALL) return previewSkins();
   const result = emptySkins();
   const raw = saved.skins as Partial<Record<WeaponId, string[]>> | undefined;
   for (const weapon of weaponOrder) result[weapon] = ["default", ...new Set((raw?.[weapon] ?? []).map(normalizeSkin).filter((id): id is SkinId => id !== null && id !== "default"))];
@@ -601,7 +597,7 @@ export const useGameStore = create<GameStore>((set, get) => {
       const upgrades = emptyUpgrades(); const gear = Object.fromEntries(GEAR.map(({ id }) => [id, 0])) as GearLevels;
       set((state) => ({ screen: "story", runId: state.runId + 1, unlockedLevel: 1, hearts: MAX_HEARTS,
         ngPlusCycle: 0, champion: null, coins: 0, gear, lastReward: 0, lastXpReward: 0, xp: 0, playerLevel: 1, skillPoints: 0,
-        magic: emptyMagic(), magicChoices: emptyMagicChoices(), selectedMagic: null, magicReadyAt: 0, skins: COSMETIC_PREVIEW_ALL ? previewSkins() : emptySkins(), equippedSkins: defaultSkins(),
+        magic: emptyMagic(), magicChoices: emptyMagicChoices(), selectedMagic: null, magicReadyAt: 0, skins: emptySkins(), equippedSkins: defaultSkins(),
         upgrades, upgradeChoices: [], selectedUpgrade: null, ...freshRun(1, upgrades, 0, gear) }));
     },
 
