@@ -2505,7 +2505,7 @@ button {
 .skin-render--legendary .skin-flow{animation-duration:1.1s}
 .skin-render--reload .skin-flow{animation-duration:.55s;stroke-width:6}
 .skin-render--reload .skin-part--magazine,.skin-render--reload .skin-part--pump,.skin-render--reload .skin-part--handle{animation:skin-reload .55s ease-in-out infinite alternate}
-.skin-orbit{transform-box:fill-box;transform-origin:center;animation:skin-orbit 7s linear infinite}
+.skin-orbit{animation:skin-orbit-glow 3.2s ease-in-out infinite alternate}
 .skin-redact{animation:skin-redact 2.8s steps(2,end) infinite}
 .skin-idle-particles circle{animation:skin-float 2.2s ease-in-out infinite alternate}
 .skin-attack{animation:skin-attack .22s ease-out both;filter:drop-shadow(0 0 7px var(--skin-color))}
@@ -2514,7 +2514,7 @@ button {
 @keyframes skin-appear{from{opacity:.25;transform:translateY(8px)}to{opacity:1;transform:none}}
 @keyframes skin-flow{to{stroke-dashoffset:-100}}
 @keyframes skin-reload{to{transform:translate(8px,8px)}}
-@keyframes skin-orbit{to{transform:rotate(360deg)}}
+@keyframes skin-orbit-glow{to{opacity:.42;stroke-width:6}}
 @keyframes skin-redact{15%,80%{opacity:.15}20%,85%{opacity:1}}
 @keyframes skin-float{to{transform:translate(-8px,-14px);opacity:.25}}
 @keyframes skin-attack{from{opacity:1;transform:translate(0,0) scale(.8)}to{opacity:0;transform:translate(0,0) scale(1.3)}}
@@ -2540,3 +2540,15 @@ button {
 .scope-overlay--clock .scope-theme-rim{border:3px dotted var(--scope-accent)}
 .scope-overlay--abyss .scope-theme-rim{box-shadow:inset 0 0 20px var(--scope-color)}
 .scope-overlay--shotgun .scope-theme-rim b{top:-31%}
+
+.arsenal-scope-model{position:relative;overflow:hidden}
+.arsenal-scope-model .scope-overlay{position:absolute;inset:0;--scope-size:min(37vh,30vw)}
+.arsenal-scope-model .scope-ring{width:var(--scope-size);box-shadow:0 0 14px var(--scope-color);border-color:var(--scope-color)}
+.arsenal-scope-model .scope-theme-rim{width:var(--scope-size)}
+.arsenal-scope-model .scope-axis--x{width:var(--scope-size)}
+.arsenal-scope-model .scope-axis--y{height:var(--scope-size)}
+.arsenal-scope-model .scope-reticle{left:50%;top:50%}
+.arsenal-scope-model .scope-overlay--rifle,.arsenal-scope-model .scope-overlay--shotgun{display:grid;--scope-size:min(21vh,17vw)}
+.arsenal-scope-model .scope-overlay--rifle .scope-ring,.arsenal-scope-model .scope-overlay--shotgun .scope-ring{width:var(--scope-size);box-shadow:0 0 12px var(--scope-color);opacity:.8}
+.arsenal-scope-model .scope-theme-rim b{top:-12%}
+@media(max-width:630px){.arsenal-scope-model .scope-overlay{--scope-size:190px}.arsenal-scope-model .scope-overlay--rifle,.arsenal-scope-model .scope-overlay--shotgun{--scope-size:110px}}

@@ -167,7 +167,10 @@ function ScopedWeaponArt({ weapon, skin }: { weapon: WeaponId; skin: SkinId }) {
   );
 }
 
-export function SkinScopePreview({weapon,skin}:{weapon:WeaponId;skin:SkinId}){return <div className="arsenal-scope-model"><ScopedWeaponArt weapon={weapon} skin={skin}/></div>}
+export function SkinScopePreview({weapon,skin}:{weapon:WeaponId;skin:SkinId}){
+  const theme=getSkin(skin);
+  return <div className="arsenal-scope-model"><ScopedWeaponArt weapon={weapon} skin={skin}/><div className={`scope-overlay scope-overlay--${weapon} ${theme ? `scope-overlay--themed scope-overlay--${theme.rarity} scope-overlay--${theme.motif}` : ""}`} style={theme?{"--scope-color":theme.color,"--scope-accent":theme.accent} as CSSProperties:undefined}><div className="scope-ring"/>{theme&&<div className="scope-theme-rim"><i/><i/><i/><i/><b>{theme.name.toUpperCase()}</b></div>}{weapon==="sniper"&&<><span className="scope-axis scope-axis--x"/><span className="scope-axis scope-axis--y"/></>}<span className="scope-reticle"/></div></div>
+}
 
 export function WeaponView() {
   const weapon = useGameStore((state) => state.weapon);
