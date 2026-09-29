@@ -1,4 +1,4 @@
-export type WorldSound = "bossStep"|"bossAttack"|"bossShot"|"paperStep"|"paperAttack"|"penShot"|"inkHit"|"flyWing"|"flyAttack"|"statueCharge"|"statueFire"|"thornGrow"|"gemCharge"|"gemLaser"|"hellWarning"|"hellErupt"|"paperWind";
+export type WorldSound = "bossStep"|"bossAttack"|"bossShot"|"paperStep"|"paperAttack"|"penShot"|"inkHit"|"flyWing"|"flyAttack"|"flyDeath"|"statueCharge"|"statueFire"|"statueDeath"|"thornGrow"|"gemCharge"|"gemLaser"|"hellWarning"|"hellErupt"|"paperWind"|"surge"|"finalPush"|"cardProc"|"pickupHealth"|"pickupAmmo"|"pickupBomb"|"pickupSpeed";
 type Preset={start:number;end:number;length:number;wave:OscillatorType;noise:number;filter:number;gain:number;interval:number};
 const presets:Record<WorldSound,Preset>={
  bossStep:{start:92,end:45,length:.13,wave:"triangle",noise:.42,filter:420,gain:.24,interval:125},
@@ -10,14 +10,23 @@ const presets:Record<WorldSound,Preset>={
  inkHit:{start:190,end:52,length:.17,wave:"sine",noise:.45,filter:600,gain:.2,interval:120},
  flyWing:{start:420,end:210,length:.16,wave:"sine",noise:.65,filter:1200,gain:.15,interval:520},
  flyAttack:{start:900,end:135,length:.31,wave:"sawtooth",noise:.54,filter:2200,gain:.31,interval:160},
+ flyDeath:{start:1100,end:150,length:.62,wave:"triangle",noise:.48,filter:2450,gain:.36,interval:180},
  statueCharge:{start:140,end:770,length:.72,wave:"sawtooth",noise:.18,filter:1600,gain:.24,interval:2400},
  statueFire:{start:1050,end:105,length:.85,wave:"sawtooth",noise:.62,filter:2300,gain:.42,interval:1800},
+ statueDeath:{start:160,end:38,length:.95,wave:"sawtooth",noise:.84,filter:730,gain:.49,interval:180},
  thornGrow:{start:90,end:740,length:.67,wave:"triangle",noise:.82,filter:1700,gain:.39,interval:2000},
  gemCharge:{start:580,end:1460,length:.44,wave:"sine",noise:.18,filter:4100,gain:.23,interval:1200},
  gemLaser:{start:1720,end:290,length:.86,wave:"sawtooth",noise:.51,filter:3200,gain:.38,interval:2200},
  hellWarning:{start:160,end:76,length:.52,wave:"triangle",noise:.35,filter:650,gain:.23,interval:1800},
  hellErupt:{start:68,end:31,length:1.1,wave:"sawtooth",noise:.94,filter:540,gain:.5,interval:2600},
  paperWind:{start:510,end:92,length:1.15,wave:"triangle",noise:.92,filter:970,gain:.34,interval:2100},
+ surge:{start:320,end:570,length:.35,wave:"square",noise:.68,filter:1600,gain:.33,interval:800},
+ finalPush:{start:220,end:75,length:.6,wave:"sawtooth",noise:.86,filter:970,gain:.47,interval:1000},
+ cardProc:{start:900,end:300,length:.24,wave:"triangle",noise:.35,filter:2100,gain:.23,interval:200},
+ pickupHealth:{start:440,end:880,length:.22,wave:"sine",noise:.04,filter:1600,gain:.3,interval:120},
+ pickupAmmo:{start:890,end:510,length:.14,wave:"square",noise:.12,filter:2200,gain:.19,interval:120},
+ pickupBomb:{start:230,end:490,length:.27,wave:"triangle",noise:.22,filter:950,gain:.33,interval:120},
+ pickupSpeed:{start:620,end:1520,length:.19,wave:"sine",noise:.08,filter:2800,gain:.25,interval:120},
 };
 let ctx:AudioContext|null=null;let noiseBuffer:AudioBuffer|null=null;let compressor:DynamicsCompressorNode|null=null;
 const last=new Map<string,number>();

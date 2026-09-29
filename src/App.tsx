@@ -5,6 +5,7 @@ import { MainMenu } from "./components/MainMenu";
 import { BalanceDebug } from "./components/BalanceDebug";
 import { SceneCurtain } from "./components/SceneCurtain";
 import { UpgradeScreen } from "./components/UpgradeScreen";
+import { TutorialDirector } from "./components/TutorialDirector";
 import { useGameStore } from "./game/store";
 import { useEffect } from "react";
 
@@ -22,13 +23,14 @@ export default function App() {
   if (screen === "story") content = new URLSearchParams(window.location.search).has("arsenal") ? <MainMenu /> : <ComicIntro mode="launch" />;
   else if (screen === "comic") content = <ComicIntro mode="reader" />;
   else if (screen === "menu") content = <MainMenu />;
-  else if (screen === "upgrade") content = <UpgradeScreen />;
+  else if (screen === "upgrade" || screen === "evolution") content = <UpgradeScreen />;
   else content = <GameCanvas key={runId} />;
 
   return (
     <>
       <AudioManager />
       {content}
+      <TutorialDirector />
       {new URLSearchParams(window.location.search).has("debugBalance") && <BalanceDebug />}
       <SceneCurtain />
     </>

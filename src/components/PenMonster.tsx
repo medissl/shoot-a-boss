@@ -195,7 +195,7 @@ export function PenMonster({
     const group = root.current;
     if (group && !dead) useGameStore.getState().setEnemyPosition(id, [group.position.x, group.position.y + 1.5, group.position.z]);
     const beam = warning.current;
-    if (!group || (screen !== "playing" || useGameStore.getState().tutorialOpen)) return;
+    if (!group) return;
 
     if (dead) {
       if (beam) beam.visible = false;
@@ -206,9 +206,12 @@ export function PenMonster({
         0.12,
       );
       group.position.y = Math.max(-0.4, group.position.y - delta * 0.45);
-      if (age > 4 && !gone) setGone(true);
+      group.scale.setScalar(age > 4 ? Math.max(.001, 5 - age) : 1);
+      if (age >= 5 && !gone) setGone(true);
       return;
     }
+
+    if (screen !== "playing" || useGameStore.getState().tutorialOpen) return;
 
     if (enemyMotionFactor(id, useGameStore.getState().runId) === 0) {
       if (beam) beam.visible = false;

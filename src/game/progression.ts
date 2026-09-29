@@ -84,13 +84,14 @@ function seeded(seed: number) {
   return () => { value = (Math.imul(value, 1664525) + 1013904223) >>> 0; return value / 0x100000000; };
 }
 const rarityWeights: [Rarity, number][] = [["common", 0.5], ["rare", 0.3], ["epic", 0.15], ["legendary", 0.05]];
-export function rollUpgradeChoices(level: number, rerollIndex: number, upgrades: UpgradeLevels, magicUnlocked = false, excluded: UpgradeId[] = []): UpgradeId[] {
+export function rollUpgradeChoices(level: number, rerollIndex: number, upgrades: UpgradeLevels, magicUnlocked = false, excluded: UpgradeId[] = [], preferredWeapon?: "sniper" | "rifle" | "shotgun" | "knife"): UpgradeId[] {
   const stackScore = Object.values(upgrades).reduce((sum, value) => sum + value, 0);
   const random = seeded(level * 92821 + rerollIndex * 19391 + stackScore * 7919 + 17);
   const available = UPGRADE_CARDS.filter((card) => upgrades[card.id] < card.maxStacks && !excluded.includes(card.id) && (magicUnlocked || !["magicPower","magicTempo","magicEcho","spellWard","fireBloom","crystalThorns","iceBarrier","waterHealing","thunderSpark"].includes(card.id)) && (card.id !== "shieldShatter" || upgrades.shieldOrbit || upgrades.shieldReserve));
   const choices: UpgradeId[] = [];
   for (let slot = 0; slot < 3; slot++) {
-    const pool = available.filter((card) => !choices.includes(card.id) && (slot === 0 ? Boolean(card.weapon) : slot === 1 ? !card.weapon : true));
+    const preferred = slot === 0 && preferredWeapon && random() < .7;
+    const pool = available.filter((card) => !choices.includes(card.id) && (preferred ? card.weapon === preferredWeapon : slot === 0 ? Boolean(card.weapon) : slot === 1 ? !card.weapon : true));
     const candidates = pool.length ? pool : available.filter((card) => !choices.includes(card.id));
     if (!candidates.length) break;
     const roll = random(); let cumulative = 0; let rarity: Rarity = "common";
@@ -108,17 +109,19 @@ export function upgradeDescription(card: UpgradeCard, owned: number) {
   const next = owned + 1;
   const values: Partial<Record<UpgradeId, string>> = {
     damage: `+${owned * 8}% → +${next * 8}% damage.`,
-    accuracy: `${Math.round((1 - Math.pow(.86, owned)) * 100)}% → ${Math.round((1 - Math.pow(.86, next)) * 100)}% tighter spread.`,
+    accuracy: `${Math.round((1 - Math.pow(.88, owned)) * 100)}% → ${Math.round((1 - Math.pow(.88, next)) * 100)}% tighter spread.`,
     movement: `+${owned * 5}% → +${next * 5}% speed.`,
     magazine: `+${owned * 12}% → +${next * 12}% capacity.`,
     maxHp: `+${owned * 12} → +${next * 12} HP.`,
     bombBelt: `+${owned} → +${next} maximum paper bombs.`,
-    grenadePower: `+${owned * 18}% → +${next * 18}% damage and radius.`,
+    grenadePower: `+${owned * 18}% → +${next * 18}% damage; +${owned * 8}% → +${next * 8}% radius.`,
     knifeDamage: `+${owned * 25}% → +${next * 25}% knife damage.`,
     jump: `+${owned * 12}% → +${next * 12}% jump power.`,
     reload: `${Math.round((1 - Math.pow(.90, owned)) * 100)}% → ${Math.round((1 - Math.pow(.90, next)) * 100)}% shorter reload time.`,
     fireRate: `${Math.round((1 - Math.pow(.93, owned)) * 100)}% → ${Math.round((1 - Math.pow(.93, next)) * 100)}% shorter cooldown.`,
-    riflePrecision: `${owned * 18}% → ${next * 18}% tighter rifle spread.`,
+    riflePrecision: `${Math.round((1 - Math.pow(.82, owned)) * 100)}% → ${Math.round((1 - Math.pow(.82, next)) * 100)}% tighter rifle spread.`,
+    shieldReserve: `${owned} → ${next} extra shield charges at stage start.`,
+    magicPower: `+${owned * 10}% → +${next * 10}% magic damage.`,
   };
   return values[card.id] ?? card.description;
 }

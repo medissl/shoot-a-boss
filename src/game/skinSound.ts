@@ -1,6 +1,6 @@
 import { getSkin, type SkinId } from './skins';
 import type { WeaponId } from './config';
-type Action='fire'|'equip'|'reload'|'knife-hit';
+type Action='fire'|'equip'|'cock'|'reload'|'knife-hit';
 type Wave=OscillatorType;
 type Timbre={pitch:number;fall:number;wave:Wave;noise:number;filter:BiquadFilterType;cut:number;echo:number;harmonic:number;attack:number};
 /** Individually tuned timbres. The same family is processed separately for each weapon. */
@@ -38,9 +38,9 @@ export function playSkinSound(ctx:AudioContext,id:SkinId,action:Action,volume:nu
  if(now-(last.get(key)??-Infinity)<(action==='fire'?(weapon==='rifle'?67:100):action==='knife-hit'?90:300))return;
  last.set(key,now);
  const t=voices[theme.sound];if(!t)return;
- const profile={rifle:{pitch:1.08,length:.30,body:.72},shotgun:{pitch:.65,length:.49,body:1.08},sniper:{pitch:.46,length:.75,body:1.22},knife:{pitch:1.67,length:.29,body:.72}}[weapon];
+ const profile={rifle:{pitch:1.08,length:.27,body:.96},shotgun:{pitch:.65,length:.49,body:1.18},sniper:{pitch:.46,length:.75,body:1.24},knife:{pitch:1.67,length:.29,body:.85}}[weapon];
  const at=ctx.currentTime+.002;
- const master=ctx.createGain();master.gain.value=Math.min(.78,Math.max(.02,volume*.7*profile.body));
+ const master=ctx.createGain();master.gain.value=Math.min(.95,Math.max(.02,volume*1.05*profile.body));
  const limiter=ctx.createDynamicsCompressor();limiter.threshold.value=-11;limiter.knee.value=9;limiter.ratio.value=5;limiter.attack.value=.002;limiter.release.value=.18;
  master.connect(limiter).connect(ctx.destination);
  const duration=action==='fire'?profile.length:action==='knife-hit'?.35:action==='reload'?.64:.37;
@@ -67,6 +67,9 @@ export function playSkinSound(ctx:AudioContext,id:SkinId,action:Action,volume:nu
    trigger(0,.66,.13,2.4,t.cut*1.55);
    trigger(.19,.55,.17,1.3,t.cut);
    trigger(.41,.83,.22,.72,t.cut*.68);
+ }else if(action==='cock'){
+   trigger(0,.87,.09,2.5,t.cut*1.8);
+   trigger(.075,.63,.16,.58,t.cut*.82);
  }else if(action==='equip'){
    trigger(0,.6,.13,1.7,t.cut*1.3);
    trigger(.12,.75,.24,.68,t.cut*.75);

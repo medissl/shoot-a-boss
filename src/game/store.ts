@@ -5,6 +5,7 @@ import { getPlayerSpawn, getTargetCount } from "./levels";
 import { ELEMENTS, emptyMagicChoices, isMilestone, magicCost, magicStats, type Element, type Branch, type MagicChoices } from "./magicTree";
 import { SKIN_IDS, normalizeSkin, rollSkin, type SkinId } from "./skins";
 import { availableEvolutions, EVOLUTIONS, type EvolutionId } from "./evolutions";
+import { emitCardProc } from "./procFeedback";
 import {
   emptyUpgrades,
   getUpgradeStats,
@@ -17,9 +18,10 @@ import {
 type AmmoState = Record<WeaponId, { mag: number; reserve: number }>;
 type Champion = { cycle: number; level: number; hearts: number; upgrades: UpgradeLevels; ready: boolean };
 type DreamAnchor = { level: number; cycle: number; upgrades: UpgradeLevels; evolutions: EvolutionId[] };
-export type TutorialId = "controls" | "cards" | "xp" | "levelUp" | "magic" | "coins" | "gear" | "shop" | "crates" | "hearts" | "scan" | "evolution";
+export type TutorialId = "controls" | "cards" | "xp" | "levelUp" | "skillPoint" | "magic" | "magicAwakened" | "coins" | "gear" | "shop" | "crates" | "hearts" | "anchor" | "scan" | "evolution";
+export const SAVE_VERSION = 2;
 type TutorialFlags = Record<TutorialId, boolean>;
-const freshTutorials = (): TutorialFlags => ({ controls:false, cards:false, xp:false, levelUp:false, magic:false, coins:false, gear:false, shop:false, crates:false, hearts:false, scan:false, evolution:false });
+const freshTutorials = (): TutorialFlags => ({ controls:false, cards:false, xp:false, levelUp:false, skillPoint:false, magic:false, magicAwakened:false, coins:false, gear:false, shop:false, crates:false, hearts:false, anchor:false, scan:false, evolution:false });
 export const MAGIC_TYPES = ELEMENTS;
 export type MagicType = Element;
 export type SkinColor = SkinId;
@@ -48,7 +50,19 @@ export const MAX_HEARTS = 5;
 const CHAMPION_KEY = "shoot-a-boss:champion";
 const HEARTS_KEY = "shoot-a-boss:hearts";
 const SAVE_KEY = "shoot-a-boss:campaign";
-const readSave = (): Record<string, unknown> => { try { return JSON.parse(localStorage.getItem(SAVE_KEY) || "{}") ?? {}; } catch { return {}; } };
+function migrateSave(raw: Record<string, unknown>): Record<string, unknown> {
+  const version = Number(raw.saveVersion) || 0;
+  if (version >= SAVE_VERSION) return raw;
+  const tutorials = { ...freshTutorials(), ...(raw.tutorials && typeof raw.tutorials === "object" ? raw.tutorials as Partial<TutorialFlags> : {}) };
+  tutorials.controls = tutorials.controls || raw.tutorialSeen === true;
+  const magic = raw.magic as Partial<Record<MagicType, number>> | undefined;
+  if (magic && Object.values(magic).some(rank => Number(rank) > 0)) tutorials.magic = true;
+  try { if (Object.values(JSON.parse(localStorage.getItem("shoot-a-boss:gear") || "{}") as Record<string, number>).some(rank => rank > 0)) tutorials.gear = true; } catch { /* Preserve the remaining save. */ }
+  const skins = raw.skins as Partial<Skins> | undefined;
+  if (skins && Object.values(skins).some(items => items?.some(id => id !== "default"))) tutorials.crates = true;
+  return { ...raw, saveVersion: SAVE_VERSION, tutorials };
+}
+const readSave = (): Record<string, unknown> => { try { return migrateSave(JSON.parse(localStorage.getItem(SAVE_KEY) || "{}") ?? {}); } catch { return {}; } };
 const saved = typeof window === "undefined" ? {} : readSave();
 const allGearIds = GEAR.map(({ id }) => id);
 const equippedFromSave = (gear: GearLevels): GearId[] => {
@@ -60,14 +74,21 @@ const activeGear = (state: Pick<GameStore, "gear" | "equippedGear">): GearLevels
   Object.fromEntries(allGearIds.map(id => [id, state.equippedGear.includes(id) ? state.gear[id] : 0])) as GearLevels;
 export const equippedGearRank = (state: Pick<GameStore, "gear" | "equippedGear">, id: GearId) => state.equippedGear.includes(id) ? state.gear[id] : 0;
 function persist(state: GameStore) {
-  const pendingDraft = ["stageClear", "upgrade"].includes(state.screen) && !state.selectedUpgrade && !state.selectedEvolution && state.upgradeChoices.length > 0;
-  const level = ["stageClear", "upgrade"].includes(state.screen) && !pendingDraft && state.currentLevel < 10 ? state.currentLevel + 1 : state.currentLevel;
-  localStorage.setItem(SAVE_KEY, JSON.stringify({ level, cycle: state.ngPlusCycle, upgrades: state.upgrades,
+  if (state.practiceActive) return;
+  const postStage = ["stageClear", "levelUp", "reward", "upgrade", "evolution"].includes(state.screen);
+  const pendingDraft = postStage && !state.selectedUpgrade && state.upgradeChoices.length > 0;
+  const level = postStage ? state.currentLevel : state.currentLevel;
+  localStorage.setItem(SAVE_KEY, JSON.stringify({ saveVersion: SAVE_VERSION, level, cycle: state.ngPlusCycle, upgrades: state.upgrades,
     pendingDraft, pendingChoices: pendingDraft ? state.upgradeChoices : [], pendingRerolls: state.upgradeRerollsLeft,
+    postStageScreen: postStage ? state.screen : null, selectedUpgrade: state.selectedUpgrade, selectedEvolution: state.selectedEvolution,
+    lastReward: state.lastReward, lastPerformanceBonus: state.lastPerformanceBonus, lastXpReward: state.lastXpReward,
+    lastLevelGain: state.lastLevelGain, lastSpGain: state.lastSpGain, lastClearMs: state.lastClearMs,
+    postStageHp: postStage ? state.hp : null,
     xp: state.xp, playerLevel: state.playerLevel, skillPoints: state.skillPoints, magic: state.magic, magicChoices: state.magicChoices, selectedMagic: state.selectedMagic,
     skins: state.skins, equippedSkins: state.equippedSkins, equippedGear: state.equippedGear,
     anchor: state.anchor, evolutions: state.evolutions, claimedRewards: state.claimedRewards, hearts: state.hearts, coins: state.coins,
-    unlockedLevel: state.unlockedLevel, tutorialSeen: state.tutorialSeen, tutorials: state.tutorials }));
+    unlockedLevel: state.unlockedLevel, tutorialSeen: state.tutorialSeen, tutorials: state.tutorials,
+    tutorialQueue: state.tutorialQueue, activeTutorial: state.activeTutorial, preStage: state.preStage, postStageReturn: state.postStageReturn }));
 }
 function restoredUpgrades(): UpgradeLevels {
   const upgrades = emptyUpgrades();
@@ -110,7 +131,11 @@ export type GameScreen =
   | "playing"
   | "paused"
   | "upgrade"
+  | "evolution"
   | "stageClear"
+  | "levelUp"
+  | "reward"
+  | "practiceResult"
   | "won"
   | "lost"
   | "purged";
@@ -137,6 +162,14 @@ type GameStore = {
   anchor: DreamAnchor;
   evolutions: EvolutionId[];
   selectedEvolution: EvolutionId | null;
+  weaponUsage: Record<WeaponId, { shots: number; damage: number; kills: number }>;
+  lastHitWeapon: Record<string, WeaponId>;
+  preStage: { level: number; practice: boolean } | null;
+  postStageReturn: GameScreen | null;
+  practiceActive: boolean;
+  practiceReturn: { level: number; upgrades: UpgradeLevels; evolutions: EvolutionId[] } | null;
+  tutorialQueue: TutorialId[];
+  activeTutorial: TutorialId | null;
   crunchUntil: number;
   crunchCooldownUntil: number;
   recentKills: number[];
@@ -211,6 +244,17 @@ type GameStore = {
   undoEvolution: () => void;
   undoUpgrade: () => void;
   continueAfterVictory: () => void;
+  advanceResult: () => void;
+  continueDraft: () => void;
+  continueEvolution: () => void;
+  prepareStage: (level: number, practice?: boolean) => void;
+  startPreparedStage: () => void;
+  recordWeaponShot: (weapon: WeaponId) => void;
+  recordWeaponHit: (id: string, weapon: WeaponId, damage: number) => void;
+  openMagicFromResult: () => void;
+  returnFromMagic: () => void;
+  queueTutorial: (id: TutorialId, replay?: boolean) => void;
+  completeTutorial: () => void;
   buyGear: (id: GearId) => void;
   toggleGear: (id: GearId) => void;
   buyHeart: () => void;
@@ -379,6 +423,8 @@ function freshRun(level: number, upgrades: UpgradeLevels, cycle = 0, gear: GearL
     ammo: freshAmmo(upgrades),
     grenades: stats.grenadeCapacity + satchelBonus(gear.satchel) || GRENADE_COUNT,
     eliminated: [] as string[],
+    weaponUsage: Object.fromEntries(weaponOrder.map(id => [id, { shots: 0, damage: 0, kills: 0 }])) as Record<WeaponId, { shots: number; damage: number; kills: number }>,
+    lastHitWeapon: {} as Record<string, WeaponId>,
     scanTargets: [] as string[],
     scanUntil: 0,
     scanCooldownUntil: 0,
@@ -437,9 +483,12 @@ export const useGameStore = create<GameStore>((set, get) => {
     window.localStorage.getItem(SAVE_KEY) !== null || readUnlockedLevel() > 1 ||
     readHearts() < MAX_HEARTS || readCoins() > 0 || readChampion() !== null
   );
+  const initialRun = freshRun(Math.min(readUnlockedLevel(), Math.max(1, Number(saved.level) || readUnlockedLevel())), initialUpgrades, Math.max(0, Number(saved.cycle) || 0),
+    activeGear({ gear: typeof window === "undefined" ? Object.fromEntries(allGearIds.map(id => [id, 0])) as GearLevels : readGear(), equippedGear: typeof window === "undefined" ? [] : equippedFromSave(readGear()) }));
 
   return {
-    screen: saved.pendingDraft === true ? "upgrade" : returningPlayer ? "menu" : "story",
+    screen: ["stageClear", "levelUp", "reward", "upgrade", "evolution"].includes(String(saved.postStageScreen))
+      ? saved.postStageScreen as GameScreen : saved.pendingDraft === true ? "upgrade" : returningPlayer ? "menu" : "story",
     runId: 0,
     unlockedLevel: readUnlockedLevel(),
     hearts: readHearts(),
@@ -453,14 +502,21 @@ export const useGameStore = create<GameStore>((set, get) => {
       : { level: 1, cycle: 0, upgrades: emptyUpgrades(), evolutions: [] },
     evolutions: Array.isArray(saved.evolutions) ? saved.evolutions.filter((id): id is EvolutionId => typeof id === "string" && EVOLUTIONS.some(item => item.id === id)) : [],
     claimedRewards: Array.isArray(saved.claimedRewards) ? saved.claimedRewards.filter((entry): entry is string => typeof entry === "string") : [],
+    preStage: saved.preStage && typeof saved.preStage === "object" && Number.isInteger((saved.preStage as { level: number }).level)
+      ? saved.preStage as { level: number; practice: boolean } : null,
+    postStageReturn: typeof saved.postStageReturn === "string" ? saved.postStageReturn as GameScreen : null,
+    practiceActive: false,
+    practiceReturn: null,
+    tutorialQueue: Array.isArray(saved.tutorialQueue) ? saved.tutorialQueue.filter((id): id is TutorialId => typeof id === "string" && id in freshTutorials()) : [],
+    activeTutorial: typeof saved.activeTutorial === "string" && saved.activeTutorial in freshTutorials() ? saved.activeTutorial as TutorialId : null,
     tutorialSeen: saved.tutorialSeen === true || (saved.tutorials as Partial<TutorialFlags> | undefined)?.controls === true,
     tutorials: { ...freshTutorials(), ...saved.tutorials as Partial<TutorialFlags>, controls: saved.tutorialSeen === true || (saved.tutorials as Partial<TutorialFlags> | undefined)?.controls === true },
-    lastReward: 0,
-    lastPerformanceBonus: 0,
-    lastXpReward: 0,
-    lastLevelGain: 0,
-    lastSpGain: 0,
-    lastClearMs: 0,
+    lastReward: Number(saved.lastReward) || 0,
+    lastPerformanceBonus: Number(saved.lastPerformanceBonus) || 0,
+    lastXpReward: Number(saved.lastXpReward) || 0,
+    lastLevelGain: Number(saved.lastLevelGain) || 0,
+    lastSpGain: Number(saved.lastSpGain) || 0,
+    lastClearMs: Number(saved.lastClearMs) || 0,
     lastDeathCollapsed: false,
     xp: Math.max(0, Number(saved.xp) || 0),
     playerLevel: Math.max(1, Math.floor(Number(saved.playerLevel) || 1)),
@@ -474,10 +530,11 @@ export const useGameStore = create<GameStore>((set, get) => {
     upgrades: initialUpgrades,
     upgradeChoices: saved.pendingDraft === true && Array.isArray(saved.pendingChoices) ? saved.pendingChoices.filter((id): id is UpgradeId => typeof id === "string" && Boolean(getUpgradeCard(id as UpgradeId))) : [],
     upgradeRerollsLeft: Math.max(0, Math.min(1, Number(saved.pendingRerolls) || 0)),
-    selectedUpgrade: null, selectedEvolution: null,
+    selectedUpgrade: typeof saved.selectedUpgrade === "string" && Boolean(getUpgradeCard(saved.selectedUpgrade as UpgradeId)) ? saved.selectedUpgrade as UpgradeId : null,
+    selectedEvolution: typeof saved.selectedEvolution === "string" && EVOLUTIONS.some(item => item.id === saved.selectedEvolution) ? saved.selectedEvolution as EvolutionId : null,
     tutorialOpen: false,
-    ...freshRun(Math.min(readUnlockedLevel(), Math.max(1, Number(saved.level) || readUnlockedLevel())), initialUpgrades, Math.max(0, Number(saved.cycle) || 0),
-      activeGear({ gear: typeof window === "undefined" ? Object.fromEntries(allGearIds.map(id => [id, 0])) as GearLevels : readGear(), equippedGear: typeof window === "undefined" ? [] : equippedFromSave(readGear()) })),
+    ...initialRun,
+    hp: saved.postStageScreen && Number.isFinite(saved.postStageHp) ? Number(saved.postStageHp) : initialRun.hp,
     sensitivity: readSensitivity(),
     bgmVolume: readStoredVolume("shoot-a-boss:bgm-volume", 0.34),
     sfxVolume: readStoredVolume("shoot-a-boss:sfx-volume", 0.42),
@@ -526,6 +583,45 @@ export const useGameStore = create<GameStore>((set, get) => {
       announceRifle();
       window.dispatchEvent(new Event("stage-selected"));
     },
+
+    prepareStage: (level, practice = false) => {
+      const state = get();
+      if (level < 1 || level > 10 || (practice ? level > (state.champion?.ready ? 10 : state.currentLevel - 1) : level !== state.currentLevel && !(level === 1 && state.champion?.ready))) return;
+      set({ preStage: { level, practice }, screen: "menu" });
+      persist(get());
+    },
+    startPreparedStage: () => {
+      const state = get();
+      const choice = state.preStage;
+      if (!choice) return;
+      if (choice.practice) {
+        const practiceReturn = { level: state.currentLevel, upgrades: { ...state.upgrades }, evolutions: [...state.evolutions] };
+        set({ practiceReturn, practiceActive: true, preStage: null,
+          screen: "playing", runId: state.runId + 1, tutorialOpen: false,
+          ...freshRun(choice.level, state.upgrades, state.ngPlusCycle, activeGear(state)) });
+        announceRifle();
+        return;
+      }
+      set({ preStage: null });
+      if (state.ngPlusCycle > 0 || state.champion?.ready) get().startNewGamePlus();
+      else get().startLevel(choice.level);
+    },
+    openMagicFromResult: () => {
+      const state = get();
+      if (!["levelUp", "reward"].includes(state.screen)) return;
+      set({ postStageReturn: state.screen, screen: "menu", preStage: null });
+      persist(get());
+    },
+    returnFromMagic: () => {
+      const screen = get().postStageReturn;
+      if (!screen) return;
+      set({ screen, postStageReturn: null }); persist(get());
+    },
+    recordWeaponShot: (weapon) => set(state => ({ weaponUsage: { ...state.weaponUsage,
+      [weapon]: { ...state.weaponUsage[weapon], shots: state.weaponUsage[weapon].shots + 1 } } })),
+    recordWeaponHit: (id, weapon, damage) => set(state => ({ weaponUsage: { ...state.weaponUsage,
+      [weapon]: { ...state.weaponUsage[weapon], damage: state.weaponUsage[weapon].damage + damage } },
+      lastHitWeapon: { ...state.lastHitWeapon, [id]: weapon } })),
 
     startNewGamePlus: () => {
       const { champion, unlockedLevel } = get();
@@ -603,22 +699,21 @@ export const useGameStore = create<GameStore>((set, get) => {
         selectedUpgrade: id,
       });
       persist(get());
-      get().markTutorial("cards");
       window.dispatchEvent(new Event("ui-confirm"));
     },
 
     chooseEvolution: (id) => {
       const state = get();
-      if (state.screen !== "upgrade" || state.selectedUpgrade || state.selectedEvolution || ![5, 9].includes(state.currentLevel) ||
+      if (state.screen !== "evolution" || state.selectedEvolution || ![5, 9].includes(state.currentLevel) ||
         !availableEvolutions(state.upgrades, state.evolutions).some(item => item.id === id)) return;
       const evolutions = [...state.evolutions, id];
       set({ evolutions, selectedEvolution: id }); persist(get());
-      get().markTutorial("evolution");
+      emitCardProc("EVOLUTION AWAKENED", EVOLUTIONS.find(item => item.id === id)?.name ?? "", 0);
       window.dispatchEvent(new Event("ui-confirm"));
     },
     undoEvolution: () => {
       const state = get();
-      if (state.screen !== "upgrade" || !state.selectedEvolution) return;
+      if (state.screen !== "evolution" || !state.selectedEvolution) return;
       set({ evolutions: state.evolutions.filter(id => id !== state.selectedEvolution), selectedEvolution: null }); persist(get());
     },
 
@@ -635,9 +730,36 @@ export const useGameStore = create<GameStore>((set, get) => {
       persist(get());
     },
 
-    continueAfterVictory: () => {
+    continueAfterVictory: () => get().advanceResult(),
+    advanceResult: () => {
       const state = get();
-      if (state.screen === "stageClear") set({ screen: "upgrade" });
+      const screen = state.screen === "stageClear" ? (state.lastLevelGain > 0 ? "levelUp" : "reward")
+        : state.screen === "levelUp" ? "reward" : state.screen === "reward" ? "upgrade" : null;
+      if (!screen) return;
+      set({ screen }); persist(get());
+      if (screen === "levelUp" && state.lastSpGain > 0) { get().queueTutorial("skillPoint"); get().queueTutorial("magic"); }
+      if (screen === "reward") get().queueTutorial("coins");
+      if (screen === "upgrade") get().queueTutorial("cards");
+    },
+    continueDraft: () => {
+      const state = get();
+      if (state.screen !== "upgrade" || (!state.selectedUpgrade && state.upgradeChoices.length)) return;
+      const available = [5, 9].includes(state.currentLevel) ? availableEvolutions(state.upgrades, state.evolutions) : [];
+      if (available.length) { set({ screen: "evolution" }); persist(get()); get().queueTutorial("evolution"); return; }
+      get().continueEvolution();
+    },
+    continueEvolution: () => {
+      const state = get();
+      if (state.screen === "evolution" && !state.selectedEvolution) return;
+      if (state.currentLevel >= 10) { set({ screen: "won", preStage: null }); persist(get()); return; }
+      const next = state.currentLevel + 1;
+      const champion = state.ngPlusCycle > 0 ? { cycle: state.ngPlusCycle, level: next, hearts: state.hearts, upgrades: state.upgrades, ready: false } : state.champion;
+      if (state.ngPlusCycle > 0) writeChampion(champion);
+      set({ screen: "menu", currentLevel: next, champion, preStage: { level: next, practice: false }, upgradeChoices: [], selectedUpgrade: null, selectedEvolution: null });
+      persist(get());
+      if (state.coins >= Math.min(...GEAR.map(item => item.cost))) get().queueTutorial("gear");
+      if (state.coins >= 300) get().queueTutorial("crates");
+      if (state.anchor.level === next && next > 1) get().queueTutorial("anchor");
     },
 
     buyGear: (id) => {
@@ -651,7 +773,7 @@ export const useGameStore = create<GameStore>((set, get) => {
       window.localStorage.setItem("shoot-a-boss:gear", JSON.stringify(gear));
       set({ coins, gear });
       persist(get());
-      get().markTutorial("gear"); get().markTutorial("shop");
+      get().queueTutorial("gear");
       window.dispatchEvent(new Event("ui-confirm"));
     },
     toggleGear: (id) => {
@@ -693,7 +815,7 @@ export const useGameStore = create<GameStore>((set, get) => {
       const skins = { ...state.skins, [weapon]: [...new Set([...state.skins[weapon], color])] };
       localStorage.setItem("shoot-a-boss:coins", String(coins));
       set({ coins, skins }); persist(get());
-      get().markTutorial("crates");
+      get().queueTutorial("crates");
       window.dispatchEvent(new Event("ui-confirm"));
       return color;
     },
@@ -708,7 +830,7 @@ export const useGameStore = create<GameStore>((set, get) => {
       const magic = { ...state.magic, [kind]: tier };
       const magicChoices = tier > 1 && !isMilestone(tier) ? { ...state.magicChoices, [kind]: { ...state.magicChoices[kind], [tier]: branch } } : state.magicChoices;
       set({ magic, magicChoices, skillPoints: state.skillPoints - magicCost(tier), selectedMagic: state.selectedMagic ?? kind }); persist(get());
-      get().markTutorial("magic");
+      if (tier === 1) get().queueTutorial("magicAwakened");
       window.dispatchEvent(new Event("ui-confirm"));
     },
     selectMagic: (kind) => {
@@ -731,7 +853,7 @@ export const useGameStore = create<GameStore>((set, get) => {
       for (const key of [SAVE_KEY, CHAMPION_KEY, HEARTS_KEY, "shoot-a-boss:unlocked-level", "shoot-a-boss:gear", "shoot-a-boss:coins", "shoot-a-boss:sensitivity", "shoot-a-boss:bgm-volume", "shoot-a-boss:sfx-volume"]) localStorage.removeItem(key);
       const upgrades = emptyUpgrades(); const gear = Object.fromEntries(GEAR.map(({ id }) => [id, 0])) as GearLevels;
       set((state) => ({ screen: "story", runId: state.runId + 1, unlockedLevel: 1, hearts: MAX_HEARTS,
-        ngPlusCycle: 0, champion: null, coins: 0, gear, equippedGear: [], anchor: { level: 1, cycle: 0, upgrades, evolutions: [] }, evolutions: [], claimedRewards: [], tutorialSeen: false, tutorials: freshTutorials(),
+        ngPlusCycle: 0, champion: null, coins: 0, gear, equippedGear: [], anchor: { level: 1, cycle: 0, upgrades, evolutions: [] }, evolutions: [], claimedRewards: [], tutorialSeen: false, tutorials: freshTutorials(), tutorialQueue: [], activeTutorial: null, preStage: null, postStageReturn: null, practiceActive: false, practiceReturn: null,
         lastReward: 0, lastPerformanceBonus: 0, lastXpReward: 0, xp: 0, playerLevel: 1, skillPoints: 0,
         magic: emptyMagic(), magicChoices: emptyMagicChoices(), selectedMagic: null, magicReadyAt: 0, skins: emptySkins(), equippedSkins: defaultSkins(),
         upgrades, upgradeChoices: [], selectedUpgrade: null, selectedEvolution: null, sensitivity: .85, bgmVolume: .34, sfxVolume: .42,
@@ -739,7 +861,22 @@ export const useGameStore = create<GameStore>((set, get) => {
     },
 
     closeTutorial: () => { set({ tutorialOpen: false, tutorialSeen: true, tutorials: { ...get().tutorials, controls: true } }); persist(get()); },
-    markTutorial: (id) => { if (get().tutorials[id]) return; set({ tutorials: { ...get().tutorials, [id]: true } }); persist(get()); },
+    queueTutorial: (id, replay = false) => {
+      const state = get();
+      if ((!replay && state.tutorials[id]) || state.activeTutorial === id || state.tutorialQueue.includes(id)) return;
+      set({ activeTutorial: state.activeTutorial ?? id,
+        tutorialQueue: state.activeTutorial ? [...state.tutorialQueue, id] : state.tutorialQueue });
+      persist(get());
+    },
+    completeTutorial: () => {
+      const state = get();
+      const id = state.activeTutorial;
+      if (!id) return;
+      const [activeTutorial, ...tutorialQueue] = state.tutorialQueue;
+      set({ tutorials: { ...state.tutorials, [id]: true }, activeTutorial: activeTutorial ?? null, tutorialQueue });
+      persist(get());
+    },
+    markTutorial: (id) => get().queueTutorial(id),
     triggerScan: () => {
       const state = get();
       const now = performance.now();
@@ -754,7 +891,6 @@ export const useGameStore = create<GameStore>((set, get) => {
       const duration = (all ? 7500 : 4500) + activeGear(state).lens * 1000;
       const until = now + duration;
       set({ scanTargets: selected, scanUntil: until, scanCooldownUntil: now + Math.max(18000, 28000 - activeGear(state).lens * 1000) });
-      get().markTutorial("scan");
       window.dispatchEvent(new Event("scan-started"));
       window.setTimeout(() => {
         if (get().scanUntil === until) set({ scanTargets: [] });
@@ -774,7 +910,8 @@ export const useGameStore = create<GameStore>((set, get) => {
       const rerollIndex = 2 - state.upgradeRerollsLeft;
       set({
         upgradeChoices: rollUpgradeChoices(state.currentLevel, rerollIndex + 1, state.upgrades,
-          Object.values(state.magic).some(Boolean), state.upgradeChoices),
+          Object.values(state.magic).some(Boolean), state.upgradeChoices,
+          weaponOrder.reduce((best, weapon) => state.weaponUsage[weapon].damage > state.weaponUsage[best].damage ? weapon : best, "rifle" as WeaponId)),
         upgradeRerollsLeft: state.upgradeRerollsLeft - 1,
       });
     },
@@ -807,8 +944,17 @@ export const useGameStore = create<GameStore>((set, get) => {
 
     goToMenu: () => {
       const state = get();
+      if (state.practiceActive) {
+        const original = state.practiceReturn;
+        set({ screen: "menu", practiceActive: false, practiceReturn: null,
+          currentLevel: original?.level ?? state.unlockedLevel,
+          upgrades: original?.upgrades ?? state.upgrades, evolutions: original?.evolutions ?? state.evolutions,
+          preStage: null, scoped: false });
+        persist(get());
+        return;
+      }
       if (state.screen === "purged") { get().resetData(); set({ screen: "menu" }); return; }
-      const checkpointLevel = ["stageClear", "upgrade"].includes(state.screen) && state.currentLevel < 10 ? state.currentLevel + 1 : state.currentLevel;
+      const checkpointLevel = ["stageClear", "levelUp", "reward", "upgrade", "evolution"].includes(state.screen) && state.currentLevel < 10 ? state.currentLevel + 1 : state.currentLevel;
       if (state.ngPlusCycle > 0 && state.screen !== "won" && !(state.screen === "stageClear" && state.currentLevel === 10)) {
         const champion = {
           cycle: state.ngPlusCycle,
@@ -823,6 +969,7 @@ export const useGameStore = create<GameStore>((set, get) => {
       set({
         screen: "menu",
         currentLevel: checkpointLevel,
+        preStage: null,
         scoped: false,
         movementMode: "idle",
         speedBoostActive: false,
@@ -993,12 +1140,14 @@ export const useGameStore = create<GameStore>((set, get) => {
       if (state.shieldCharges > 0) {
         set({ shieldCharges: state.shieldCharges - 1, guardHp: equippedGearRank(state, "aegis") >= 3 ? Math.max(state.guardHp, 5) : state.guardHp });
         window.dispatchEvent(new CustomEvent("shield-blocked", { detail: { source, chargesRemaining: state.shieldCharges - 1 } }));
+        emitCardProc("PAPER ARMOR", "BLOCKED", 300);
         return;
       }
       if (state.upgrades.shieldOrbit && performance.now() >= state.shieldReadyAt) {
         set({ shieldReadyAt: performance.now() + (state.evolutions.includes("returnToSender") ? 10400 : 16000),
           guardHp: equippedGearRank(state, "aegis") >= 3 ? Math.max(state.guardHp, 5) : state.guardHp });
         window.dispatchEvent(new CustomEvent("shield-blocked", { detail: { source } }));
+        emitCardProc("ORBITAL GUARD", "BLOCKED", 300);
         return;
       }
       const guardHp = Math.max(0, state.guardHp - amount);
@@ -1008,6 +1157,7 @@ export const useGameStore = create<GameStore>((set, get) => {
         new CustomEvent("player-damaged", { detail: { amount, source } }),
       );
       if (next > 0) { set({ hp: next, guardHp: firstAid ? 10 : guardHp, vestGuardUsed: state.vestGuardUsed || firstAid }); return; }
+      if (state.practiceActive) { set({ hp: 0, screen: "practiceResult", scoped: false }); return; }
       const hearts = state.hearts - 1;
       writeHearts(hearts);
       if (hearts <= 0) {
@@ -1018,6 +1168,7 @@ export const useGameStore = create<GameStore>((set, get) => {
         set({ screen: "lost", hearts: MAX_HEARTS, lastDeathCollapsed: true, hp: 0, currentLevel: anchor.level, upgrades: anchor.upgrades, evolutions: anchor.evolutions,
           tutorialOpen: false, scoped: false, champion });
         persist(get());
+        get().queueTutorial("hearts");
         return;
       }
       const champion = state.ngPlusCycle > 0 ? {
@@ -1027,6 +1178,7 @@ export const useGameStore = create<GameStore>((set, get) => {
       if (champion) writeChampion(champion);
       set({ hp: 0, hearts, champion, screen: "lost", lastDeathCollapsed: false, scoped: false, movementMode: "idle" });
       persist(get());
+      get().queueTutorial("hearts");
     },
 
     eliminate: (id) => {
@@ -1034,10 +1186,14 @@ export const useGameStore = create<GameStore>((set, get) => {
       if (state.screen !== "playing" || state.eliminated.includes(id)) return;
 
       const eliminated = [...state.eliminated, id];
+      const killingWeapon = state.lastHitWeapon[id];
+      if (killingWeapon) set({ weaponUsage: { ...state.weaponUsage, [killingWeapon]: { ...state.weaponUsage[killingWeapon], kills: state.weaponUsage[killingWeapon].kills + 1 } } });
       const killCount = eliminated.length;
       const now = performance.now();
       const recentKills = [...state.recentKills.filter(time => now - time <= 4000), now];
       const crunchActive = state.evolutions.includes("crunchTime") && recentKills.length >= 3 && now >= state.crunchCooldownUntil;
+      if (crunchActive) emitCardProc("CRUNCH TIME", "FIRING FRENZY", 1000);
+      if (state.evolutions.includes("paperTrail") && state.weapon === "knife") emitCardProc("PAPER TRAIL", "SPEED BURST", 1000);
       const stats = getUpgradeStats(state.upgrades);
       const heal = stats.killHeal + activeGear(state).medallion * 2 + (activeGear(state).medallion >= 5 && killCount % 5 === 0 ? 4 : 0) + (state.upgrades.vampireInk && killCount % 4 === 0 ? 10 : 0);
       const nextHp = Math.min(state.maxHp, state.hp + Math.min(20, heal));
@@ -1056,6 +1212,10 @@ export const useGameStore = create<GameStore>((set, get) => {
       );
 
       if (killCount >= state.targetCount) {
+        if (state.practiceActive) {
+          set({ eliminated, enemyPositions, screen: "practiceResult", hp: nextHp, lastClearMs: performance.now() - state.stageStartedAt });
+          return;
+        }
         const claimKey = `${state.ngPlusCycle}:${state.currentLevel}`;
         const firstClear = !state.claimedRewards.includes(claimKey);
         const lastClearMs = performance.now() - state.stageStartedAt;
@@ -1096,11 +1256,12 @@ export const useGameStore = create<GameStore>((set, get) => {
             screen: "stageClear", coins, lastReward, lastPerformanceBonus, xp, playerLevel, skillPoints, lastXpReward, lastLevelGain, lastSpGain, lastClearMs, ammo, enemyPositions, claimedRewards, anchor,
             scoped: false,
             movementMode: "idle",
-            upgradeChoices: rollUpgradeChoices(state.currentLevel, 0, state.upgrades, Object.values(state.magic).some(Boolean)),
+            upgradeChoices: rollUpgradeChoices(state.currentLevel, 0, state.upgrades, Object.values(state.magic).some(Boolean), [], weaponOrder.reduce((best, weapon) => state.weaponUsage[weapon].damage > state.weaponUsage[best].damage ? weapon : best, "rifle" as WeaponId)),
             upgradeRerollsLeft: 1,
             selectedUpgrade: null, selectedEvolution: null,
           });
           persist(get());
+          get().queueTutorial("xp");
           return;
         }
 
@@ -1111,11 +1272,12 @@ export const useGameStore = create<GameStore>((set, get) => {
           screen: "stageClear", coins, lastReward, lastPerformanceBonus, xp, playerLevel, skillPoints, lastXpReward, lastLevelGain, lastSpGain, lastClearMs, ammo, enemyPositions, claimedRewards, anchor,
           scoped: false,
           movementMode: "idle",
-          upgradeChoices: rollUpgradeChoices(state.currentLevel, 0, state.upgrades, Object.values(state.magic).some(Boolean)),
+          upgradeChoices: rollUpgradeChoices(state.currentLevel, 0, state.upgrades, Object.values(state.magic).some(Boolean), [], weaponOrder.reduce((best, weapon) => state.weaponUsage[weapon].damage > state.weaponUsage[best].damage ? weapon : best, "rifle" as WeaponId)),
           upgradeRerollsLeft: 1,
           selectedUpgrade: null, selectedEvolution: null,
         });
         persist(get());
+        get().queueTutorial("xp");
         return;
       }
 

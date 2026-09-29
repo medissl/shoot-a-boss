@@ -29,9 +29,21 @@ export function GearShopScene({ onBack }: { onBack: () => void }) {
   const refillHearts = useGameStore((s) => s.refillHearts);
   const hearts = useGameStore((s) => s.hearts);
   const skins = useGameStore((s) => s.skins);
-  const [category, setCategory] = useState<"gear" | "crates">("gear");
+  const [category, setCategory] = useState<"gear" | "crates">(() => {
+    const initial = sessionStorage.getItem("sab-shop-category"); sessionStorage.removeItem("sab-shop-category");
+    return initial === "crates" ? "crates" : "gear";
+  });
   const [crate, setCrate] = useState<WeaponId | null>(null);
   const [dialogue, setDialogue] = useState(shopkeeperLines[0]);
+
+  useEffect(() => {
+    const selectTutorialCategory = (event: Event) => {
+      const tab = (event as CustomEvent<string>).detail;
+      if (tab === "shop" || tab === "crates") setCategory(tab === "crates" ? "crates" : "gear");
+    };
+    window.addEventListener("tutorial-desk-tab", selectTutorialCategory);
+    return () => window.removeEventListener("tutorial-desk-tab", selectTutorialCategory);
+  }, []);
 
   useEffect(() => {
     const timer = window.setInterval(() => {

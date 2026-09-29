@@ -5,6 +5,7 @@ import { FullscreenToggle } from "./FullscreenToggle";
 import { getUpgradeCard, type UpgradeId } from "../game/progression";
 import { GEAR, useGameStore } from "../game/store";
 import { restorePreferredFullscreen } from "../game/fullscreen";
+import { EVOLUTIONS, type EvolutionId } from "../game/evolutions";
 
 export function MenuOverlay() {
   const screen = useGameStore((state) => state.screen);
@@ -28,6 +29,7 @@ export function MenuOverlay() {
   const evolutions = useGameStore((state) => state.evolutions);
   const [panel, setPanel] = useState<"settings" | "cards" | "controls">("cards");
   const [selectedCard, setSelectedCard] = useState<UpgradeId | null>(null);
+  const [selectedCombo, setSelectedCombo] = useState<EvolutionId | null>(null);
 
   if (!["paused", "purged"].includes(screen)) return null;
 
@@ -65,6 +67,7 @@ export function MenuOverlay() {
           <button type="button" onClick={() => { sessionStorage.setItem("sab-menu-scene", "stages"); goToMenu(); }}>
             <Home size={15} /> RETURN TO DREAM MAP
           </button>
+          <FullscreenToggle />
           <div className="pause-tabs">
             <button type="button" onClick={() => setPanel("cards")}>RUN SHEET</button>
             <button type="button" onClick={() => setPanel("controls")}>CONTROLS</button>
@@ -72,7 +75,6 @@ export function MenuOverlay() {
           </div>
 
           {panel === "settings" && <>
-          <FullscreenToggle />
           <label className="sensitivity-control">
             <span>SENSITIVITY</span>
             <b>{sensitivity.toFixed(2)}×</b>
@@ -116,7 +118,7 @@ export function MenuOverlay() {
           {panel === "cards" && <div className="inventory-panel">
             <p>MAGIC: {selectedMagic ? `${selectedMagic.toUpperCase()} · TIER ${magic[selectedMagic]}` : "NOT EQUIPPED"}</p>
             <p>GEAR: {equippedGear.length ? equippedGear.map(id => `${GEAR.find(item => item.id === id)?.name} R${gear[id]}`).join(" · ") : "NONE EQUIPPED"}</p>
-            <p>EVOLUTIONS: {evolutions.length ? evolutions.join(" · ") : "NONE YET"}</p>
+            <h3>DREAM CARDS · {Object.values(upgrades).reduce((sum, amount) => sum + amount, 0)}</h3>
             {Object.entries(upgrades).filter(([, count]) => count > 0).length === 0 && <p>No cards yet. Clear a stage to pick one.</p>}
             <div className="inventory-grid">
               {(Object.entries(upgrades) as [UpgradeId, number][]).filter(([, count]) => count > 0).map(([id, count]) => {
@@ -131,6 +133,16 @@ export function MenuOverlay() {
               <h3>{getUpgradeCard(selectedCard).glyph} {getUpgradeCard(selectedCard).name}</h3>
               <p>{getUpgradeCard(selectedCard).description}</p>
               <p>Stack limit {getUpgradeCard(selectedCard).maxStacks} · {getUpgradeCard(selectedCard).weapon?.toUpperCase() ?? "ALL WEAPONS"}</p>
+            </div>}
+            <h3>EVOLUTIONS · {evolutions.length}</h3>
+            <div className="inventory-grid">{evolutions.map(id => {
+              const combo = EVOLUTIONS.find(item => item.id === id);
+              return <button type="button" className={`inventory-card evolution-option ${selectedCombo === id ? "is-selected" : ""}`} key={id} onClick={() => setSelectedCombo(id)}>✳ {combo?.name}</button>;
+            })}</div>
+            {!evolutions.length && <p>Combine compatible Dream Cards to awaken an Evolution.</p>}
+            {selectedCombo && evolutions.includes(selectedCombo) && <div className="inventory-detail evolution-option"><h3>✳ {EVOLUTIONS.find(item => item.id === selectedCombo)?.name}</h3>
+              <p>Requires {EVOLUTIONS.find(item => item.id === selectedCombo)?.cards.map(id => getUpgradeCard(id).name).join(" + ")}</p>
+              <p>{EVOLUTIONS.find(item => item.id === selectedCombo)?.detail}</p>
             </div>}
           </div>}
         </div>

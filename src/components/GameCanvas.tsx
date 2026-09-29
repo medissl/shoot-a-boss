@@ -28,6 +28,7 @@ import {
   getLevelDefinition,
 } from "../game/levels";
 import { useGameStore } from "../game/store";
+import { setAttackPhase } from "../game/attackDirector";
 import { useTouchMode } from "../game/touch";
 
 export function GameCanvas() {
@@ -119,8 +120,25 @@ export function GameCanvas() {
   const gemExtras = definition.theme === "gems" ? 3 : 0;
   const remainingRatio = (targetCount - eliminated) / Math.max(1, targetCount);
   const intensity = remainingRatio > .65 ? "OPENING" : remainingRatio > .30 ? "SURGE" : "FINAL PUSH";
-  const activeCap = Math.min(12, Math.max(5, 5 + Math.floor(currentLevel * .7) + (intensity === "FINAL PUSH" ? 1 : intensity === "OPENING" ? -1 : 0)));
-  const spawnedCount = Math.min(roster.length, activeCap + eliminated - gemExtras);
+  const activeCap = Math.min(12, Math.max(4, 5 + Math.floor(currentLevel * .7) + (intensity === "FINAL PUSH" ? 2 : intensity === "SURGE" ? 1 : -1)));
+  const [spawnedCount, setSpawnedCount] = useState(() => Math.min(roster.length, Math.max(1, activeCap - gemExtras)));
+  const [phaseNotice, setPhaseNotice] = useState("");
+  const phaseSeen = useRef("OPENING");
+  useEffect(() => {
+    setAttackPhase(intensity);
+    if (intensity === phaseSeen.current || screen !== "playing") return;
+    phaseSeen.current = intensity;
+    const message = intensity === "SURGE" ? "DEADLINE SURGE!" : "FINAL PUSH!";
+    const show = window.setTimeout(() => { setPhaseNotice(message); window.dispatchEvent(new CustomEvent("intensity-phase", { detail: intensity })); }, 0);
+    const hide = window.setTimeout(() => setPhaseNotice(""), 1350);
+    return () => { window.clearTimeout(show); window.clearTimeout(hide); };
+  }, [intensity, screen]);
+  useEffect(() => {
+    if (screen !== "playing") return;
+    const cadence = intensity === "OPENING" ? 1250 : intensity === "SURGE" ? 950 : 690;
+    const timer = window.setInterval(() => setSpawnedCount(count => Math.min(roster.length, Math.max(count, Math.min(roster.length, activeCap + eliminated - gemExtras)), count + 1)), cadence);
+    return () => window.clearInterval(timer);
+  }, [activeCap, eliminated, gemExtras, intensity, roster.length, screen]);
 
   useEffect(() => {
     document.documentElement.dataset.sabLevel = String(currentLevel);
@@ -172,7 +190,7 @@ export function GameCanvas() {
       </Canvas>
 
       <HUD />
-      <div className={`intensity-indicator intensity-indicator--${intensity.replace(" ", "-").toLowerCase()}`}>{intensity}</div>
+      {phaseNotice && <div className={`intensity-announcement intensity-announcement--${intensity.replace(" ", "-").toLowerCase()}`}>{phaseNotice}</div>}
       {eventKind && eventSeconds !== null && <div className="dream-event" role="status"><b>{eventKind}</b><span>{eventResult ?? (eventKind === "PAPER JAM" ? `${seals.length}/3 SEALS · ${Math.ceil(eventSeconds)}S` : eventKind === "OVERTIME" ? `SURVIVE OR ELIMINATE 3 · ${Math.ceil(eventSeconds)}S` : `ELIMINATE MARKED TARGET · ${Math.ceil(eventSeconds)}S`)}</span></div>}
       <MobileControls />
       <WeaponView />

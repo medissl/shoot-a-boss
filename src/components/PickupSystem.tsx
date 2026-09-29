@@ -1,4 +1,3 @@
-import { Edges } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { useRef, useState } from "react";
 import * as THREE from "three";
@@ -64,39 +63,25 @@ function Pickup({
 
   return (
     <group ref={group} position={position}>
-      <mesh>
-        {kind === "grenade" ? (
-          <dodecahedronGeometry args={[0.42, 0]} />
-        ) : (
-          <octahedronGeometry args={[0.48, 0]} />
-        )}
-        <meshStandardMaterial color="#fbfaf4" roughness={1} />
-        <Edges color={kind === "grenade" ? "#d77b16" : kind === "health" ? "#d34b62" : kind === "ammo" ? "#609862" : "#2548b8"} threshold={7} />
-      </mesh>
-
-      {kind === "grenade" ? (
-        <>
-          <mesh position={[0.26, 0.28, 0]} rotation={[0, 0, -0.45]}>
-            <boxGeometry args={[0.22, 0.08, 0.05]} />
-            <meshBasicMaterial color="#d77b16" />
-          </mesh>
-          <mesh position={[0, -0.72, 0]}>
-            <planeGeometry args={[1.25, 0.28]} />
-            <meshBasicMaterial color="#fbfaf4" transparent opacity={0.88} />
-          </mesh>
-        </>
-      ) : kind === "health" || kind === "ammo" ? <mesh position={[0, 0, .1]}><boxGeometry args={[.55, .12, .05]} /><meshBasicMaterial color={kind === "health" ? "#d34b62" : "#609862"} /></mesh> : (
-        <group rotation={[0, 0, -0.1]}>
-          <mesh position={[-0.16, 0, 0.04]}>
-            <boxGeometry args={[0.11, 0.82, 0.04]} />
-            <meshBasicMaterial color="#2548b8" />
-          </mesh>
-          <mesh position={[0.16, 0, 0.04]}>
-            <boxGeometry args={[0.11, 0.82, 0.04]} />
-            <meshBasicMaterial color="#2548b8" />
-          </mesh>
-        </group>
-      )}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -.48, 0]}><ringGeometry args={[.42, .51, 24]} /><meshBasicMaterial color={kind === "health" ? "#ed4168" : kind === "ammo" ? "#71d74f" : kind === "grenade" ? "#ffc34b" : "#53dff8"} side={THREE.DoubleSide} transparent opacity={.8} /></mesh>
+      {kind === "health" && <group>
+        <mesh><boxGeometry args={[.78, .78, .24]} /><meshBasicMaterial color="#e84469" /></mesh>
+        <mesh position={[0, 0, .14]}><boxGeometry args={[.52, .16, .06]} /><meshBasicMaterial color="white" /></mesh>
+        <mesh position={[0, 0, .14]}><boxGeometry args={[.16, .52, .06]} /><meshBasicMaterial color="white" /></mesh>
+      </group>}
+      {kind === "ammo" && <group>{[-.22, 0, .22].map(x => <group key={x} position={[x, 0, 0]}>
+        <mesh position={[0, -.09, 0]}><boxGeometry args={[.18, .49, .18]} /><meshBasicMaterial color="#55b84b" /></mesh>
+        <mesh position={[0, .22, 0]}><coneGeometry args={[.09, .19, 8]} /><meshBasicMaterial color="#d6ef79" /></mesh>
+      </group>)}</group>}
+      {kind === "grenade" && <group>
+        <mesh><dodecahedronGeometry args={[.45, 0]} /><meshBasicMaterial color="#e49a29" /></mesh>
+        <mesh position={[0, .48, 0]}><boxGeometry args={[.14, .22, .15]} /><meshBasicMaterial color="#614a36" /></mesh>
+        <mesh position={[.15, .58, 0]} rotation={[0, 0, .7]}><torusGeometry args={[.14, .035, 6, 12, Math.PI * 1.5]} /><meshBasicMaterial color="#fff6c4" /></mesh>
+      </group>}
+      {kind === "speed" && <group>{[-.24, .24].map(x => <group key={x} position={[x, 0, 0]} rotation={[0, 0, -.3]}>
+        <mesh><boxGeometry args={[.13, .68, .11]} /><meshBasicMaterial color="#42d6f1" /></mesh>
+        <mesh position={[.1, .2, .05]} rotation={[0, 0, -.6]}><boxGeometry args={[.12, .4, .11]} /><meshBasicMaterial color="#d8ffff" /></mesh>
+      </group>)}</group>}
     </group>
   );
 }

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { BookOpen, ChevronLeft, LockKeyhole, Play, SlidersHorizontal, Sparkles } from "lucide-react";
 import { LEVELS } from "../game/levels";
 import { useGameStore } from "../game/store";
@@ -21,16 +21,26 @@ const deskTabs: DeskTab[] = ["loadout", "magic", "shop", "arsenal"];
 
 export function MainMenu() {
   const state = useGameStore();
+  const queueTutorial = useGameStore(s => s.queueTutorial);
   const [scene, setScene] = useState<Scene>(() => {
     const landing = sessionStorage.getItem("sab-menu-scene"); sessionStorage.removeItem("sab-menu-scene");
-    return new URLSearchParams(location.search).has("arsenal") || landing === "desk" ? "desk" : landing === "stages" ? "stages" : "home";
+    return state.preStage || state.postStageReturn || new URLSearchParams(location.search).has("arsenal") || landing === "desk" ? "desk" : landing === "stages" ? "stages" : "home";
   });
-  const [returnTo, setReturnTo] = useState<"home" | "stages">(state.currentLevel > 1 ? "stages" : "home");
-  const [deskTab, setDeskTab] = useState<DeskTab>(new URLSearchParams(location.search).has("arsenal") ? "arsenal" : "loadout");
+  const [returnTo, setReturnTo] = useState<"home" | "stages">(state.preStage || state.currentLevel > 1 ? "stages" : "home");
+  const [deskTab, setDeskTab] = useState<DeskTab>(state.postStageReturn ? "magic" : new URLSearchParams(location.search).has("arsenal") ? "arsenal" : "loadout");
   const [archiveTab, setArchiveTab] = useState<ArchiveTab>("story");
-  const [replayTopic, setReplayTopic] = useState<string | null>(null);
-  const back = () => setScene(scene === "desk" ? returnTo : "home");
+  useEffect(() => {
+    const open = (event: Event) => {
+      const tab = (event as CustomEvent<string>).detail;
+      if (tab === "shop" || tab === "crates") { setScene("desk"); setDeskTab("shop"); }
+    };
+    window.addEventListener("tutorial-desk-tab", open);
+    return () => window.removeEventListener("tutorial-desk-tab", open);
+  }, []);
+  useEffect(() => { if (scene === "desk" && deskTab === "shop") queueTutorial("shop"); }, [scene, deskTab, queueTutorial]);
+  const back = () => { if (state.postStageReturn) { state.returnFromMagic(); return; } if (scene === "desk" && state.preStage) useGameStore.setState({ preStage: null }); setScene(scene === "desk" ? returnTo : "home"); };
   const prepare = (origin: "home" | "stages", tab: DeskTab = "loadout") => { setReturnTo(origin); setDeskTab(tab); setScene("desk"); };
+  const selectStage = (level: number, practice = false) => { state.prepareStage(level, practice); prepare("stages"); };
   const activeCards = (Object.entries(state.upgrades) as [UpgradeId, number][]).filter(([, count]) => count > 0);
   const selectedSpell = state.selectedMagic ? `${state.selectedMagic.toUpperCase()} · TIER ${state.magic[state.selectedMagic]}` : "NOT LEARNED";
 
@@ -57,25 +67,24 @@ export function MainMenu() {
         <span>RUN CARDS <b>{activeCards.reduce((sum, [, count]) => sum + count, 0)}</b></span>
         <span>MAGIC <b>{selectedSpell}</b></span>
         <span>GEAR <b>{state.equippedGear.length}/4 EQUIPPED</b></span>
-        <button onClick={() => prepare("stages")}>PREPARE →</button>
       </div>
       <p className="stage-select__copy">Continue your active dream. Clearing a stage unlocks the next deadline.</p>
-      {state.unlockedLevel >= 10 && state.champion && <button className="ng-plus-button" onClick={() => enterStageAfterCurtain(state.startNewGamePlus)}>
+      {state.unlockedLevel >= 10 && state.champion && <button className="ng-plus-button" onClick={() => selectStage(state.champion?.ready ? 1 : state.champion?.level ?? state.currentLevel)}>
         {state.champion.ready ? `START NG+ LOOP ${state.champion.cycle + 1}` : `CONTINUE NG+ LOOP ${state.champion.cycle}`}
       </button>}
       <div className="stage-road">{LEVELS.map((level, index) => {
         const available = state.ngPlusCycle === 0 && level.level === state.currentLevel && level.level <= state.unlockedLevel && !state.champion?.ready;
         const completed = level.level < state.currentLevel || Boolean(state.champion?.ready);
-        return <button key={level.level} className={`stage-node stage-node--${level.theme} ${available ? "is-unlocked" : completed ? "is-completed" : "is-locked"}`}
-          style={{ "--stage-index": index } as React.CSSProperties} disabled={!available}
-          onClick={() => enterStageAfterCurtain(() => state.startLevel(level.level))}>
+        return <div key={level.level} className={`stage-node stage-node--${level.theme} ${available ? "is-unlocked" : completed ? "is-completed" : "is-locked"}`}
+          style={{ "--stage-index": index } as React.CSSProperties}>
+          <button disabled={!available} onClick={() => selectStage(level.level)}>
           <span className="stage-node__number">{completed ? "✓" : available ? level.level : <LockKeyhole size={16} />}</span>
           <span className="stage-node__text"><strong>{level.name}</strong><small>{completed ? "COMPLETED" : level.difficulty}</small></span>
-        </button>;
+          </button>{completed && <button className="stage-practice" onClick={() => selectStage(level.level, true)}>PRACTICE</button>}</div>;
       })}<span className="stage-road__line" aria-hidden="true" /></div>
     </div></section>}
     {scene === "desk" && <div className="dream-desk">
-      <header className="dream-desk__header"><button onClick={back}><ChevronLeft size={17} /> {returnTo === "stages" ? "DREAM MAP" : "MENU"}</button><div><small>ONE HOME FOR YOUR BUILD</small><h1>DREAM DESK</h1></div><ProgressStrip compact /></header>
+      <header className="dream-desk__header"><button onClick={back}><ChevronLeft size={17} /> {state.postStageReturn ? "RETURN TO REWARDS" : returnTo === "stages" ? "DREAM MAP" : "MENU"}</button><div><small>ONE HOME FOR YOUR BUILD</small><h1>DREAM DESK</h1></div><ProgressStrip compact /></header>
       <nav className="dream-desk__tabs" aria-label="Dream Desk">{deskTabs.map(tab => <button key={tab} className={deskTab === tab ? "is-active" : ""} onClick={() => setDeskTab(tab)}>{tab.toUpperCase()}</button>)}</nav>
       <div className="dream-desk__content">
         {deskTab === "loadout" && <EquipmentHub />}
@@ -83,6 +92,7 @@ export function MainMenu() {
         {deskTab === "shop" && <GearShopScene onBack={back} />}
         {deskTab === "arsenal" && <Arsenal onBack={back} />}
       </div>
+      {state.preStage && !state.postStageReturn && <footer className="prestage-footer"><div><small>{state.preStage.practice ? "PRACTICE · NO HEARTS / COINS / XP / CARDS" : state.champion?.ready ? "NG+ · NEXT DEADLINE" : "NEXT DEADLINE"}</small><h2>LEVEL {state.preStage.level} · {LEVELS[state.preStage.level - 1].name}</h2><span>{state.preStage.practice ? "Practice does not change your campaign." : `${state.equippedGear.length}/4 GEAR · ${selectedSpell} · ${activeCards.length} CARDS`}</span></div><button onClick={() => enterStageAfterCurtain(state.startPreparedStage)}>START {state.preStage.practice ? "PRACTICE" : `LEVEL ${state.preStage.level}`} →</button></footer>}
     </div>}
     {scene === "archives" && <div className="dream-archives">
       <header><button onClick={back}><ChevronLeft size={17} /> MENU</button><h1>ARCHIVES</h1></header>
@@ -95,23 +105,10 @@ export function MainMenu() {
         <label className="sensitivity-control"><span>CAMERA SENSITIVITY</span><b>{state.sensitivity.toFixed(2)}×</b><input type="range" min=".25" max="1.6" step=".05" value={state.sensitivity} onChange={(e) => state.setSensitivity(Number(e.target.value))} /></label>
         <label className="sensitivity-control audio-control"><span>BGM VOLUME</span><b>{Math.round(state.bgmVolume * 100)}%</b><input type="range" min="0" max="1" step=".05" value={state.bgmVolume} onChange={(e) => state.setBgmVolume(Number(e.target.value))} /></label>
         <label className="sensitivity-control audio-control"><span>SFX VOLUME</span><b>{Math.round(state.sfxVolume * 100)}%</b><input type="range" min="0" max="1" step=".05" value={state.sfxVolume} onChange={(e) => state.setSfxVolume(Number(e.target.value))} /></label>
-        <h2>TUTORIAL REPLAY</h2><div className="tutorial-topic-list">{Object.keys(tutorials).map(topic => <button key={topic} onClick={() => setReplayTopic(topic)}>{topic}</button>)}</div>
-        {replayTopic && <p className="tutorial-topic-detail"><b>{replayTopic}</b> · {tutorials[replayTopic]} <button onClick={() => setReplayTopic(null)}>CLOSE</button></p>}
+        <h2>TUTORIAL REPLAY</h2><div className="tutorial-topic-list">{(Object.keys(state.tutorials) as import("../game/store").TutorialId[]).map(topic => <button key={topic} onClick={() => state.queueTutorial(topic, true)}>{topic.toUpperCase()}</button>)}</div>
         <ResetDataButton />
       </div>
     </section>}
     <small className="creator-credit creator-credit--menu">Made by Medianto Susilo</small>
   </main>;
 }
-
-const tutorials: Record<string, string> = {
-  CONTROLS: "WASD move, Shift sprint, C slide, Space jump, aim with RMB, fire with LMB, R reload, 1–4 switch weapons, G throw a paper bomb.",
-  CARDS: "Each cleared stage offers one card. Cards build the current dream run and can combine into evolutions.",
-  "XP & LEVELS": "Successful stage clears award XP. Every player level grants a Skill Point, with a bonus point every fifth level.",
-  MAGIC: "Spend Skill Points in the Magic tab. Equip an element there, then press F to cast in combat.",
-  GEAR: "Purchased gear is permanent. Equip up to four owned pieces in Loadout.",
-  SHOP: "Spend coins earned from successful clears on permanent gear or heart recovery.",
-  "SKINS & CRATES": "A crate costs 300 coins and guarantees a new cosmetic theme for its weapon. Skins do not change combat stats.",
-  "HEARTS / DREAM COLLAPSE": "A death costs one heart. When they run out, the dream returns to its latest anchor while permanent progress remains.",
-  "SCAN / TARGET MARKERS": "Press Q to mark nearby targets. Edge markers point toward enemies outside your view.",
-};

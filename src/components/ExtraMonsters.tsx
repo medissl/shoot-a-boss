@@ -20,6 +20,7 @@ export function ExtraMonster({ id, spawn, kind }: { id: string; spawn: [number, 
   const root = useRef<THREE.Group>(null);
   const telegraph = useRef<THREE.Group>(null);
   const fire = useRef<THREE.Group>(null);
+  const debris = useRef<THREE.Group>(null);
   const warningBeam = useRef<THREE.Mesh>(null);
   const attackBeam = useRef<THREE.Mesh>(null);
   const armed = useRef(false);
@@ -47,6 +48,7 @@ export function ExtraMonster({ id, spawn, kind }: { id: string; spawn: [number, 
   const hp = useRef(maxHp);
   const [dead, setDead] = useState(false);
   const deadAt = useRef(0);
+  const deathOriginY = useRef(0);
   const [health, setHealth] = useState(maxHp);
   const [damagePops, setDamagePops] = useState<{id:number; amount:number; part:"head"|"body"|"leg"}[]>([]);
   const nextDamagePopId = useRef(0);
@@ -66,11 +68,16 @@ export function ExtraMonster({ id, spawn, kind }: { id: string; spawn: [number, 
       hitTimer.current = window.setTimeout(() => setHitFlash(false), 330);
       awarenessUntil.current = performance.now() + 5600;
       lastSeen.current.set(...useGameStore.getState().playerPosition);
-      if (!hp.current) { deadAt.current=performance.now();if(root.current)root.current.userData.ignoreProjectile=true;setDead(true); eliminate(id); }
+      if (!hp.current) {
+        deadAt.current = performance.now();
+        if (root.current) { root.current.userData.ignoreProjectile = true; deathOriginY.current = root.current.position.y; }
+        window.dispatchEvent(new CustomEvent("world-sfx", { detail: { kind: kind === "fly" ? "flyDeath" : "statueDeath", position: root.current ? [root.current.position.x, root.current.position.y, root.current.position.z] : spawn } }));
+        setDead(true); eliminate(id);
+      }
     };
     window.addEventListener("boss-hit", onHit);
     return () => { window.removeEventListener("boss-hit", onHit); if (hitTimer.current) window.clearTimeout(hitTimer.current); };
-  }, [eliminate, id]);
+  }, [eliminate, id, kind, spawn]);
 
   useEffect(() => {
     const blast = (event: Event) => {
@@ -86,7 +93,22 @@ export function ExtraMonster({ id, spawn, kind }: { id: string; spawn: [number, 
   useFrame((state, delta) => {
     const mesh = root.current;
     if (!mesh) return;
-    if (dead) { mesh.visible = performance.now()-deadAt.current<750; return; }
+    if (dead) {
+      const age = (performance.now() - deadAt.current) / 1000;
+      if (warningBeam.current) warningBeam.current.visible = false;
+      if (attackBeam.current) attackBeam.current.visible = false;
+      if (telegraph.current) telegraph.current.visible = false;
+      if (fire.current) fire.current.visible = false;
+      mesh.visible = age < 5;
+      if (!mesh.visible) return;
+      const fall = THREE.MathUtils.smoothstep(age, 0, kind === "fly" ? 1.15 : .85);
+      mesh.rotation.z = (kind === "fly" ? -.42 : -.93) * fall;
+      mesh.rotation.x = (kind === "fly" ? .27 : -.16) * fall;
+      mesh.position.y = kind === "fly" ? THREE.MathUtils.lerp(deathOriginY.current, .95, fall) : -.12 * fall;
+      mesh.scale.setScalar(age > 4 ? Math.max(.001, 5 - age) : 1);
+      if (debris.current) { debris.current.rotation.y += delta * 2; debris.current.scale.setScalar(1 + Math.min(age, .8) * .35); }
+      return;
+    }
     const live = useGameStore.getState();
     if (screen !== "playing" || live.tutorialOpen) {
       if (telegraph.current) telegraph.current.visible = false;
@@ -194,6 +216,7 @@ export function ExtraMonster({ id, spawn, kind }: { id: string; spawn: [number, 
   });
 
   return <group ref={root} position={[safeSpawn[0], kind === "fly" ? 5.2 : 0, safeSpawn[2]]}>
+    {dead && <group ref={debris} userData={{ ignoreProjectile: true }}>{[-1, 1].map(side => <mesh key={side} position={[side * 1.55, kind === "fly" ? .45 : 2.8, .3]} rotation={[side * .4, 0, side * .5]}><tetrahedronGeometry args={[kind === "fly" ? .4 : .55]} /><meshBasicMaterial color={kind === "fly" ? "#d7a7f6" : "#aab0b9"} transparent opacity={.7} /></mesh>)}</group>}
     <EnemyFeedback id={id} root={root} />
     {kind === "fly" ? <>
       <mesh userData={{ targetId: id, targetPart: "body" }} castShadow><icosahedronGeometry args={[1.2, 1]} /><meshStandardMaterial color={hitFlash ? "#ff363c" : "#8558dc"} emissive="#402379" emissiveIntensity={0.35} /></mesh>
@@ -226,10 +249,10 @@ export function ExtraMonster({ id, spawn, kind }: { id: string; spawn: [number, 
         })}
       </group>
     </>}
-    <group position={[0, kind === "fly" ? 1.65 : 4.7, 0]} userData={{ ignoreProjectile: true }}>
+    {!dead && <group position={[0, kind === "fly" ? 1.65 : 4.7, 0]} userData={{ ignoreProjectile: true }}>
       <mesh scale={[Math.max(0.04, health / maxHp), 1, 1]}><boxGeometry args={[1.8, 0.09, 0.08]} /><meshBasicMaterial color="#fa5964" /></mesh>
-    </group>
+    </group>}
     {damagePops.map((pop,index)=><Html key={pop.id} position={[0, (kind === "fly" ? 2.25 : 5.15)+index*.14,0]} center zIndexRange={[40,0]} style={{pointerEvents:"none"}}><div className={`boss-damage-pop boss-damage-pop--${pop.part}`}>{pop.part==="head"&&<span>HEADSHOT</span>}<strong>{pop.amount}</strong></div></Html>)}
-    <ScanHalo id={id} size={kind === "fly" ? 1.3 : 2.8} />
+    {!dead && <ScanHalo id={id} size={kind === "fly" ? 1.3 : 2.8} />}
   </group>;
 }

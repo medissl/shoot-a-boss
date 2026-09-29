@@ -496,11 +496,7 @@ export function Dummy({
     const warning = warningRef.current;
     const shot = shotRef.current;
 
-    if (!root || (screen !== "playing" || useGameStore.getState().tutorialOpen)) {
-      if (warning) warning.visible = false;
-      if (shot) shot.visible = false;
-      return;
-    }
+    if (!root) return;
 
     if (dead) {
       if (warning) warning.visible = false;
@@ -513,12 +509,18 @@ export function Dummy({
 
       if (spriteMaterial.current) {
         spriteMaterial.current.opacity =
-          elapsed <= 7.1
+          elapsed <= 4
             ? 1
-            : THREE.MathUtils.clamp(1 - (elapsed - 7.1) / 0.9, 0, 1);
+            : THREE.MathUtils.clamp(5 - elapsed, 0, 1);
       }
 
-      if (elapsed >= 8 && !corpseGone) setCorpseGone(true);
+      if (elapsed >= 5 && !corpseGone) setCorpseGone(true);
+      return;
+    }
+
+    if (screen !== "playing" || useGameStore.getState().tutorialOpen) {
+      if (warning) warning.visible = false;
+      if (shot) shot.visible = false;
       return;
     }
 

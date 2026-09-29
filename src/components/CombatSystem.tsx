@@ -7,6 +7,7 @@ import { getUpgradeStats } from "../game/progression";
 import { getSkin, skinColor, type SkinId } from "../game/skins";
 import { equippedGearRank, useGameStore } from "../game/store";
 import { weaponMuzzleWorldPosition } from "../game/weaponMuzzle";
+import { emitCardProc } from "../game/procFeedback";
 
 type Trace = {
   id: number;
@@ -255,6 +256,7 @@ export function CombatSystem() {
 
       if (now - lastShot.current < cooldown) return;
       lastShot.current = now;
+      state.recordWeaponShot("knife");
 
       const raycaster = new THREE.Raycaster();
       raycaster.far = WEAPONS.knife.maxRange * (now < state.paperTrailUntil ? 1.25 : 1);
@@ -291,6 +293,7 @@ export function CombatSystem() {
             stats.damage *
             stats.knifeDamage *
             partMultiplier;
+          state.recordWeaponHit(targetId, "knife", damage);
 
           window.dispatchEvent(
             new CustomEvent("boss-impact", {
@@ -375,6 +378,7 @@ export function CombatSystem() {
         emptyMagazine(currentWeapon);
         return;
       }
+      state.recordWeaponShot(currentWeapon);
 
       lastShot.current = now;
 
@@ -390,6 +394,8 @@ export function CombatSystem() {
 
       const pelletCount = currentWeapon === "sniper" && state.upgrades.sniperTwin ? 2 :
         config.pellets + (currentWeapon === "shotgun" ? state.upgrades.shotgunPellets + state.upgrades.shotgunDouble * 2 : 0);
+      if (currentWeapon === "sniper" && state.upgrades.sniperTwin) emitCardProc("TWIN SIGNATURE", "SECOND ROUND");
+      if (currentWeapon === "shotgun" && state.upgrades.shotgunDouble) emitCardProc("DOUBLE ENTRY", "+2 PELLETS");
       for (let pellet = 0; pellet < pelletCount; pellet += 1) {
         const raycaster = new THREE.Raycaster();
         const spreadX = (Math.random() - 0.5) * spread;
@@ -563,8 +569,10 @@ export function CombatSystem() {
 
       if (currentWeapon === "rifle" && state.upgrades.rifleSurge && rifleShots.current % 6 === 0) {
         hits.forEach((summary) => { summary.damage *= 1.65; });
+        emitCardProc("FULL AUTO AUDIT", "POWER SHOT", 300);
       }
       hits.forEach((summary, id) => {
+        state.recordWeaponHit(id, currentWeapon, summary.damage);
         window.dispatchEvent(
           new CustomEvent("boss-hit", {
             detail: {
@@ -576,9 +584,11 @@ export function CombatSystem() {
         );
         if (currentWeapon === "rifle" && state.upgrades.rifleFreeze) {
           applyEnemyStatus(id, state.runId, 800);
+          emitCardProc("COLD CALL", "FROZEN", 1300);
         }
         if (currentWeapon === "shotgun" && state.upgrades.shotgunSlow) {
           applyEnemyStatus(id, state.runId, 0, 1500, .65, 2500);
+          emitCardProc("HEAVY PAGES", "SLOWED", 1300);
         }
         if (currentWeapon === "sniper" && state.upgrades.sniperFire) {
           for (let tick = 1; tick <= 4; tick += 1) {

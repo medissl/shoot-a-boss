@@ -3,6 +3,7 @@ import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { useGameStore } from "../game/store";
 import { enemyHpScale } from "../game/levels";
+import { emitCardProc } from "../game/procFeedback";
 
 export function CombatAura() {
   const ring = useRef<THREE.Mesh>(null);
@@ -65,6 +66,7 @@ export function CombatAura() {
       lastBurn.current = now;
       Object.entries(live.enemyPositions).forEach(([id, pos]) => {
         if (Math.hypot(x - pos[0], z - pos[2]) < 3.7 && Math.abs(y - pos[1]) < 3.5) {
+          emitCardProc("FIRE WALTZ", "ORBIT HIT", 1600);
           window.dispatchEvent(new CustomEvent("boss-hit", { detail: { id, damage: 8, part: "body" } }));
         }
       });
@@ -87,14 +89,17 @@ export function CombatAura() {
         displayed.forEach((id) => {
           const pos = live.enemyPositions[id];
           if (!pos) return;
-          const direction = new THREE.Vector3(...pos).sub(camera.position).applyQuaternion(camera.quaternion.clone().invert());
-          const behind = direction.z > 0;
-          const target = new THREE.Vector3(...pos).project(camera);
-          if (!behind && Math.abs(target.x) < .83 && Math.abs(target.y) < .7) return;
-          const dx = direction.x * (behind ? -1 : 1);
-          const dy = direction.y * (behind ? -1 : 1);
-          const edge = Math.abs(dx) > Math.abs(dy) ? dx < 0 ? "left" : "right" : dy > 0 ? "top" : "bottom";
-          marks.push({ id, edge, offset: Math.max(-38, Math.min(38, (edge === "left" || edge === "right" ? -target.y : target.x) * 35)),
+          const local = new THREE.Vector3(...pos).sub(camera.position).applyQuaternion(camera.quaternion.clone().invert());
+          const behind = local.z >= 0;
+          const projected = new THREE.Vector3(...pos).project(camera);
+          if (!behind && Math.abs(projected.x) < .83 && Math.abs(projected.y) < .7) return;
+          const edge = behind ? "bottom" : Math.abs(projected.x) > Math.abs(projected.y) * 1.25
+            ? projected.x < 0 ? "left" : "right" : projected.y > 0 ? "top" : "bottom";
+          const horizontal = behind ? local.x / Math.max(1, Math.hypot(local.x, local.z)) : projected.x;
+          const offset = edge === "left" || edge === "right"
+            ? THREE.MathUtils.clamp(-projected.y * innerHeight * .35, -innerHeight * .32, innerHeight * .32)
+            : THREE.MathUtils.clamp(horizontal * innerWidth * .35, -innerWidth * .35, innerWidth * .35);
+          marks.push({ id, edge, offset,
             distance: Math.round(new THREE.Vector3(...pos).distanceTo(camera.position)), vertical: pos[1] - camera.position.y > 3 ? "↑" : pos[1] - camera.position.y < -3 ? "↓" : "", scan: scanning });
         });
       }

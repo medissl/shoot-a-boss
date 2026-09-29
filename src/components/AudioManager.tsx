@@ -60,7 +60,7 @@ const reloadGain: Partial<Record<WeaponId, number>> = {
 };
 
 function bgmFor(screen: GameScreen, level: number) {
-  if (!["playing", "paused", "stageClear", "won", "upgrade", "lost"].includes(screen)) return A.introBgm;
+  if (!["playing", "paused", "stageClear", "levelUp", "reward", "upgrade", "evolution", "won", "lost", "practiceResult"].includes(screen)) return A.introBgm;
   const theme = getLevelDefinition(level).theme;
   return {
     playground: "/audio/ThePlaygroundBGM.mp3",
@@ -138,13 +138,13 @@ export function AudioManager() {
     [sfxLevel],
   );
 
-  const playTheme = useCallback((weapon:WeaponId,action:"fire"|"equip"|"reload"|"knife-hit") => {
+  const playTheme = useCallback((weapon:WeaponId,action:"fire"|"equip"|"cock"|"reload"|"knife-hit") => {
     if (!unlocked.current || useGameStore.getState().screen!=="playing" || typeof AudioContext==="undefined")return;
     const skin=useGameStore.getState().equippedSkins[weapon];
     if(skin==="default")return;
     const context=boostedContext.current??new AudioContext();boostedContext.current=context;
     void context.resume().catch(()=>undefined);
-    playSkinSound(context,skin,action,sfxLevel(.92),weapon);
+    playSkinSound(context,skin,action,sfxLevel(1.25),weapon);
   },[sfxLevel]);
 
   const playMenuSound = useCallback((kind: "open" | "select" | "confirm") => {
@@ -421,7 +421,7 @@ export function AudioManager() {
       if (useGameStore.getState().screen === "playing") {
         const path = cocking[selected];
         if (useGameStore.getState().equippedSkins[selected] === "default") { if (path) playOne(path, 0.72); }
-        else playTheme(selected,"equip");
+        else playTheme(selected,"cock");
       }
     };
 
@@ -459,11 +459,14 @@ export function AudioManager() {
       const detail = (event as CustomEvent<{ kind: WorldSound; position?: [number, number, number] }>).detail;
       if (detail?.kind) playWorldSound(detail.kind, useGameStore.getState().sfxVolume, detail.position, useGameStore.getState().playerPosition);
     };
+    const phaseSound = (event: Event) => playWorldSound((event as CustomEvent<string>).detail === "SURGE" ? "surge" : "finalPush", useGameStore.getState().sfxVolume);
+    const procSound = () => playWorldSound("cardProc", useGameStore.getState().sfxVolume * .75);
     const playerDamage = () => playOne(A.playerDamage, 0.24);
     const landing = () => playOne(A.land, 0.3);
 
     const pickup = (event: Event) => {
-      const kind = (event as CustomEvent<{ kind: "grenade" | "speed" }>).detail.kind;
+      const kind = (event as CustomEvent<{ kind: "grenade" | "speed" | "health" | "ammo" }>).detail.kind;
+      playWorldSound(({ grenade: "pickupBomb", speed: "pickupSpeed", health: "pickupHealth", ammo: "pickupAmmo" } as const)[kind], useGameStore.getState().sfxVolume);
       playOne(
         kind === "speed" ? A.speed : A.pickup,
         kind === "speed" ? 0.38 : 0.32,
@@ -488,6 +491,8 @@ export function AudioManager() {
     window.addEventListener("crate-spin", crateSpin);
     window.addEventListener("crate-reveal", crateReveal);
     window.addEventListener("world-sfx", worldSound);
+    window.addEventListener("intensity-phase", phaseSound);
+    window.addEventListener("card-proc", procSound);
     window.addEventListener("paper-grenade-explode", grenadeExplode);
     window.addEventListener("player-damaged", playerDamage);
     window.addEventListener("player-landed", landing);
@@ -509,6 +514,8 @@ export function AudioManager() {
       window.removeEventListener("crate-spin", crateSpin);
       window.removeEventListener("crate-reveal", crateReveal);
       window.removeEventListener("world-sfx", worldSound);
+      window.removeEventListener("intensity-phase", phaseSound);
+      window.removeEventListener("card-proc", procSound);
       window.removeEventListener("paper-grenade-explode", grenadeExplode);
       window.removeEventListener("player-damaged", playerDamage);
       window.removeEventListener("player-landed", landing);

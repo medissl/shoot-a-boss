@@ -54,6 +54,7 @@ export function HUD() {
   const [pickupNotice, setPickupNotice] = useState("");
   const [emptyAlert, setEmptyAlert] = useState(false);
   const [hazardNotice, setHazardNotice] = useState("");
+  const [procNotice, setProcNotice] = useState<{ label: string; detail: string } | null>(null);
   const [damageFlashKey, setDamageFlashKey] = useState(0);
   const [damageDirection, setDamageDirection] = useState("front");
   const [scanDirections, setScanDirections] = useState<{ id: string; edge: string; offset: number; distance: number; vertical: string; scan: boolean }[]>([]);
@@ -93,6 +94,12 @@ export function HUD() {
     const scanHandler = (event: Event) => setScanDirections((event as CustomEvent<{ id: string; edge: string; offset: number; distance: number; vertical: string; scan: boolean }[]>).detail);
     const killHandler = () => setKillPulseKey((current) => current + 1);
     const hazardHandler = (event: Event) => setHazardNotice((event as CustomEvent<{ message: string }>).detail.message);
+    let procTimer = 0;
+    const procHandler = (event: Event) => {
+      setProcNotice((event as CustomEvent<{ label: string; detail: string }>).detail);
+      clearTimeout(procTimer);
+      procTimer = window.setTimeout(() => setProcNotice(null), 1100);
+    };
 
     window.addEventListener("pickup-collected", pickupHandler as EventListener);
     window.addEventListener("empty-mag", emptyHandler);
@@ -100,6 +107,7 @@ export function HUD() {
     window.addEventListener("boss-killed", killHandler);
     window.addEventListener("map-hazard-notice", hazardHandler);
     window.addEventListener("scan-directions", scanHandler);
+    window.addEventListener("card-proc", procHandler);
 
     return () => {
       if (emptyTimer.current) window.clearTimeout(emptyTimer.current);
@@ -109,6 +117,8 @@ export function HUD() {
       window.removeEventListener("boss-killed", killHandler);
       window.removeEventListener("map-hazard-notice", hazardHandler);
       window.removeEventListener("scan-directions", scanHandler);
+      window.removeEventListener("card-proc", procHandler);
+      clearTimeout(procTimer);
     };
   }, []);
 
@@ -198,7 +208,7 @@ export function HUD() {
       <div className="hud-scan">Q · {scanTargets.length ? `MARKED ${scanTargets.length}` : scanCooldownUntil > now ? `RECHARGE ${Math.ceil((scanCooldownUntil - now) / 1000)}S` : "MARK ENEMY"}</div>
       <div className="hud-coins"><span className="doodle-coin" aria-hidden="true">◉</span> {coins} COINS</div>
       {Boolean(shieldCharges > 0 || upgrades.shieldOrbit) && <div className="hud-shield">⬡ SHIELD {shieldCharges > 0 ? `×${shieldCharges}` : now < shieldReadyAt ? `${Math.ceil((shieldReadyAt - now) / 1000)}S` : "READY"}</div>}
-      {scanDirections.map((mark) => <div key={mark.id} className={`scan-edge scan-edge--${mark.edge} ${mark.scan ? "" : "scan-edge--passive"}`} style={{ "--edge-offset": `${mark.offset}px` } as CSSProperties}>◆<small>{mark.scan ? "TARGET" : "NEAREST"} {mark.vertical} {fullReport ? `${mark.distance}M` : ""}</small></div>)}
+      {scanDirections.map((mark) => <div key={mark.id} className={`scan-edge scan-edge--${mark.edge} ${mark.scan ? "" : "scan-edge--passive"}`} style={{ "--edge-offset": `${mark.offset}px` } as CSSProperties}>{mark.scan ? "◆" : "➤"}<small>{mark.scan ? "TARGET" : "NEAREST"} {mark.vertical} {mark.distance}M{fullReport ? " · LIVE" : ""}</small></div>)}
 
       {!scoped && (
         <div className="doodle-crosshair">
@@ -246,6 +256,7 @@ export function HUD() {
 
       {pickupNotice && <div className="pickup-notice">{pickupNotice}</div>}
       {hazardNotice && <div className="hazard-notice">⚠ {hazardNotice}</div>}
+      {procNotice && <div className="card-proc-notice">✳ {procNotice.label}<small>{procNotice.detail}</small></div>}
 
       {emptyAlert && (
         <div className="empty-mag-message">

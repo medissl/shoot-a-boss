@@ -121,7 +121,7 @@ export function PaperworkMonster({
   useFrame((state, delta) => {
     const group = root.current;
     if (group && !dead) useGameStore.getState().setEnemyPosition(id, [group.position.x, group.position.y + 1.1, group.position.z]);
-    if (!group || (screen !== "playing" || useGameStore.getState().tutorialOpen)) return;
+    if (!group) return;
 
     if (dead) {
       const elapsed = (performance.now() - deadAt.current) / 1000;
@@ -133,13 +133,15 @@ export function PaperworkMonster({
       group.position.y = Math.max(-0.42, group.position.y - delta * 0.5);
       if (material.current) {
         material.current.opacity =
-          elapsed < 3.2
+          elapsed < 4
             ? 1
-            : THREE.MathUtils.clamp(1 - (elapsed - 3.2) / 0.8, 0, 1);
+            : THREE.MathUtils.clamp(5 - elapsed, 0, 1);
       }
-      if (elapsed >= 4 && !gone) setGone(true);
+      if (elapsed >= 5 && !gone) setGone(true);
       return;
     }
+
+    if (screen !== "playing" || useGameStore.getState().tutorialOpen) return;
 
     if (enemyMotionFactor(id, useGameStore.getState().runId) === 0) return;
 
