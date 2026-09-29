@@ -204,7 +204,7 @@ export function HUD() {
           aria-hidden="true"
         >
           <div className="scope-ring" />
-          {scopeTheme && <div className="scope-theme-rim"><i/><i/><i/><i/></div>}
+          {scopeTheme && <div className="scope-theme-rim"><i/><i/><i/><i/><b>{scopeTheme.name.toUpperCase()}</b></div>}
           {weapon === "sniper" && <>
             <span className="scope-axis scope-axis--x" />
             <span className="scope-axis scope-axis--y" />

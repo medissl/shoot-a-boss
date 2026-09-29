@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type CSSProperties } from "react";
 import type { WeaponId } from "../game/config";
 import { useGameStore } from "../game/store";
 import { getSkin, skinColor, type SkinId } from "../game/skins";
-import { ScopedSkinArt, WeaponSkinArt } from "./WeaponSkinArt";
+import { ScopedSkinArt, SkinWeaponArt } from "./WeaponSkinArt";
 
 function RifleHipArt() {
   return (
@@ -113,13 +113,14 @@ function HipWeaponArt({ weapon, skin, firing, reloading, preview=false }: { weap
         </pattern>
       </defs>
 
-      {weapon === "rifle" && <RifleHipArt />}
-      {weapon === "shotgun" && <ShotgunHipArt />}
-      {weapon === "sniper" && <SniperHipArt />}
-      {weapon === "knife" && <KnifeHipArt />}
-      <WeaponSkinArt weapon={weapon} id={skin} firing={firing} reloading={reloading}/>
+      {skin === "default" ? <>
+        {weapon === "rifle" && <RifleHipArt />}
+        {weapon === "shotgun" && <ShotgunHipArt />}
+        {weapon === "sniper" && <SniperHipArt />}
+        {weapon === "knife" && <KnifeHipArt />}
+      </> : <SkinWeaponArt weapon={weapon} id={skin} firing={firing} reloading={reloading}/>}
 
-      {weapon !== "knife" && (
+      {skin === "default" && weapon !== "knife" && (
         <g className="muzzle-spark">
           <path d="M304 240 l-26 -17 M304 240 l-4 -28 M304 240 l21 -20 M304 240 l28 4" />
         </g>
@@ -128,14 +129,14 @@ function HipWeaponArt({ weapon, skin, firing, reloading, preview=false }: { weap
   );
 }
 
-export function SkinWeaponPreview({weapon,skin}:{weapon:WeaponId;skin:SkinId}){
-  return <div className="skin-weapon-preview" style={{"--skin-color":skinColor(skin)} as CSSProperties} aria-hidden="true"><HipWeaponArt weapon={weapon} skin={skin} firing={false} reloading={false} preview/></div>;
+export function SkinWeaponPreview({weapon,skin,firing=false}:{weapon:WeaponId;skin:SkinId;firing?:boolean}){
+  return <div className="skin-weapon-preview" style={{"--skin-color":skinColor(skin)} as CSSProperties} aria-hidden="true"><HipWeaponArt weapon={weapon} skin={skin} firing={firing} reloading={false} preview/></div>;
 }
 
 function ScopedWeaponArt({ weapon, skin }: { weapon: WeaponId; skin: SkinId }) {
   return (
     <svg className="weapon-scope-model" viewBox="0 0 1000 600" role="presentation">
-      {weapon === "sniper" && (
+      {skin === "default" && weapon === "sniper" && (
         <g className="ads-drawing ads-drawing--sniper">
           <path className="ads-fill" d="M397 520 Q500 468 603 520 L650 600 H350 Z" />
           <path className="ads-line" d="M420 510 Q500 476 580 510" />
@@ -143,7 +144,7 @@ function ScopedWeaponArt({ weapon, skin }: { weapon: WeaponId; skin: SkinId }) {
         </g>
       )}
 
-      {weapon === "rifle" && (
+      {skin === "default" && weapon === "rifle" && (
         <g className="ads-drawing ads-drawing--rifle">
           <path className="ads-fill" d="M405 456 L595 456 L670 600 H330 Z" />
           <path className="ads-fill ads-optic-frame" d="M438 230 L562 230 L578 368 L422 368 Z" />
@@ -153,7 +154,7 @@ function ScopedWeaponArt({ weapon, skin }: { weapon: WeaponId; skin: SkinId }) {
         </g>
       )}
 
-      {weapon === "shotgun" && (
+      {skin === "default" && weapon === "shotgun" && (
         <g className="ads-drawing ads-drawing--shotgun">
           <path className="ads-fill" d="M418 452 L582 452 L650 600 H350 Z" />
           <path className="ads-line" d="M500 452 V306" />
@@ -165,6 +166,8 @@ function ScopedWeaponArt({ weapon, skin }: { weapon: WeaponId; skin: SkinId }) {
     </svg>
   );
 }
+
+export function SkinScopePreview({weapon,skin}:{weapon:WeaponId;skin:SkinId}){return <div className="arsenal-scope-model"><ScopedWeaponArt weapon={weapon} skin={skin}/></div>}
 
 export function WeaponView() {
   const weapon = useGameStore((state) => state.weapon);

@@ -223,7 +223,7 @@ export function AudioManager() {
 
       const audio = new Audio(A.rifleBurst);
       audio.preload = "auto";
-      audio.volume = sfxLevel(0.8);
+      audio.volume = sfxLevel(useGameStore.getState().equippedSkins.rifle === "default" ? 0.8 : 0.16);
       rifleBursts.current.add(audio);
 
       const scheduleNext = () => {
@@ -371,7 +371,7 @@ export function AudioManager() {
     if (!reloading || !reloadingWeapon) return;
     const path = reloads[reloadingWeapon];
     if (!path) return;
-    playOne(path, reloadGain[reloadingWeapon] ?? 0.25);
+    playOne(path, useGameStore.getState().equippedSkins[reloadingWeapon] === "default" ? (reloadGain[reloadingWeapon] ?? 0.25) : 0.11);
     skinAccent(reloadingWeapon,"reload");
   }, [playOne, reloading, reloadingWeapon, skinAccent]);
 
@@ -418,22 +418,23 @@ export function AudioManager() {
       const selected = (event as CustomEvent<{ weapon: WeaponId }>).detail.weapon;
       if (useGameStore.getState().screen === "playing") {
         const path = cocking[selected];
-        if (path) playOne(path, 0.72);
+        if (path) playOne(path, useGameStore.getState().equippedSkins[selected] === "default" ? 0.72 : 0.18);
         skinAccent(selected,"equip");
       }
     };
 
     const weaponFire = (event: Event) => {
       const fired = (event as CustomEvent<{ weapon: WeaponId }>).detail.weapon;
-      if (fired === "sniper") playOne(A.sniperShoot, 0.95, 1.6);
-      if (fired === "shotgun") playOne(A.shotgunShoot, 0.85);
+      const themed = useGameStore.getState().equippedSkins[fired] !== "default";
+      if (fired === "sniper") playOne(A.sniperShoot, themed ? 0.18 : 0.95, themed ? 1 : 1.6);
+      if (fired === "shotgun") playOne(A.shotgunShoot, themed ? 0.16 : 0.85);
       skinAccent(fired,"fire");
     };
 
     const rifleDown = () => {
       if (!unlocked.current || rifleHeld.current) return;
       rifleHeld.current = true;
-      playOne(A.rifleOne, 0.75);
+      playOne(A.rifleOne, useGameStore.getState().equippedSkins.rifle === "default" ? 0.75 : 0.15);
 
       rifleHoldTimer.current = window.setTimeout(() => {
         if (!rifleHeld.current || !unlocked.current) return;

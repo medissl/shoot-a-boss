@@ -2375,8 +2375,6 @@ button {
 .equipment-layout section article h3 { margin:3px; font-size:13px; }
 .equipment-layout section > button { display:block; width:100%; margin:7px 0; }
 .equipment-layout button.is-equipped, .skin-options button.is-equipped { background:#2548b8; color:white; }
-.skin-options { display:flex; flex-wrap:wrap; gap:4px; }
-.skin-options button { padding:4px 6px; font-size:9px; border-color:var(--skin-preview); }
 .equipment-avatar { position:relative; min-height:330px; align-self:center; border:3px dashed #2548b8; border-radius:50%; background:#dbe7ff; }
 .equipment-head { position:absolute; top:55px; left:50%; transform:translateX(-50%); width:105px; height:105px; display:grid; place-items:center; border:6px solid #2548b8; border-radius:50%; background:#fffef6; font-size:20px; font-weight:1000; }
 .equipment-body { position:absolute; top:160px; left:50%; height:89px; border-left:8px solid #2548b8; }
@@ -2389,8 +2387,6 @@ button {
 .crate-box {display:grid; place-items:center; width:min(290px,60vw);height:min(220px,42vh); background:#d1e2ff !important; border:7px solid #2548b8 !important; box-shadow:10px 12px 0 #95b2e8; transform:rotate(-4deg); transition:transform .5s}.crate-box.drop {animation:crate-drop .7s ease-out both}.crate-box span{font-size:80px}.crate-box b{font-size:16px}@keyframes crate-drop{from{transform:translateY(-100vh) rotate(-22deg)}to{transform:translateY(0) rotate(-4deg)}}
 .crate-window {width:min(650px,90vw);height:110px;overflow:hidden;position:relative;border:4px solid #2548b8;background:white}.crate-window i{position:absolute;z-index:2;left:50%;top:0;height:100%;border-left:4px solid #f65a77}.crate-roulette {display:flex;gap:8px;width:max-content;animation:crate-spin 5.6s cubic-bezier(.09,.48,.13,1) forwards}.crate-roulette span {flex:none;width:120px;height:100px;display:grid;place-items:center;background:var(--crate-color);color:white;font-weight:1000;text-shadow:1px 2px #2548b8}
 .crate-prize {padding:28px;border:5px solid var(--crate-color);border-radius:14px;background:#fffef6;box-shadow:8px 8px #9bb4e7;animation:crate-reveal .5s cubic-bezier(.1,1,.3,1) both}.crate-prize span{color:var(--crate-color);font-size:50px}.crate-prize h2{font-size:clamp(20px,4vw,38px)}.crate-prize button{margin:5px}@keyframes crate-reveal{from{transform:scale(.6);opacity:0}to{transform:scale(1);opacity:1}}
-.weapon-view.has-skin .gun-fill,.weapon-view.has-skin .gun-hatch-line,.weapon-view.has-skin .gun-line,.weapon-view.has-skin .gun-line-only,.weapon-view.has-skin .gun-barrel,.weapon-view.has-skin .ads-fill,.weapon-view.has-skin .ads-line{stroke:var(--skin-color)}
-.weapon-skin-sparkles {position:absolute;z-index:2;top:25%;left:52%;font-size:24px;color:var(--skin-color);text-shadow:0 0 8px white;animation:skin-sparkle 1.2s ease-in-out infinite;pointer-events:none}@keyframes skin-sparkle{50%{opacity:.3;transform:translateY(-12px)}}
 @media (pointer:coarse) {
   .pause-layer {padding:6px; align-items:start; }
   .pause-card {width:min(480px,96vw); max-height:calc(100dvh - 12px);padding:11px 15px;transform:none;scrollbar-width:thin;}
@@ -2462,55 +2458,15 @@ button {
 @media(pointer:coarse) and (orientation:landscape){.reload-progress{bottom:calc(clamp(46px,12vh,61px) + 52px);left:50%;width:min(235px,32vw);padding:4px;border-radius:8px;background:#fffdf0dc;transform:translateX(-50%)}.reload-progress__label{margin-bottom:3px;font-size:9px}.weapon-view.is-hip{width:min(48vw,380px);right:9%;bottom:-3vh}}
 @media(pointer:coarse) and (orientation:portrait){.reload-progress{top:clamp(144px,25vh,215px);bottom:auto;left:50%;width:min(210px,44vw);padding:4px;border-radius:8px;background:#fffdf0de;transform:translateX(-50%)}.reload-progress__label{margin-bottom:3px;font-size:9px}.weapon-view.is-hip{width:min(53vw,350px);right:6%;bottom:-4vh}}
 
-/* One illustrated skin kit per theme. All four existing silhouettes use the same ornaments. */
-.weapon-view.has-skin .gun-fill,.weapon-view.has-skin .ads-fill{stroke:#2548b8}
-.weapon-view.skin-papercraft .gun-fill,.weapon-view.skin-frostbite .gun-fill{fill:#e5f5ff}
-.weapon-view.skin-classroom .gun-fill,.weapon-view.skin-caution .gun-fill{fill:#fff7dc}
-.weapon-view.skin-office .gun-fill,.weapon-view.skin-hellfire .gun-fill{fill:#fff1e8}
-.weapon-view.skin-toxic .gun-fill{fill:#eaf9ed}
-.weapon-view.skin-void .gun-hatch{fill:#20244d}
-.weapon-view.skin-redacted .gun-hatch{fill:#f4eef0}
-.weapon-view.skin-living .gun-hatch{fill:#d8edfa}
-.weapon-view.has-skin .gun-line,.weapon-view.has-skin .gun-hatch-line,.weapon-view.has-skin .gun-line-only,.weapon-view.has-skin .ads-line{stroke:var(--skin-color)}
-.skin-geometry{pointer-events:none;animation:skin-draw-on .35s ease-out backwards}
-.skin-geometry--rare .skin-etched-panel{opacity:.85}
-.skin-geometry--epic .skin-etched-panel,.skin-geometry--legendary .skin-etched-panel{opacity:.95;filter:drop-shadow(0 0 3px var(--skin-color))}
-.skin-geometry--epic .skin-pulse-line,.skin-geometry--legendary .skin-pulse-line{animation:skin-circuit-flow 2.3s linear infinite;filter:drop-shadow(0 0 3px var(--skin-color))}
-.skin-geometry--legendary .skin-idle-ornament{transform-box:fill-box;transform-origin:center;animation:skin-living-idle 3.1s ease-in-out infinite}
+/* Full part mapped cosmetics. Default weapon drawing remains independent. */
 .weapon-view.is-inspecting.is-hip .weapon-view__perspective{animation:skin-inspect 1.7s ease-in-out both;transform-origin:78% 82%}
-.weapon-view.is-inspecting .skin-geometry--legendary .skin-etched-panel{filter:drop-shadow(0 0 9px var(--skin-color))}
 @keyframes skin-inspect{0%,100%{transform:translateY(0) rotate(0) scale(1)}28%{transform:translateY(-26px) rotate(-10deg) scale(1.13)}64%{transform:translateY(-32px) rotate(5deg) scale(1.1)}}
-.skin-geometry--void .skin-orbit-dust{transform-box:fill-box;transform-origin:center;animation:skin-star-orbit 5s linear infinite}
-.skin-geometry--redacted .skin-moving-redaction{animation:skin-redaction-flicker 3.6s steps(3,end) infinite}
-.skin-geometry--living .skin-pulse-line{stroke-dasharray:9 12;animation-duration:1.2s}
-.skin-geometry--hellfire .skin-idle-ornament,.skin-geometry--stormbound .skin-idle-ornament{filter:drop-shadow(0 0 7px var(--skin-color))}
-.skin-geometry--reload .skin-etched-panel{animation:skin-reload-sketch .6s ease-in-out infinite alternate}
-.skin-attack-effect{animation:skin-muzzle-out .24s ease-out both;filter:drop-shadow(0 0 3px var(--skin-color))}
-.skin-attack-effect--legendary{filter:drop-shadow(0 0 7px var(--skin-color))}
-@keyframes skin-circuit-flow{to{stroke-dashoffset:-83}}
-@keyframes skin-draw-on{from{opacity:0}to{opacity:1}}
-@keyframes skin-living-idle{50%{opacity:.66;filter:drop-shadow(0 0 7px var(--skin-color))}}
-@keyframes skin-star-orbit{to{transform:rotate(360deg)}}
-@keyframes skin-redaction-flicker{0%,87%,100%{opacity:1}89%,93%{opacity:.17}95%{opacity:1}}
-@keyframes skin-reload-sketch{to{opacity:.26}}
-@keyframes skin-muzzle-out{from{opacity:1;transform:scale(.65);transform-origin:30% 38%}to{opacity:0;transform:scale(1.18);transform-origin:30% 38%}}
-.skin-loadout{min-width:0}.skin-loadout h3{display:flex;justify-content:space-between;gap:4px;align-items:baseline}.skin-loadout h3 small{font-size:9px}
-.skin-selection{display:grid;grid-template-columns:minmax(92px,1fr) minmax(105px,1fr);gap:6px;align-items:center;border:2px dashed #97afe1;border-radius:9px;background:#eef4ff;padding:5px}
-.skin-selection>div:last-child{display:grid;gap:3px;min-width:0}.skin-selection strong{font:900 12px/1.2 ui-rounded,sans-serif;overflow-wrap:anywhere}.skin-selection small{font:900 9px ui-monospace,monospace}.skin-selection button{min-height:27px;padding:2px 4px;font-size:9px}.skin-selection button:disabled{opacity:.72}
 .skin-weapon-preview{display:grid;place-items:center;min-height:92px;overflow:hidden;background:radial-gradient(ellipse at 52% 85%,#dce9fc,transparent 70%)}
 .skin-weapon-preview svg{width:100%;height:94px;overflow:visible;filter:drop-shadow(2px 3px 0 #2548b83d)}
 .skin-weapon-preview .gun-fill,.skin-weapon-preview .gun-hand{stroke:#2548b8;stroke-width:7}
-.skin-weapon-preview .gun-line,.skin-weapon-preview .gun-line-only{stroke:var(--skin-color)}
-.skin-options{max-height:125px;overflow:auto;display:flex;align-content:start;scrollbar-color:#9cb8ef #f7faff}
-.skin-options button{border-width:2px;min-height:28px;background:#fff;padding:3px 5px;color:#2548b8}
-.skin-options button i{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--skin-preview);border:1px solid #2548b8}
-.skin-options button.is-locked{opacity:.58}.skin-options button.is-previewed{outline:2px solid #2548b8;outline-offset:1px}
-.skin-options button.skin-option--epic{border-style:double}.skin-options button.skin-option--legendary{border-width:3px;box-shadow:inset 0 0 5px #eab24a83}
 .crate-prize{max-width:min(680px,95vw)}.crate-prize .skin-weapon-preview{width:min(450px,65vw);min-height:160px;margin:auto}.crate-prize .skin-weapon-preview svg{height:150px}.crate-prize>strong{display:block;color:var(--crate-color);font:1000 14px ui-monospace,monospace}
 .crate-prize--legendary{box-shadow:0 0 18px var(--crate-color),8px 8px #9bb4e7}.crate-roulette span{padding:6px;font-size:10px;line-height:1.2;overflow:hidden;overflow-wrap:anywhere}
 .crate-roulette--epic{border:3px double #fff}.crate-roulette--legendary{border:4px solid #ffebaa}
-@media (max-width:780px){.skin-selection{grid-template-columns:1fr}.skin-weapon-preview{min-height:74px}.skin-weapon-preview svg{height:74px}.skin-options{max-height:92px}.crate-prize .skin-weapon-preview svg{height:95px}.crate-prize .skin-weapon-preview{min-height:100px}}
-
 /* Cosmetic aiming treatment for all three ranged weapons. Effects stay on the rim. */
 .scope-overlay{pointer-events:none;--scope-size:min(66vh,66vw)}
 .scope-overlay--rifle{--scope-size:min(31vh,31vw)}
@@ -2540,26 +2496,47 @@ button {
 @keyframes scope-theme-breathe{50%{opacity:.52;filter:drop-shadow(0 0 5px var(--scope-color))}}
 @media(prefers-reduced-motion:reduce){.scope-overlay--legendary .scope-theme-rim{animation:none}}
 
-/* Engraved material channels replace the repeated floating motif stamps. */
-.skin-channel{opacity:.65;filter:drop-shadow(0 0 2px var(--skin-color))}
-.skin-channel--inner{opacity:.72}
-.skin-geometry--rare .skin-channel{opacity:.45;filter:none}
-.skin-geometry--epic .skin-channel{opacity:.8}
-.skin-geometry--legendary .skin-channel{opacity:1;filter:drop-shadow(0 0 5px var(--skin-color))}
-.skin-receiver-inlay{filter:drop-shadow(0 0 2px var(--skin-color))}
-.skin-impulse{animation:skin-channel-flow 2.1s linear infinite;opacity:.8}
-.weapon-view.is-kicking .skin-impulse{stroke-width:7;filter:drop-shadow(0 0 8px var(--skin-color))}
-.weapon-view.is-reloading .skin-channel{opacity:.24}
-.skin-geometry--eye .skin-channel{animation:skin-channel-twitch 3.2s steps(2,end) infinite}
-.skin-geometry--stars .skin-receiver-inlay{filter:drop-shadow(0 0 6px var(--skin-color))}
-.skin-geometry--redacted .skin-channel{stroke-dasharray:28 8;animation:skin-channel-flow 1.6s steps(3,end) infinite}
-.skin-geometry--hellfire .skin-channel{filter:drop-shadow(0 0 6px #ff894c)}
-.skin-geometry--frostbite .skin-receiver-inlay{fill:#def9ff}
-@keyframes skin-channel-flow{to{stroke-dashoffset:-240}}
-@keyframes skin-channel-twitch{90%,100%{opacity:.65}94%{opacity:1}}
-@media(prefers-reduced-motion:reduce){.skin-impulse,.skin-geometry--eye .skin-channel,.skin-geometry--redacted .skin-channel{animation:none}}
+/* Structural identity, moving surfaces and controlled particles. */
+.skin-render{pointer-events:none;animation:skin-appear .34s ease-out both}
+.skin-render--epic,.skin-render--legendary{filter:drop-shadow(0 0 5px var(--skin-color))}
+.skin-render--legendary .skin-motif{filter:drop-shadow(0 0 6px var(--skin-color))}
+.skin-flow{animation:skin-flow 1.8s linear infinite}
+.skin-render--rare .skin-flow{animation-duration:2.7s}
+.skin-render--legendary .skin-flow{animation-duration:1.1s}
+.skin-render--reload .skin-flow{animation-duration:.55s;stroke-width:6}
+.skin-render--reload .skin-part--magazine,.skin-render--reload .skin-part--pump,.skin-render--reload .skin-part--handle{animation:skin-reload .55s ease-in-out infinite alternate}
+.skin-orbit{transform-box:fill-box;transform-origin:center;animation:skin-orbit 7s linear infinite}
+.skin-redact{animation:skin-redact 2.8s steps(2,end) infinite}
+.skin-idle-particles circle{animation:skin-float 2.2s ease-in-out infinite alternate}
+.skin-attack{animation:skin-attack .22s ease-out both;filter:drop-shadow(0 0 7px var(--skin-color))}
+.skin-render--legendary .skin-attack{filter:drop-shadow(0 0 15px var(--skin-color))}
+.skin-scoped{filter:drop-shadow(0 0 4px var(--skin-color))}
+@keyframes skin-appear{from{opacity:.25;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes skin-flow{to{stroke-dashoffset:-100}}
+@keyframes skin-reload{to{transform:translate(8px,8px)}}
+@keyframes skin-orbit{to{transform:rotate(360deg)}}
+@keyframes skin-redact{15%,80%{opacity:.15}20%,85%{opacity:1}}
+@keyframes skin-float{to{transform:translate(-8px,-14px);opacity:.25}}
+@keyframes skin-attack{from{opacity:1;transform:translate(0,0) scale(.8)}to{opacity:0;transform:translate(0,0) scale(1.3)}}
+@media(prefers-reduced-motion:reduce){.skin-render,.skin-flow,.skin-orbit,.skin-redact,.skin-idle-particles circle,.skin-attack{animation:none}}
 
-.weapon-view.has-skin .muzzle-spark{stroke:var(--skin-color);filter:drop-shadow(0 0 5px var(--skin-color))}
-.skin-geometry--circuit .skin-impulse,.skin-geometry--stormbound .skin-impulse{animation-duration:1.2s}
-.skin-geometry--toxic .skin-receiver-inlay{fill:#d8f8dc}
-.skin-geometry--redacted .skin-receiver-inlay{fill:#f9f8ef}
+/* Arsenal has its own scroll and preview area, separate from equipment. */
+.arsenal-scene{min-height:100dvh;height:100dvh;overflow:auto;background:#111c36;color:#f5f3e8;font-family:ui-rounded,"Comic Sans MS",sans-serif;padding:clamp(10px,2vw,26px);background-image:radial-gradient(circle at 22% 20%,#273b62 0,transparent 45%),repeating-linear-gradient(0deg,transparent 0 39px,#ffffff08 40px)}
+.arsenal-scene button{cursor:pointer;font:900 12px ui-rounded,sans-serif}
+.arsenal-header{display:flex;align-items:center;gap:20px;max-width:1500px;margin:0 auto 16px}.arsenal-header>div{flex:1}.arsenal-header small,.arsenal-collection__heading small{letter-spacing:.18em;color:#9eb5d0;font:800 11px ui-monospace,monospace}.arsenal-header h1{margin:2px 0;font-size:clamp(29px,4vw,56px);letter-spacing:-.06em;line-height:1}.arsenal-header>span{font:900 10px ui-monospace,monospace;color:#b9cde0}.arsenal-header>button{display:flex;align-items:center;gap:5px;border:1px solid #6683a6;border-radius:8px;background:#263954;color:white;padding:10px 14px}
+.arsenal-weapons{max-width:1500px;margin:0 auto 14px;display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.arsenal-weapons button{display:flex;align-items:center;gap:10px;min-width:0;border:2px solid #4b6686;border-radius:9px;background:#1d2b49;color:#d8e8f3;padding:10px;text-align:left}.arsenal-weapons button.active{border-color:var(--arsenal-color);background:#30445d;box-shadow:inset 0 -3px var(--arsenal-color)}.arsenal-weapons button small{color:var(--arsenal-color)}.arsenal-weapons button b{margin-left:auto;color:#a5bfd1;font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:42%}
+.arsenal-body{max-width:1500px;margin:auto;display:grid;grid-template-columns:minmax(340px,.93fr) minmax(390px,1.07fr);gap:16px;align-items:start}.arsenal-stage,.arsenal-collection{border:2px solid #5c7293;border-radius:15px;background:#17243c;box-shadow:0 12px 28px #050e2180}.arsenal-stage{position:sticky;top:10px;padding:16px;overflow:hidden}.arsenal-stage__top{display:flex;justify-content:space-between;gap:12px;color:#afc1d8;font:900 10px ui-monospace,monospace;letter-spacing:.1em}.arsenal-display{display:grid;place-items:center;min-height:clamp(260px,39vh,480px);margin:13px 0;background:radial-gradient(ellipse at 43% 55%,color-mix(in srgb,var(--arsenal-color) 20%,#243a58),#101b31 68%);border:1px solid #536885;border-radius:9px;overflow:hidden}.arsenal-display .skin-weapon-preview{width:100%;min-height:clamp(260px,39vh,480px);background:none}.arsenal-display .skin-weapon-preview svg{height:clamp(260px,39vh,480px);width:96%;filter:drop-shadow(8px 15px 6px #020811aa)}.arsenal-display .arsenal-scope-model{width:100%;height:100%;display:grid;place-items:center}.arsenal-scope-model svg{width:min(100%,600px);height:clamp(260px,39vh,480px)}.arsenal-stage__identity{display:grid;grid-template-columns:auto 1fr;align-items:baseline;gap:0 12px}.arsenal-stage__identity h2{font-size:clamp(25px,3vw,40px);line-height:1;margin:0}.arsenal-stage__identity p{grid-column:2;color:#a6b9d1;font:800 11px ui-monospace,monospace;letter-spacing:.09em}.arsenal-rarity{text-transform:uppercase;color:var(--arsenal-color);font:900 10px ui-monospace,monospace}.arsenal-rarity--legendary{text-shadow:0 0 9px var(--arsenal-color)}.arsenal-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}.arsenal-actions button{display:flex;align-items:center;justify-content:center;gap:5px;border:1px solid #7189a9;border-radius:7px;background:#263e5b;color:#fff;padding:10px 11px}.arsenal-actions button:first-child{background:var(--arsenal-color);color:#111b33;border-color:var(--arsenal-color)}.arsenal-actions button.arsenal-equip{margin-left:auto;border-color:var(--arsenal-color);color:var(--arsenal-color)}.arsenal-actions button:disabled{opacity:.65;cursor:default}
+.arsenal-collection{padding:15px}.arsenal-collection__heading{display:flex;justify-content:space-between;align-items:center}.arsenal-collection__heading h2{margin:1px 0 10px;font-size:22px}.arsenal-collection__heading>span{font:900 13px ui-monospace,monospace;color:var(--arsenal-color)}.arsenal-filters{display:flex;gap:7px;flex-wrap:wrap;margin:0 0 12px}.arsenal-filters button{border:1px solid #5c7697;border-radius:7px;background:#233651;color:#bcd3e7;padding:7px 10px}.arsenal-filters button.active{background:#e1ebf1;color:#17243c}.arsenal-filters small{opacity:.65}.arsenal-grid{max-height:calc(100dvh - 225px);min-height:350px;overflow:auto;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;align-content:start;padding:3px;scrollbar-color:#627d9e #17243c}.arsenal-card{min-width:0;min-height:135px;display:grid;grid-template-rows:auto 72px auto auto;gap:3px;text-align:left;border:2px solid #49627f;border-radius:9px;padding:7px;color:#f1f4f3;background:linear-gradient(150deg,#263d5d,#1e304a)}.arsenal-card.selected{border-color:var(--card-color,var(--arsenal-color));box-shadow:0 0 0 2px #ffffff70,0 0 17px var(--card-color,var(--arsenal-color))}.arsenal-card--epic{background:linear-gradient(145deg,#2b3a62,#1b2d47)}.arsenal-card--legendary{background:radial-gradient(circle at 70% 40%,color-mix(in srgb,var(--card-color) 24%,#172744),#1b2844 75%)}.arsenal-card>span,.arsenal-card>small{font:800 9px ui-monospace,monospace;color:var(--card-color,#afc0d4)}.arsenal-card>b{font-size:12px;line-height:1.1;overflow-wrap:anywhere}.arsenal-card .skin-weapon-preview{min-height:72px;background:none}.arsenal-card .skin-weapon-preview svg{height:72px;max-width:100%}.equipment-arsenal-link p{font:700 13px/1.5 ui-rounded,sans-serif}.equipment-arsenal-link button{display:flex!important;align-items:center;gap:8px;background:#2548b8!important;color:white!important}
+@media(max-width:1000px){.arsenal-body{grid-template-columns:1fr}.arsenal-stage{position:static}.arsenal-grid{max-height:none;grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(max-width:630px){.arsenal-scene{height:100dvh}.arsenal-header>span{display:none}.arsenal-weapons{grid-template-columns:repeat(2,1fr)}.arsenal-weapons button{font-size:10px}.arsenal-body{display:block}.arsenal-collection{margin-top:12px}.arsenal-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.arsenal-display,.arsenal-display .skin-weapon-preview{min-height:235px}.arsenal-display .skin-weapon-preview svg,.arsenal-scope-model svg{height:235px}.arsenal-stage__identity h2{font-size:24px}.arsenal-actions button{font-size:10px}}
+.scope-theme-rim b{position:absolute;top:7%;left:50%;transform:translateX(-50%);white-space:nowrap;color:var(--scope-color);letter-spacing:.16em;font:900 clamp(8px,1vw,12px) ui-monospace,monospace;text-shadow:0 0 5px var(--scope-accent)}
+.scope-overlay--rifle .scope-theme-rim b,.scope-overlay--shotgun .scope-theme-rim b{top:-17%;font-size:8px}
+.scope-overlay--prism .scope-theme-rim{border:3px double var(--scope-accent);background:conic-gradient(from 20deg,transparent 0 15%,#ffffff17 20%,transparent 30% 65%,#ffffff1f 80%,transparent 90%)}
+.scope-overlay--stars .scope-theme-rim{box-shadow:inset 0 0 14px var(--scope-color),0 0 15px var(--scope-accent)}
+.scope-overlay--eye .scope-theme-rim{border:3px dashed var(--scope-color)}
+.scope-overlay--dragon .scope-theme-rim{border:4px double var(--scope-color)}
+.scope-overlay--blueprint .scope-theme-rim{border:2px dashed var(--scope-accent)}
+.scope-overlay--hazard .scope-theme-rim{border:4px dashed var(--scope-color)}
+.scope-overlay--clock .scope-theme-rim{border:3px dotted var(--scope-accent)}
+.scope-overlay--abyss .scope-theme-rim{box-shadow:inset 0 0 20px var(--scope-color)}
+.scope-overlay--shotgun .scope-theme-rim b{top:-31%}

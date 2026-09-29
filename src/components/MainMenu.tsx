@@ -1,6 +1,7 @@
 import { useState } from "react";
 import {
   BookOpen,
+  Crosshair,
   ChevronLeft,
   Github,
   LockKeyhole,
@@ -15,6 +16,7 @@ import { GearShopScene } from "./GearShopScene";
 import { FullscreenToggle } from "./FullscreenToggle";
 import { MonsterEncyclopedia } from "./MonsterEncyclopedia";
 import { EquipmentHub } from "./EquipmentHub";
+import { Arsenal } from "./Arsenal";
 import { SkillTree } from "./SkillTree";
 import { ResetDataButton } from "./ResetDataButton";
 import { enterStageAfterCurtain } from "../game/sceneTransition";
@@ -40,12 +42,14 @@ export function MainMenu() {
   const [shopOpen, setShopOpen] = useState(false);
   const [encyclopediaOpen, setEncyclopediaOpen] = useState(false);
   const [equipmentOpen, setEquipmentOpen] = useState(false);
+  const [arsenalOpen, setArsenalOpen] = useState(false);
   const [treeOpen, setTreeOpen] = useState(false);
   const coins = useGameStore((state) => state.coins);
 
   if (shopOpen) return <GearShopScene onBack={() => { setShopOpen(false); window.dispatchEvent(new Event("ui-scene-open")); }} />;
   if (treeOpen) return <SkillTree onBack={() => setTreeOpen(false)} />;
-  if (equipmentOpen) return <EquipmentHub onBack={() => setEquipmentOpen(false)} onShop={() => setShopOpen(true)} onStages={() => {setEquipmentOpen(false);setLevelSelectOpen(true);}} onTree={() => setTreeOpen(true)} />;
+  if (arsenalOpen) return <Arsenal onBack={() => setArsenalOpen(false)} />;
+  if (equipmentOpen) return <EquipmentHub onBack={() => setEquipmentOpen(false)} onShop={() => setShopOpen(true)} onStages={() => {setEquipmentOpen(false);setLevelSelectOpen(true);}} onTree={() => setTreeOpen(true)} onArsenal={() => setArsenalOpen(true)} />;
   if (encyclopediaOpen) return <MonsterEncyclopedia onBack={() => setEncyclopediaOpen(false)} />;
 
   return (
@@ -93,6 +97,7 @@ export function MainMenu() {
               <button type="button" onClick={() => setEncyclopediaOpen(true)}>
                 <BookOpen size={17} /> MONSTER ENCYCLOPEDIA
               </button>
+              <button type="button" onClick={() => setArsenalOpen(true)}><Crosshair size={17}/> THE ARSENAL · 88 SKINS</button>
               <button type="button" onClick={() => setEquipmentOpen(true)}>✦ PLAYER EQUIPMENT</button>
 
               <a href="https://github.com/medissl" target="_blank" rel="noreferrer">

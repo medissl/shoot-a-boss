@@ -71,14 +71,17 @@ function TraceLine({ trace }: { trace: Trace }) {
         <cylinderGeometry args={[skin.rarity === "legendary" ? .016 : .011, .003, length * .68, motif === "pixel" || motif === "redaction" ? 4 : 5]} />
         <meshBasicMaterial color={trace.color} transparent opacity={skin.rarity === "rare" ? .24 : .45} depthWrite={false} />
       </mesh>}
-      {(motif === "pixel" || motif === "redaction" || motif === "circuit") && [0, 1, 2].map((i) => (
-        <mesh key={i} position={[0, (i - 1) * Math.min(length * .24, .55), 0]}>
-          <boxGeometry args={[.045, .11, .045]} />
-          <meshBasicMaterial color={trace.color} depthWrite={false} />
+      {skin && [0, 1, 2].map((i) => (
+        <mesh key={i} position={[Math.sin(i*2.4)*.035, (i - 1) * Math.min(length * .24, .55), Math.cos(i*2.4)*.035]} rotation={[i*.7,0,i*.8]}>
+          {(["pixel","redaction","circuit","hazard","cassette","blueprint"].includes(motif!)) ? <boxGeometry args={[.045, .09, .045]} />
+           : (["ice","prism","fold","storm"].includes(motif!)) ? <tetrahedronGeometry args={[.05]} />
+           : (["void","stars","eye","clock"].includes(motif!)) ? <torusGeometry args={[.055,.01,4,9]} />
+           : <octahedronGeometry args={[.043,0]} />}
+          <meshBasicMaterial color={i===1?skin.accent:trace.color} transparent opacity={skin.rarity==="rare"?.6:.9} depthWrite={false} />
         </mesh>
       ))}
       <mesh position={[0, length / 2, 0]}>
-        {motif === "ice" ? <tetrahedronGeometry args={[trace.hit ? .08 : .05]} /> : motif === "redaction" ? <boxGeometry args={[.09,.055,.055]}/> : <octahedronGeometry args={[trace.hit ? .05 : .03, 0]} />}
+        {motif === "ice" || motif === "prism" ? <tetrahedronGeometry args={[trace.hit ? .12 : .07]} /> : motif === "redaction" || motif === "pixel" ? <boxGeometry args={[.12,.065,.065]}/> : <octahedronGeometry args={[trace.hit ? .05 : .03, 0]} />}
         <meshBasicMaterial color={trace.color} depthWrite={false} />
       </mesh>
     </group>
@@ -91,9 +94,9 @@ function ImpactBurst({ impact }: { impact: Impact }) {
     <group position={impact.position} userData={{ ignoreProjectile: true }}>
       {impact.sparks.map((offset, index) => (
         <mesh position={offset} key={index}>
-          {skin?.motif==="pixel"||skin?.motif==="redaction"||skin?.motif==="hazard"?<boxGeometry args={[.09,.07,.08]}/>:<octahedronGeometry args={[index % 2 ? 0.05 : 0.075, 0]} />}
+          {skin && ["pixel","redaction","hazard","cassette","blueprint"].includes(skin.motif)?<boxGeometry args={[.1,.075,.08]}/>:skin && ["ice","prism","fold","storm"].includes(skin.motif)?<tetrahedronGeometry args={[.09]}/>:<octahedronGeometry args={[index % 2 ? 0.05 : 0.075, 0]} />}
           <meshBasicMaterial
-            color={index % 3 === 0 ? "#ffffff" : impact.color}
+            color={index % 3 === 0 ? (skin?.accent ?? "#ffffff") : impact.color}
             transparent
             opacity={0.95}
             depthWrite={false}
@@ -101,7 +104,7 @@ function ImpactBurst({ impact }: { impact: Impact }) {
         </mesh>
       ))}
       <mesh>
-        <ringGeometry args={[skin?.rarity==="legendary"?.11:.075,skin?.rarity==="legendary"?.17:.125,skin?.motif==="ice"?6:9]} />
+        <ringGeometry args={[skin?.rarity==="legendary"?.11:.075,skin?.rarity==="legendary"?.17:.125,skin?.motif==="ice"||skin?.motif==="prism"?6:skin?.motif==="pixel"||skin?.motif==="redaction"?4:skin?.motif==="stars"?18:9]} />
         <meshBasicMaterial
           color={impact.color}
           side={THREE.DoubleSide}

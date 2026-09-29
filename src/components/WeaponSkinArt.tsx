@@ -1,83 +1,130 @@
-import type { WeaponId } from "../game/config";
-import { getSkin, type SkinId, type SkinTheme } from "../game/skins";
+import type { WeaponId } from '../game/config';
+import { getSkin, type SkinId, type SkinTheme } from '../game/skins';
 
-/** Shared surface kit that follows each weapon silhouette. */
-function ThemePlating({theme,weapon}:{theme:SkinTheme;weapon:WeaponId}){
-  const {id,color,accent,motif,rarity}=theme;
-  const knife=weapon==="knife";
-  const panel=knife?"M488 400 535 368 641 459 605 500Z":"M454 356 497 335 649 449 607 478Z";
-  const rear=knife?"M527 410 609 467 642 470 605 498Z":"M639 505 827 567 805 611 619 549Z";
-  const long=knife?"M320 217 343 235 500 380 478 391Z":"M304 232 318 230 472 345 453 358Z";
-  return <g className={`skin-plating skin-plating--${id}`} strokeLinejoin="round" strokeLinecap="round">
-    <defs>
-      <clipPath id={`skin-plates-${id}-${weapon}`}><path d={`${panel} ${rear} ${long}`}/></clipPath>
-      <pattern id={`skin-pattern-${id}`} patternUnits="userSpaceOnUse" width={motif==="hazard"?28:motif==="pixel"?20:motif==="redaction"?38:24} height="24" patternTransform={motif==="hazard"?"rotate(38)":""}>
-        <rect width="24" height="24" fill={motif==="stars"?"#191e3e":motif==="redaction"?"#f9f8ef":"#fffef7"}/>
-        {motif==="hazard"?<><rect width="13" height="24" fill="#262b3a"/><rect x="13" width="15" height="24" fill="#ffd449"/></>:motif==="pixel"?<><rect x="2" y="2" width="7" height="7" fill={color}/><rect x="12" y="13" width="6" height="6" fill={accent}/></>:motif==="stars"?<><circle cx="5" cy="6" r="2.2" fill="#fff"/><circle cx="19" cy="17" r="1.7" fill={color}/><path d="m5 6 14 11" stroke={color}/></>:motif==="redaction"?<><rect x="0" y="7" width="31" height="7" fill="#20202e"/><path d="M0 20H21" stroke="#e74e55" strokeWidth="2"/></>:motif==="nib"?<><path d="M0 7q8-7 24 0M2 18q8-9 19-3" stroke={color} strokeWidth="3"/></>:motif==="graffiti"?<><path d="m2 18 6-12 6 7 8-10" stroke={color} strokeWidth="3"/><circle cx="18" cy="18" r="2" fill={accent}/></>:motif==="circuit"?<><path d="M0 12h10V3h9m-9 9v10h14" stroke={color} strokeWidth="2.5"/><circle cx="19" cy="3" r="2" fill={accent}/></>:motif==="fold"||motif==="ice"?<path d="M0 0 24 24M0 24 24 0" stroke={color} strokeWidth="2"/>:<><path d="M0 7q12-8 24 0M1 20q14-9 24 0" stroke={color} strokeWidth="2"/><circle cx="17" cy="6" r="2" fill={accent}/></>}
-      </pattern>
-    </defs>
-    <path d={panel} fill={motif==="stars"?"#212342":motif==="redaction"?"#f7f3ea":color} fillOpacity={rarity==="rare"?.36:.42} stroke={color} strokeWidth="3"/>
-    <path d={rear} fill={motif==="stars"?"#262448":motif==="redaction"?"#faf7ee":color} fillOpacity={rarity==="legendary"?.42:.29} stroke={accent} strokeWidth="3"/>
-    <path d={long} fill={color} fillOpacity={rarity==="rare"?.42:.6} stroke={accent} strokeWidth="2.5"/>
-    <g clipPath={`url(#skin-plates-${id}-${weapon})`}><rect x="280" y="180" width="565" height="435" fill={`url(#skin-pattern-${id})`} opacity={motif==="stars"||motif==="hazard"||motif==="redaction"?.85:.42}/></g>
-    {!knife&&<><path d="M648 512Q732 539 814 575M629 546Q705 572 799 603" stroke={color} strokeWidth="3" fill="none"/><path d="M641 520 657 524m20 5 16 5m20 4 16 5m20 4 16 5" stroke={accent} strokeWidth="2.5"/></>}
-    <g transform={knife?"matrix(.57 0 0 .7 165 58)":undefined}>
-    {motif==="nib"&&<><path d="M319 239Q397 289 463 352M326 246Q406 299 470 357" stroke="#131c35" strokeWidth="4" fill="none"/><path d={knife?"M328 230 306 193 328 208Z":"M324 247 291 226 303 248Z"} fill="#222e5a" stroke={color} strokeWidth="3"/><circle cx="545" cy="388" r="9" fill="#141a35"/></>}
-    {motif==="ruler"&&<><path d={knife?"M333 239 487 386":"M321 252 472 359"} stroke="#f6c948" strokeWidth="14" opacity=".83"/><path d="M654 522 807 572" stroke="#f6c948" strokeWidth="12" opacity=".65"/>{[0,1,2,3,4,5,6].map((i)=><path key={i} d={`M${659+i*21} ${523+i*7}l-3 10`} stroke={accent} strokeWidth="2"/>)}</>}
-    {motif==="fold"&&<><path d="M364 277 412 280 399 310Zm79 56 29-20 10 47Zm211 187 52-20-14 42Z" fill="#d4ebff" stroke={accent} strokeWidth="3"/><path d="M372 284 400 310m44 25 38 25m173 163 37 19" stroke={accent} strokeWidth="2"/></>}
-    {motif==="pixel"&&<><rect x="510" y="355" width="56" height="30" rx="3" fill="#1d3153" stroke={color} strokeWidth="3"/><text x="518" y="376" fill="#73f4ff" stroke="none" fontFamily="monospace" fontWeight="bold" fontSize="17">1999</text><path d="M687 528h10v10h-10Zm30 12h9v8h-9Z" fill={accent}/></>}
-    {motif==="clip"&&<><path d="M675 516q-9-24 7-27 13-1 12 16l-2 28m42-7q-9-21 5-22 11-1 10 13" fill="none" stroke={accent} strokeWidth="4"/><rect x="517" y="352" width="43" height="19" fill="#fff9e4" stroke={color} strokeWidth="2"/></>}
-    {motif==="graffiti"&&<><path d="M651 523q30 13 52 9l29 20 44 12M660 539l48 11 32 10m-71-41 25 29 23-24 12 38" fill="none" stroke={color} strokeWidth="5" strokeLinecap="round"/><path d="M692 536q24-13 46 9m-25 6 18-6" fill="none" stroke={accent} strokeWidth="3"/><path d="M488 354q17-8 25 2" fill="none" stroke={color} strokeWidth="3"/></>}
-    {motif==="circuit"&&<><path d="m660 527 27 8 9-10 32 11v15l28 6m-92-13 30 12 14-3 32 15" stroke={color} strokeWidth="3.5" fill="none"/>{[[696,525],[727,551],[757,557],[708,553]].map(([x,y],i)=><circle key={i} cx={x} cy={y} r="4" fill={i%2?accent:color}/>)}</>}
-    {motif==="ice"&&<><path d="M377 273 403 247 397 288Zm53 42 22-20-8 40Zm71 48 19-29 7 50Zm190 161 25-26 3 43Z" fill="#c4f5ff" stroke={accent} strokeWidth="3"/></>}
-    {motif==="flame"&&<><path d="M364 266Q403 289 456 341M481 358Q533 380 608 443M654 520Q726 544 801 579" fill="none" stroke="#a82e3e" strokeWidth="12" opacity=".75"/><path className="skin-pulse-line" d="M364 266Q403 289 456 341M481 358Q533 380 608 443M654 520Q726 544 801 579" fill="none" stroke="#ffbf6a" strokeWidth="3" strokeDasharray="19 23"/></>}
-    {motif==="vial"&&<><path d="M487 348Q521 327 565 373L549 394Q516 379 487 348Z" fill="#d6f9dc" stroke="#276b79" strokeWidth="3"/><path className="skin-pulse-line" d="M501 351Q529 341 559 374L547 385Q522 370 501 351Z" fill={color} stroke="none" opacity=".58"/><path d="M497 354Q532 367 543 387" stroke="#edfff0" strokeWidth="2" fill="none"/><circle cx="531" cy="362" r="2.5" fill="#fff"/></>}
-    {motif==="storm"&&<><path d="M642 513 675 523 668 534 713 546 698 556 771 579" fill="none" stroke={accent} strokeWidth="8" strokeLinejoin="round"/><path className="skin-pulse-line" d="M645 516 672 526 665 534 711 548 699 555 771 577" fill="none" stroke="#fff5aa" strokeWidth="3" strokeLinejoin="round"/><path d="M385 281 421 307 430 300 453 325" fill="none" stroke={color} strokeWidth="4"/></>}
-    {motif==="eye"&&<><path d="M657 527Q692 512 724 539M659 537Q690 526 720 548" fill="none" stroke={accent} strokeWidth="3"/><path className="skin-pulse-line" d="M662 550Q735 538 791 594" stroke={color} strokeWidth="4" strokeDasharray="12 10" fill="none"/></>}
-    {motif==="stars"&&<><ellipse cx="704" cy="550" rx="74" ry="17" transform="rotate(17 704 550)" fill="none" stroke={color} strokeWidth="3"/><circle cx="688" cy="535" r="5" fill="#fff"/><circle cx="752" cy="572" r="4" fill={color}/><circle cx="557" cy="380" r="8" fill="#f4f2ff"/><path d="m674 545 27-8 28 20 24-4" stroke="#d4caff" strokeWidth="2" fill="none"/></>}
-    {motif==="redaction"&&<><path d="M648 520 775 559M671 544 810 586" stroke="#191a29" strokeWidth="11" fill="none"/><rect x="503" y="355" width="58" height="29" rx="2" fill="#fffaf1" stroke="#e7434c" strokeWidth="3"/><text x="507" y="373" fontFamily="monospace" fontWeight="bold" fontSize="12" fill="#c8243b" stroke="none">SECRET</text><path className="skin-moving-redaction" d="M371 275 444 329" stroke="#171723" strokeWidth="9"/></>}
-    </g>
+type Part={name:string;d:string;layer:'shell'|'dark'|'metal'|'light'|'core'};
+const PARTS:Record<WeaponId,Part[]>={
+  rifle:[
+    {name:'barrel',d:'M306 225 326 230 476 343 457 361 301 242Z',layer:'metal'},
+    {name:'upper',d:'M421 313 466 296 552 360 511 381Z',layer:'dark'},
+    {name:'optic',d:'M488 315 537 309 579 342 540 365 491 346Z',layer:'light'},
+    {name:'receiver',d:'M455 351 498 330 652 447 607 474Z',layer:'shell'},
+    {name:'rear',d:'M606 470 650 447 688 478 640 510Z',layer:'metal'},
+    {name:'magazine',d:'M555 430 609 469 591 547 543 516Z',layer:'dark'},
+    {name:'stock',d:'M640 504 835 562 808 614 619 543Z',layer:'shell'},
+    {name:'grip',d:'M492 386 531 398 548 459 519 490 480 460 478 414Z',layer:'dark'},
+    {name:'muzzle',d:'M294 221 309 225 307 247 290 243Z',layer:'core'},
+  ],
+  shotgun:[
+    {name:'barrel',d:'M296 223 320 222 478 341 455 362 296 240Z',layer:'metal'},
+    {name:'upper',d:'M418 317 459 301 588 399 544 423Z',layer:'dark'},
+    {name:'receiver',d:'M452 356 496 335 654 455 609 482Z',layer:'shell'},
+    {name:'pump',d:'M486 350 548 396 517 443 460 397Z',layer:'core'},
+    {name:'rear',d:'M609 480 653 455 690 488 640 516Z',layer:'metal'},
+    {name:'stock',d:'M642 509 836 565 806 614 619 549Z',layer:'shell'},
+    {name:'grip',d:'M494 396 536 414 552 471 519 500 480 475 480 425Z',layer:'dark'},
+    {name:'muzzle',d:'M287 219 303 219 301 244 284 239Z',layer:'core'},
+  ],
+  sniper:[
+    {name:'barrel',d:'M281 209 303 207 484 343 462 365 281 229Z',layer:'metal'},
+    {name:'upper',d:'M428 322 472 304 605 406 560 433Z',layer:'dark'},
+    {name:'receiver',d:'M455 359 500 337 657 455 609 484Z',layer:'shell'},
+    {name:'scopeMount',d:'M505 347 531 334 569 363 550 380Z',layer:'core'},
+    {name:'scope',d:'M402 258 Q405 243 426 243 L559 339 Q576 353 563 368 L544 379 397 279Z',layer:'dark'},
+    {name:'scopeFront',d:'M391 244 Q407 232 425 245 L437 262 Q443 279 429 290 Q412 299 397 284 Q380 266 391 244Z',layer:'core'},
+    {name:'scopeRear',d:'M548 333 Q568 325 583 344 L587 362 Q586 377 568 384 Q551 385 543 369 Q537 347 548 333Z',layer:'core'},
+    {name:'magazine',d:'M562 437 611 480 592 548 548 519Z',layer:'dark'},
+    {name:'stock',d:'M642 509 835 565 805 615 619 549Z',layer:'shell'},
+    {name:'grip',d:'M495 398 537 417 553 474 520 503 480 475 480 428Z',layer:'dark'},
+    {name:'muzzle',d:'M270 206 283 208 283 234 267 230Z',layer:'core'},
+  ],
+  knife:[
+    {name:'blade',d:'M301 187 342 225 521 370 490 411 321 257Z',layer:'metal'},
+    {name:'edge',d:'M301 187 344 229 490 385 321 257Z',layer:'light'},
+    {name:'guard',d:'M478 384 511 356 548 389 512 425Z',layer:'core'},
+    {name:'handle',d:'M507 405 537 370 653 466 609 510Z',layer:'dark'},
+    {name:'pommel',d:'M609 465 653 463 671 493 635 523 606 511Z',layer:'shell'},
+    {name:'grip',d:'M591 452 Q629 433 675 471 L703 521 660 558 618 527Z',layer:'dark'},
+  ],
+};
+
+function Motif({theme,weapon}:{theme:SkinTheme;weapon:WeaponId}){
+  const {motif,color,accent}=theme;
+  const knife=weapon==='knife';
+  // These drawings sit on the surfaces facing the camera, with theme structure on the barrel/blade and rear.
+  const barrel=knife?'M328 232 Q408 285 484 389':'M323 240 Q399 293 458 348';
+  const stock=knife?'M536 394 619 472':'M655 519 805 581';
+  return <g className={`skin-motif skin-motif--${motif}`} fill="none" strokeLinecap="round" strokeLinejoin="round">
+    {motif==='nib'&&<><path d={barrel} stroke={accent} strokeWidth="9"/><path d={barrel} stroke={color} strokeWidth="3" className="skin-flow" strokeDasharray="17 28"/><path d={stock} stroke={accent} strokeWidth="7"/><path d="M500 365 Q528 351 553 379 L537 398 Q521 378 500 365Z" fill={accent}/><path d="M519 366 540 383" stroke={color} strokeWidth="5"/><circle cx="550" cy="384" r="5" fill={color}/></>}
+    {motif==='ruler'&&<><path d={barrel} stroke="#edbc48" strokeWidth="15"/><path d={stock} stroke="#edbc48" strokeWidth="13"/>{[0,1,2,3,4,5].map(i=><path key={i} d={`M${352+i*21} ${260+i*15}l-7 9 M${663+i*24} ${522+i*9}l-4 11`} stroke={accent} strokeWidth="3"/>)}<path d="M506 355 547 382m-32-31 42 28" stroke={color} strokeWidth="8"/></>}
+    {motif==='hazard'&&<><path d={barrel} stroke={color} strokeWidth="15" strokeDasharray="20 12"/><path d={stock} stroke={accent} strokeWidth="20" strokeDasharray="27 14"/><path d="M490 363 517 344 577 392 546 411Z" fill={color} stroke={accent} strokeWidth="4"/><path d="m515 361 11 26 10-17-21-9Z" fill={accent}/><circle cx="526" cy="391" r="3" fill={accent}/></>}
+    {motif==='fold'&&<><path d="M300 224 354 235 345 275 399 274 390 309 454 337" stroke={accent} strokeWidth="4"/><path d="M480 354 513 327 529 378 558 370 613 450" stroke={color} strokeWidth="5"/><path d="m638 509 52 1-14 43 50-4-11 26 96 9" stroke={accent} strokeWidth="4"/><path d="m485 364 34-22-5 31Zm56 26 21-18-8 30Z" fill="#faffff" stroke={accent}/></>}
+    {motif==='pixel'&&<><path d={barrel} stroke={color} strokeWidth="11" strokeDasharray="10 8"/><path d={stock} stroke={accent} strokeWidth="12" strokeDasharray="19 7"/><rect x="498" y="350" width="61" height="39" rx="2" fill="#151d39" stroke={color} strokeWidth="4"/><text x="504" y="377" fill={color} stroke="none" fontFamily="monospace" fontWeight="900" fontSize="20">99</text>{[0,1,2,3].map(i=><rect key={i} x={662+i*35} y={530+i*12} width="10" height="10" fill={i%2?accent:color}/>)}</>}
+    {motif==='clip'&&<><path d={barrel} stroke="#c5cbd1" strokeWidth="15"/><path d={stock} stroke={accent} strokeWidth="8"/><path d="M494 357 551 385 543 398 497 371Z" fill="#fff8e8" stroke={accent} strokeWidth="3"/><path d="M504 360h42M506 367h33" stroke={color} strokeWidth="2"/><path d="M665 521q-13-24 4-29 18-3 14 17l-4 26m37 3q-8-23 8-23 12 0 10 18" stroke={accent} strokeWidth="4"/></>}
+    {motif==='graffiti'&&<><path d={barrel} stroke={color} strokeWidth="7" strokeDasharray="27 6 4 9"/><path d="m481 374 35-31 23 38 28-10 43 68-28-15-15 24-27-53-20 16Z" fill={color} stroke={accent} strokeWidth="3"/><path d="m650 527 43-10 25 34 44-4 35 38" stroke={color} strokeWidth="7"/><circle cx="685" cy="564" r="5" fill={accent}/><circle cx="747" cy="580" r="4" fill={color}/></>}
+    {motif==='comic'&&<><path d={barrel} stroke={accent} strokeWidth="11" strokeDasharray="30 7"/><path d={stock} stroke={color} strokeWidth="6" strokeDasharray="4 7"/><path d="m493 371 18-27 11 17 18-17 5 24 22-1-12 21 10 16-27-6-12 12-8-19-24 4Z" fill="#fff9da" stroke={accent} strokeWidth="4"/><text x="501" y="383" fontSize="18" fontWeight="1000" fill={color} stroke="none">POW!</text></>}
+    {motif==='blueprint'&&<><path d={barrel} stroke={accent} strokeWidth="3" strokeDasharray="7 5"/><path d={stock} stroke={accent} strokeWidth="3" strokeDasharray="8 5"/><path d="M491 356 551 394m-49-44 59 40m-50-36-5 26m12-15-5 25m12-13-5 24m12-13-5 20M661 527l131 50" stroke={accent} strokeWidth="2"/><circle cx="525" cy="374" r="14" stroke={color} strokeWidth="3"/><circle cx="525" cy="374" r="3" fill={accent}/></>}
+    {motif==='cassette'&&<><path d={barrel} stroke={color} strokeWidth="10"/><path d={stock} stroke={accent} strokeWidth="9"/><path d="M491 352 547 344 588 388 545 408Z" fill="#24243e" stroke={color} strokeWidth="4"/><circle cx="525" cy="366" r="9" stroke={accent} strokeWidth="3"/><circle cx="551" cy="383" r="9" stroke={accent} strokeWidth="3"/><path d="M525 375 546 387M651 524q38-16 58 29t83 32" stroke={accent} strokeWidth="3"/></>}
+    {motif==='circuit'&&<><path d={barrel} stroke={color} strokeWidth="5" className="skin-flow" strokeDasharray="22 16"/><path d="M484 367 508 348 522 369 544 361 575 392m-72-2 15-12 18 20 27-7 56 58M652 524l32 10 17-9 32 13v18l64 27" stroke={color} strokeWidth="4"/><circle cx="522" cy="370" r="7" fill={accent}/><circle cx="544" cy="361" r="5" fill={color}/><circle cx="732" cy="540" r="6" fill={accent}/></>}
+    {motif==='ice'&&<><path d={barrel} stroke="#e8ffff" strokeWidth="10"/><path d="m319 228 38-15-9 46 47-10-15 46 39-8-8 33 42 7" fill={color} stroke={accent} strokeWidth="3"/><path d="m487 354 24-24 9 34 27-24 11 37 39 9-29 17M647 515l31-26 13 40 32-18 12 47 44-4" fill={color} stroke={accent} strokeWidth="4"/><path d={stock} stroke="#ecffff" strokeWidth="4" strokeDasharray="11 8"/></>}
+    {motif==='flame'&&<><path d={barrel} stroke={accent} strokeWidth="12"/><path d="M326 243q14-39 31-11t37 17q20-17 28 22t39 52M482 359q21-39 33-10t22-3q16-18 19 19t37 40M649 518q19-45 31-6t32 2q18-25 21 17t45 31" fill={color} stroke={accent} strokeWidth="4"/><path d={stock} className="skin-flow" stroke="#ffec97" strokeWidth="4" strokeDasharray="17 26"/></>}
+    {motif==='vial'&&<><path d={barrel} stroke={color} strokeWidth="8" strokeDasharray="9 4"/><path d="M494 350q34-27 67 22l-21 30q-42-10-46-52Z" fill="#c6faad" stroke={accent} strokeWidth="4"/><path d="M500 366q28-8 46 16" stroke={color} strokeWidth="8" className="skin-flow"/><circle cx="524" cy="364" r="5" fill="#fff"/><circle cx="546" cy="373" r="4" fill="#fff"/><path d={stock} stroke={color} strokeWidth="10" strokeDasharray="12 8"/></>}
+    {motif==='storm'&&<><path d="M323 236 374 277 388 264 419 308 447 328M488 365l25-23 15 27 19-12 21 32 39 40M651 515l29 9-10 16 45 5-13 17 91 19" stroke={accent} strokeWidth="10"/><path d={barrel} stroke="#fff9b5" strokeWidth="3" className="skin-flow" strokeDasharray="9 24"/><path d={stock} stroke="#fff9b5" strokeWidth="4" className="skin-flow" strokeDasharray="13 21"/></>}
+    {motif==='clock'&&<><path d={barrel} stroke={accent} strokeWidth="3" strokeDasharray="4 8"/><path d={stock} stroke={color} strokeWidth="7" strokeDasharray="9 9"/><circle cx="532" cy="377" r="25" fill="#48382b" stroke={color} strokeWidth="5"/><circle cx="532" cy="377" r="16" stroke={accent} strokeWidth="2"/><path d="M532 365v13l10 7" stroke={accent} strokeWidth="3"/><circle cx="684" cy="539" r="12" stroke={color} strokeWidth="4"/><circle cx="738" cy="558" r="15" stroke={accent} strokeWidth="4"/></>}
+    {motif==='abyss'&&<><path d={barrel} stroke={accent} strokeWidth="6" strokeDasharray="4 14"/><path d="M486 372q24-42 54-12t43 20M490 386q24-28 47-7t41 17M651 528q22-30 39 8t49 7q32-23 63 35" stroke={color} strokeWidth="8"/><circle cx="531" cy="374" r="8" fill={color}/><circle cx="698" cy="536" r="5" fill={accent}/><circle cx="756" cy="563" r="7" fill={color}/></>}
+    {motif==='eye'&&<><path d={barrel} stroke={accent} strokeWidth="4" className="skin-flow" strokeDasharray="30 12 5 8"/><path d={stock} stroke={accent} strokeWidth="6" className="skin-flow" strokeDasharray="19 13"/><path d="M489 372q37-46 78 17-40 36-78-17Z" fill="#fff" stroke={accent} strokeWidth="5"/><circle cx="528" cy="375" r="15" fill={color} stroke={accent} strokeWidth="4"/><circle cx="531" cy="375" r="7" fill={accent}/><path d="m497 361-10-16m26 11-4-22m44 33 14-17" stroke={accent} strokeWidth="3"/></>}
+    {motif==='stars'&&<><path d={barrel} stroke="#8e7de3" strokeWidth="5" strokeDasharray="2 12"/><path d={stock} stroke={color} strokeWidth="4" strokeDasharray="2 15"/><ellipse cx="526" cy="375" rx="65" ry="22" transform="rotate(34 526 375)" stroke={color} strokeWidth="4" className="skin-orbit"/><ellipse cx="722" cy="550" rx="88" ry="17" transform="rotate(17 722 550)" stroke={accent} strokeWidth="3" className="skin-orbit"/>{[[492,353],[515,363],[547,385],[675,534],[723,552],[780,572]].map(([x,y],i)=><circle key={i} cx={x} cy={y} r={i%2?5:3} fill={i%2?accent:color}/>)}</>}
+    {motif==='redaction'&&<><path d={barrel} stroke={accent} strokeWidth="14" strokeDasharray="33 12"/><path d={stock} stroke={accent} strokeWidth="17" strokeDasharray="45 9"/><path d="M490 355 556 387" stroke={accent} strokeWidth="15"/><path d="M503 391 567 418" stroke={accent} strokeWidth="11"/><rect x="489" y="341" width="70" height="23" fill="#eeeae1" stroke={color} strokeWidth="3"/><text x="495" y="357" fill={color} stroke="none" fontFamily="monospace" fontSize="12" fontWeight="900">SEALED</text><path d="M377 278 440 324" stroke={accent} strokeWidth="9" className="skin-redact"/></>}
+    {motif==='prism'&&<><path d="m317 220 29-14 16 50 33-13 14 46 41-1m37 68 38-24 20 38 31-21 16 47 40 21m9 102 50-32 15 41 42-24 16 50 48 14" fill="#c6fff2" stroke={accent} strokeWidth="4"/><path d={barrel} stroke={color} strokeWidth="4"/><path d={stock} stroke={color} strokeWidth="8" className="skin-flow" strokeDasharray="9 13"/><path d="m505 345 32 37 25-20-13 42Z" fill="#ffb3ea" stroke="#fff" strokeWidth="3"/></>}
+    {motif==='dragon'&&<><path d={barrel} stroke={accent} strokeWidth="10"/><path d="M325 233q8-31 20-8l9 31 15-18 17 43 17-11 23 46 21-2M483 366q17-26 29-15l14 28 16-18 18 28 25-5 30 48M650 523q31-39 38 10l27-14 18 40 24-13 31 42" fill={accent} stroke={color} strokeWidth="3"/><path d="M505 367q25-17 38 7l-16 18Z" fill={color}/><circle cx="532" cy="368" r="4" fill="#fff"/></>}
   </g>;
 }
 
-export function WeaponSkinArt({weapon,id,firing=false,reloading=false}:{weapon:WeaponId;id:SkinId;firing?:boolean;reloading?:boolean}){
+function ThemeSilhouette({theme,weapon}:{theme:SkinTheme;weapon:WeaponId}){
+  const m=theme.motif,knife=weapon==='knife';
+  const tips:Record<string,string>={nib:'M278 216 294 198 306 224Z',ruler:'M279 216 300 209 305 238 282 233Z',hazard:'M273 211 296 202 310 235 279 239Z',fold:'M270 203 308 213 305 244Z',pixel:'M277 211h25v10h-9v14h-16Z',clip:'M275 211 296 204 306 238 281 237Z',graffiti:'M272 207q25-20 34 21l-20 13Z',comic:'M272 217 281 202 292 218 305 207 301 242Z',blueprint:'M274 212 301 208 302 240 276 236Z',cassette:'M275 214h26v26h-26Z',circuit:'M279 216 296 198 309 239 279 240Z',ice:'M273 216 291 190 308 218 300 240Z',flame:'M273 221q8-35 21-32t12 48Z',vial:'M273 208q18-14 28 5l2 29-28-5Z',storm:'M273 218 301 192 290 221 306 232 282 246Z',clock:'M274 209h27v29h-27Z',abyss:'M269 217q23-25 36 13l-26 15Z',eye:'M268 221q18-29 37 9l-24 20Z',stars:'M269 217q17-23 39 9l-26 21Z',redaction:'M273 208 303 208 303 239 273 239Z',prism:'M271 211 287 187 304 221 286 247Z',dragon:'M268 216q14-35 26-24l14 44-18-7-11 21Z'};
+  return <g className="skin-silhouette" fill={theme.base} stroke={theme.accent} strokeWidth="4" strokeLinejoin="round">
+    {!knife&&<path d={tips[m]} fill={theme.color}/>}
+    {knife&&<path d={m==='dragon'?'M289 175 314 182 328 200 304 231Z':m==='ice'||m==='prism'?'M281 176 317 194 347 244 303 228Z':'M289 180 315 187 347 229 305 232Z'} fill={theme.color}/>}
+    {['ice','prism','dragon','flame','storm','abyss','stars','eye'].includes(m)&&<path d={knife?'M346 231q45-42 51 38l38-13 47 105-84-64Z':'M371 257q27-45 37 17l36-22 31 84-66-43Z'} fill={theme.base} opacity=".9"/>}
+    {m==='clock'&&<><circle cx="514" cy="334" r="21" fill={theme.base}/><path d="M502 328v-18h22v19"/></>}
+    {m==='hazard'&&<path d={knife?'M481 365 522 348 554 386 512 420Z':'M476 333 511 317 580 355 550 373Z'} fill={theme.color}/>}
+    {m==='cassette'&&<path d="M493 313 536 298 582 344 542 359Z" fill={theme.color}/>}
+  </g>;
+}
+
+function SkinAttack({theme,weapon}:{theme:SkinTheme;weapon:WeaponId}){
+  const knife=weapon==='knife';const motif=theme.motif;
+  const x=knife?305:weapon==='sniper'?277:295,y=knife?202:226;
+  return <g className={`skin-attack skin-attack--${motif}`} transform={`translate(${x} ${y})`} fill="none" stroke={theme.color} strokeLinecap="round">
+    {knife?<><path d="M0 0Q-95-92-162-78M0 5Q-91-48-153-45M0 11Q-85-19-138-13" strokeWidth="7"/><path d="M-106-55q-35-24-56-4" stroke={theme.accent} strokeWidth="4"/></>:<><path d={motif==='stars'?'M0 0Q-80-48-115 0Q-80 48 0 0Z':motif==='flame'||motif==='dragon'?'M0 0Q-18-75-54-78Q-43-37-103-43Q-71-10-120 16Q-65 10-38 56Z':motif==='ice'||motif==='prism'?'M0 0-92-55-63-5-110 16-47 18-72 66Z':motif==='pixel'||motif==='redaction'?'M0-14h-33v-21h-26v24h-44v28h56v29h33V14H0Z':'M0 0-91-47-57-8-113 8-50 16-74 52Z'} fill={theme.color} fillOpacity=".75" stroke={theme.accent} strokeWidth="4"/><circle r={theme.rarity==='legendary'?33:theme.rarity==='epic'?23:16} strokeWidth="4"/><path d="M-35-35-65-65M-40 27-78 52" strokeWidth="5"/></>}
+    {Array.from({length:theme.rarity==='legendary'?9:theme.rarity==='epic'?6:4},(_,i)=><circle key={i} cx={-22-i*13} cy={Math.sin(i*2.4)*34} r={2+i%3} fill={i%2?theme.accent:theme.color} stroke="none"/>)}
+  </g>;
+}
+
+export function SkinWeaponArt({weapon,id,firing=false,reloading=false}:{weapon:WeaponId;id:SkinId;firing?:boolean;reloading?:boolean}){
   const theme=getSkin(id);if(!theme)return null;
-  const {color,accent,rarity,motif}=theme;
-  const isKnife=weapon==="knife";
-  const ink=motif==="nib"||motif==="eye";
-  return <g className={`skin-geometry skin-geometry--${id} skin-geometry--${rarity} ${reloading?"skin-geometry--reload":""}`} stroke={accent} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round">
+  const uid=`${weapon}-${id}`;
+  const paints={shell:theme.base,dark:theme.accent,metal:theme.color,light:'#fffdf4',core:theme.color};
+  return <g className={`skin-render skin-render--${theme.motif} skin-render--${theme.rarity} ${reloading?'skin-render--reload':''}`} style={{'--skin-color':theme.color,'--skin-accent':theme.accent} as React.CSSProperties}>
     <defs>
-      <pattern id={`skin-etch-${id}`} width="11" height="11" patternUnits="userSpaceOnUse" patternTransform={motif==="pixel"?"rotate(0)":"rotate(33)"}><path d="M0 0v11" stroke={color} strokeWidth="2" opacity=".6"/></pattern>
-      <linearGradient id={`skin-glow-${id}`} x1="0" x2="1" y1="0" y2="1"><stop stopColor="#fffef4"/><stop offset=".52" stopColor={color}/><stop offset="1" stopColor={accent}/></linearGradient>
+      <linearGradient id={`${uid}-surface`} x1="0" y1="0" x2="1" y2="1"><stop stopColor={theme.base}/><stop offset=".55" stopColor={theme.color}/><stop offset="1" stopColor={theme.accent}/></linearGradient>
+      <pattern id={`${uid}-grain`} width="24" height="24" patternUnits="userSpaceOnUse" patternTransform={theme.motif==='hazard'?'rotate(35)':undefined}><rect width="24" height="24" fill={theme.base}/>{['hazard','redaction','pixel','cassette'].includes(theme.motif)?<path d="M0 0h10v12H0M13 13h9v9h-9" fill={theme.accent}/>:<path d="M0 20 20 0m-9 24L24 11" stroke={theme.color} strokeWidth="2" opacity=".4"/>}</pattern>
     </defs>
-    <ThemePlating theme={theme} weapon={weapon}/>
-    {/* The barrel/blade is an attachment path over the original silhouette, never a replacement mesh. */}
-    <path d={isKnife?"M320 222 Q402 281 490 382":"M303 238 Q385 292 469 354"} stroke={color} strokeWidth={weapon==="shotgun"?9:5} fill="none" opacity=".72" strokeDasharray={motif==="hazard"?"17 7":motif==="redaction"?"29 7":"none"}/>
-    <path d={isKnife?"M321 235Q396 300 487 391":"M314 251Q381 301 456 357"} stroke={accent} strokeWidth="2" fill="none" strokeDasharray={ink?"17 6":"8 8"}/>
-    <path className="skin-etched-panel" d={isKnife?"M491 401 530 375 614 451 584 467Z":"M476 359 507 342 568 388 541 404Z"} fill={`url(#skin-etch-${id})`} stroke={color} strokeWidth="2.6"/>
-    {rarity!=="rare"&&<path className="skin-pulse-line" d={isKnife?"M331 235 486 380 540 385 610 456":"M326 243 461 349 520 350 581 401"} stroke={color} strokeWidth="3.5" fill="none" strokeDasharray="18 65"/>}
-    {motif==="stars"&&<path d="M473 359 507 343 559 385 536 405Z" fill="#182044" stroke={color} opacity=".95"/>}
-    {motif==="redaction"&&<path className="skin-moving-redaction" d="M364 258 439 313m91 76 39 28" stroke="#151727" strokeWidth="10" fill="none"/>}
-    {/* Engraved paths follow the existing barrel, receiver and stock instead of floating props. */}
-    <path className="skin-channel" d={isKnife?"M329 237 478 380 521 381 612 463":"M329 249 458 351 499 344 617 451 651 514 807 578"} stroke={color} strokeWidth={rarity==="legendary"?6:rarity==="epic"?4:3} fill="none" strokeDasharray={motif==="redaction"?"22 10":motif==="pixel"?"9 4":undefined}/>
-    <path className="skin-channel skin-channel--inner" d={isKnife?"M344 245 474 372 523 373 604 452":"M343 252 468 340 493 336 626 443 660 505 805 566"} stroke={accent} strokeWidth="2" fill="none"/>
-    <path className="skin-receiver-inlay" d={isKnife?"M499 402 532 378 599 447 576 464Z":"M492 357 510 347 549 377 536 390Z"} fill={motif==="stars"?"#171d3d":"#fffef4"} stroke={color} strokeWidth="3"/>
-    <path className="skin-receiver-line" d={isKnife?"M507 403 529 388 574 434":"M501 355 513 352 538 373"} stroke={accent} strokeWidth="2.5" fill="none"/>
-    {rarity!=="rare"&&<path className="skin-impulse" d={isKnife?"M342 245 479 380 529 379 606 460":"M337 251 461 352 502 345 623 451 666 521"} stroke={color} strokeWidth="3" fill="none" strokeDasharray="20 220"/>}
-    {rarity==="legendary"&&<g className="skin-orbit-dust" fill={color} stroke="none"><circle cx="480" cy="318" r="3"/><circle cx="524" cy="310" r="2"/><circle cx="544" cy="342" r="2.5"/></g>}
-    {firing&&<g className={`skin-attack-effect skin-attack-effect--${rarity}`} fill="none" stroke={color} strokeWidth="4">
-      <path d={isKnife?"M319 226Q263 181 210 171M326 236Q265 203 224 199":"M304 236Q272 204 236 192M304 236Q276 222 224 224"} stroke={accent} strokeWidth={rarity==="legendary"?7:4} strokeLinecap="round"/>
-      {isKnife?<><path d="M306 210Q254 167 225 155M316 226Q261 185 244 178M323 240Q271 209 256 199"/><path d="M244 150q-15 2-20 14" stroke={accent}/></>:<><path d="M300 236 249 212m49 23-24-46m27 45 1-57m3 59 23-50"/><circle cx="289" cy="225" r={rarity==="legendary"?31:18} stroke={accent}/></>}
-      {rarity!=="rare"&&[0,1,2,3,4].map((i)=><path key={i} d={`m${isKnife?260-i*8:273-i*7} ${isKnife?181-i*5:197+i*8} 5-6 6 6-6 6Z`} fill={i%2?color:accent} stroke="none"/>)}
-    </g>}
+    <ThemeSilhouette theme={theme} weapon={weapon}/>
+    {PARTS[weapon].map((part,i)=><path key={part.name} data-weapon-part={part.name} d={part.d} fill={part.layer==='shell'?`url(#${uid}-grain)`:paints[part.layer]} stroke={part.layer==='dark'?theme.color:theme.accent} strokeWidth={part.name==='scope'||part.name==='stock'?7:5} strokeLinejoin="round" strokeLinecap="round" opacity={part.name==='grip'?'.95':undefined} className={`skin-part skin-part--${part.name}`} style={{animationDelay:`${i*35}ms`}}/>)}
+    <Motif theme={theme} weapon={weapon}/>
+    {weapon!=='knife'&&<><path d="M315 239 458 351 503 343 617 454 651 515 808 578" fill="none" stroke={theme.accent} strokeWidth="3"/><path d="M325 245 464 345 515 348 619 448 661 511 801 572" fill="none" stroke={theme.color} strokeWidth="3" className="skin-flow" strokeDasharray="15 37"/></>}
+    {theme.rarity!=='rare'&&<g className="skin-idle-particles" fill={theme.color}>{[0,1,2,3,4].map(i=><circle key={i} cx={395+i*63} cy={278+(i%3)*54} r={i%2?2:3} style={{animationDelay:`${i*.43}s`}}/>)}</g>}
+    {firing&&<SkinAttack theme={theme} weapon={weapon}/>}
   </g>;
 }
 
 export function ScopedSkinArt({weapon,id}:{weapon:WeaponId;id:SkinId}){
   const theme=getSkin(id);if(!theme)return null;
-  return <g className={`skin-geometry skin-geometry--${id} skin-geometry--${theme.rarity}`} stroke={theme.accent} strokeWidth="3" fill="none" strokeLinejoin="round">
-    <path d={weapon==="rifle"?"M410 472 459 463m82 0 49 9":"M393 532Q500 473 607 532"} stroke={theme.color} strokeWidth="6"/>
-    <path className="skin-scope-channel" d="M429 502Q500 473 571 502" stroke={theme.accent} strokeWidth="2" strokeDasharray={theme.motif==="stars"?"2 11":"15 12"}/>
-    {weapon==="rifle"&&<><circle cx="443" cy="254" r="4" fill={theme.color}/><circle cx="557" cy="254" r="4" fill={theme.color}/></>}
+  return <g className={`skin-scoped skin-scoped--${theme.motif}`} fill="none" stroke={theme.color} strokeWidth="5" strokeLinejoin="round">
+    <path d="M399 520Q500 466 601 520L652 600H348Z" fill={theme.base} stroke={theme.accent} strokeWidth="8"/>
+    <path d="M415 519Q500 477 585 519M377 587H623" stroke={theme.color} strokeWidth="5"/>
+    {weapon==='rifle'?<><path d="M435 231 565 231 583 370 417 370Z" fill={theme.accent}/><path d="M456 254h88v91h-88Z" fill={theme.base} stroke={theme.color}/></>:weapon==='shotgun'?<><path d="M490 451V305M469 330h62" strokeWidth="9"/><path d="M477 309 500 281 523 309Z" fill={theme.accent}/></>:<><ellipse cx="500" cy="520" rx="112" ry="49" stroke={theme.accent} strokeWidth="9"/><path d="M472 491h56"/></>}
+    <path d="M421 535q79-48 158 0" stroke={theme.color} strokeWidth="3" strokeDasharray="9 8" className="skin-flow"/>
   </g>;
 }
