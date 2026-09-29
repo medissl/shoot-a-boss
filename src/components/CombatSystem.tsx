@@ -562,6 +562,7 @@ export function CombatSystem() {
           if (seen.has(id)) continue;
           seen.add(id);
           hits.set(id, { damage: config.damage * stats.damage * 0.55 * state.upgrades.sniperPierce, part: "body" });
+          emitCardProc("THROUGH THE PAGE", "PIERCED", 900);
           addImpact(intersection.point);
           break;
         }
@@ -591,6 +592,7 @@ export function CombatSystem() {
           emitCardProc("HEAVY PAGES", "SLOWED", 1300);
         }
         if (currentWeapon === "sniper" && state.upgrades.sniperFire) {
+          emitCardProc("BURN NOTICE", "IGNITED", 1200);
           for (let tick = 1; tick <= 4; tick += 1) {
             window.setTimeout(() => {
               const live = useGameStore.getState();
