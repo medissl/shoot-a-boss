@@ -2612,3 +2612,15 @@ button {
 .intensity-announcement--final-push {background:#ffe4df;color:#bb284b}
 .card-proc-notice {position:fixed;left:50%;top:22%;transform:translateX(-50%) rotate(-2deg);z-index:31;display:grid;gap:3px;min-width:170px;padding:9px 14px;border:3px solid #99498f;background:#fff3d4;color:#893b86;box-shadow:4px 4px #2548b855;text-align:center;font:1000 14px ui-rounded,sans-serif;pointer-events:none;animation:result-pop .2s both}
 .card-proc-notice small {font:900 10px ui-monospace,monospace}
+
+/* Locked Arsenal previews reveal only the base weapon silhouette, never the cosmetic. */
+.arsenal-display.is-locked{background:#eef1ff}
+.arsenal-locked-preview{position:relative;width:100%;height:100%;display:grid;place-items:center;overflow:hidden}
+.arsenal-locked-model{width:100%;filter:brightness(0) saturate(0);opacity:.88}
+.arsenal-locked-model .skin-particle,.arsenal-locked-model .skin-flow,.arsenal-locked-model .skin-orbit{display:none!important}
+.arsenal-locked-badge{position:absolute;display:flex;align-items:center;gap:8px;padding:9px 13px;border:3px solid #2548b8;background:#fff;color:#2548b8;font:1000 12px ui-monospace,monospace;box-shadow:4px 5px 0 #2548b833}
+.arsenal-card.is-locked{background:#f4f6fb!important;color:#2548b8}
+.arsenal-card-silhouette{position:relative;width:100%;display:grid;place-items:center;overflow:hidden}
+.arsenal-card-silhouette>.skin-weapon-preview{filter:brightness(0) saturate(0);opacity:.86}
+.arsenal-card-silhouette>.skin-weapon-preview .skin-particle,.arsenal-card-silhouette>.skin-weapon-preview .skin-flow,.arsenal-card-silhouette>.skin-weapon-preview .skin-orbit{display:none!important}
+.arsenal-card-silhouette>svg{position:absolute;right:8px;bottom:8px;padding:3px;border:2px solid #2548b8;background:#fff}
