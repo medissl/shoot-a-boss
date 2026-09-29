@@ -8,6 +8,28 @@ The whole game uses a hand-drawn white-paper / blue-ink style, so instead of try
 
 **Live build:** https://shoot-a-boss.vercel.app
 
+## Screenshots
+
+<p align="center">
+  <img src="./public/gameplay.png" alt="Shoot a Boss gameplay" width="100%" />
+</p>
+
+<table>
+  <tr>
+    <td width="50%" align="center">
+      <img src="./public/menu.png" alt="Shoot a Boss main menu" width="100%" />
+      <br />
+      <sub><b>Main Menu</b></sub>
+    </td>
+    <td width="50%" align="center">
+      <img src="./public/gamedesk.png" alt="Shoot a Boss Dream Desk" width="100%" />
+      <br />
+      <sub><b>Dream Desk</b></sub>
+    </td>
+  </tr>
+</table>
+
+
 ## About the game
 
 The game is structured around a 10-stage campaign. Each stage gets harder, introduces different enemy combinations, and rotates through different map themes with their own hazards and movement challenges.
