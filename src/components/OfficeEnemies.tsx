@@ -103,7 +103,7 @@ export function OfficeEnemy({ id, spawn, kind }: { id: string; spawn: [number,nu
     const game=useGameStore.getState();
     if (game.screen!=="playing" || game.tutorialOpen) { if (telegraph) telegraph.visible=false;if(lane)lane.visible=false;if(shot)shot.visible=false; return; }
     const [px,py,pz]=game.playerPosition;
-    if(art.current){art.current.rotation.y=Math.atan2(px-mesh.position.x,pz-mesh.position.z)-mesh.rotation.y;art.current.rotation.z=kind==="clipboard"&&performance.now()<openUntil.current?-.17:0;}
+    if(art.current){art.current.rotation.y=Math.atan2(px-mesh.position.x,pz-mesh.position.z)-mesh.rotation.y;art.current.rotation.z=kind==="clipboard"&&performance.now()<openUntil.current?-.17:phase.current==="warn"&&kind==="stapler"?-.06:0;art.current.scale.y=phase.current==="warn"&&kind==="stapler"?.88:phase.current==="strike"&&kind==="stapler"?1.1:1;art.current.scale.x=kind==="sticky"?1+.035*Math.sin(now*9):1;}
     const dist=Math.hypot(px-mesh.position.x,pz-mesh.position.z);
     const motion=enemyMotionFactor(id,game.runId);
     if (now-lastPosition.current>.15) {
@@ -179,7 +179,7 @@ export function OfficeEnemy({ id, spawn, kind }: { id: string; spawn: [number,nu
       if(lane.visible){
         const length=Math.min(profile.range,Math.hypot(locked.current.x-mesh.position.x,locked.current.z-mesh.position.z));
         lane.position.set(0,-mesh.position.y+.07,length/2);
-        lane.scale.set(profile.radius*2,length,1);
+        lane.scale.set(kind==="sticky"?.14:profile.radius*2,length,1);
       }
     }
     if(shot){
@@ -199,8 +199,8 @@ export function OfficeEnemy({ id, spawn, kind }: { id: string; spawn: [number,nu
       {kind==="clipboard"&&<mesh position={[0,1.7,.38]} userData={{targetId:id,targetPart:"body"}}><boxGeometry args={[2.45,2.5,.2]}/><meshBasicMaterial colorWrite={false} depthWrite={false}/></mesh>}
     </>}
     <mesh ref={marker} rotation={[-Math.PI/2,0,0]} visible={false} userData={{ignoreProjectile:true}}>{kind==="highlighter"||kind==="auditor"?<planeGeometry args={[1,1]}/>:<circleGeometry args={[.5,32]}/>}<meshBasicMaterial color="#f1283b" transparent opacity={.4} depthWrite={false} side={THREE.DoubleSide}/></mesh>
-    {(kind==="stapler"||kind==="shredder"||kind==="hr")&&<mesh ref={corridor} rotation={[-Math.PI/2,0,0]} visible={false} userData={{ignoreProjectile:true}}><planeGeometry args={[1,1]}/><meshBasicMaterial color="#ed283c" transparent opacity={.45} depthWrite={false} side={THREE.DoubleSide}/></mesh>}
-    {kind==="sticky"&&<mesh ref={projectile} visible={false} userData={{ignoreProjectile:true}}><boxGeometry args={[.7,.6,.08]}/><meshBasicMaterial color="#ffe262"/></mesh>}
+    {(kind==="stapler"||kind==="shredder"||kind==="hr"||kind==="sticky")&&<mesh ref={corridor} rotation={[-Math.PI/2,0,0]} visible={false} userData={{ignoreProjectile:true}}><planeGeometry args={[1,1]}/><meshBasicMaterial color="#ed283c" transparent opacity={.45} depthWrite={false} side={THREE.DoubleSide}/></mesh>}
+    {kind==="sticky"&&<mesh ref={projectile} visible={false} userData={{ignoreProjectile:true}}><planeGeometry args={[.65,.65]}/><meshBasicMaterial color="#ffe262" side={THREE.DoubleSide}/></mesh>}
     {!dead&&<><ScanHalo id={id} size={heavy?2.7:1.5}/><Html position={[0,height+1,0]} center zIndexRange={[40,0]} style={{pointerEvents:"none"}}><div className="office-enemy-label"><b>{profile.name}</b><i style={{width:`${health/maxHp*100}%`}}/></div></Html></>}
     {pop>0&&<Html position={[0,height+.5,0]} center zIndexRange={[40,0]} style={{pointerEvents:"none"}}><div className="boss-damage-pop"><strong>{pop}</strong></div></Html>}
   </group>;

@@ -101,7 +101,7 @@ export function PaperworkDragon({ id = "dragon-final" }: { id?: string }) {
     const game=useGameStore.getState();
     if(game.screen!=="playing"||game.tutorialOpen){if(marker)marker.visible=false;return;}
     const [px,py,pz]=game.playerPosition;
-    if(art.current)art.current.rotation.y=Math.atan2(px-mesh.position.x,pz-mesh.position.z)-mesh.rotation.y;
+    if(art.current){art.current.rotation.y=Math.atan2(px-mesh.position.x,pz-mesh.position.z)-mesh.rotation.y;art.current.scale.x=1+.025*Math.sin(now*3.2);art.current.rotation.z=phase.current==="attack"&&move.current==="DEADLINE DIVE"?-.11:0;}
     if(now-lastPosition.current>.14){lastPosition.current=now;game.setEnemyPosition(id,[mesh.position.x,mesh.position.y+2,mesh.position.z]);}
     if(phase.current==="intro") {phase.current="idle";phaseAt.current=now;}
     const fraction=hp.current/maxHp;

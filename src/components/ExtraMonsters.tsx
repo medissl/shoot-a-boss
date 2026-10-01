@@ -122,7 +122,7 @@ export function ExtraMonster({ id, spawn, kind }: { id: string; spawn: [number, 
     const now = state.clock.elapsedTime;
     const motion = enemyMotionFactor(id, live.runId);
     const [px, py, pz] = live.playerPosition;
-    if (art.current) art.current.rotation.y = Math.atan2(px-mesh.position.x,pz-mesh.position.z)-mesh.rotation.y;
+    if (art.current) {art.current.rotation.y = Math.atan2(px-mesh.position.x,pz-mesh.position.z)-mesh.rotation.y;if(kind==="fly")art.current.scale.x=1+.09*Math.sin(now*11);}
 
     if (kind === "fly") {
       if (motion <= 0) return;
