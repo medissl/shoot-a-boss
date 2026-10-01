@@ -85,7 +85,7 @@ export function MainMenu() {
       })}<span className="stage-road__line" aria-hidden="true" /></div>
     </div></section>}
     {scene === "desk" && <div className={`dream-desk ${crateActive ? "dream-desk--crate" : ""}`}>
-      <header className="dream-desk__header"><button onClick={back}><ChevronLeft size={17} /> {state.postStageReturn ? "RETURN TO REWARDS" : returnTo === "stages" ? "DREAM MAP" : "MENU"}</button><div><small>ONE HOME FOR YOUR BUILD</small><h1>DREAM DESK</h1></div><ProgressStrip compact /></header>
+      {!crateActive && <header className="dream-desk__header"><button onClick={back}><ChevronLeft size={17} /> {state.postStageReturn ? "RETURN TO REWARDS" : returnTo === "stages" ? "DREAM MAP" : "MENU"}</button><div><small>ONE HOME FOR YOUR BUILD</small><h1>DREAM DESK</h1></div><ProgressStrip compact /></header>}
       {!crateActive && <nav className="dream-desk__tabs" aria-label="Dream Desk">{deskTabs.map(tab => <button key={tab} data-tutorial={`desk-${tab}-tab`} className={deskTab === tab ? "is-active" : ""} onClick={() => setDeskTab(tab)}>{tab.toUpperCase()}</button>)}</nav>}
       <div className="dream-desk__content">
         {deskTab === "loadout" && <EquipmentHub openShop={() => setDeskTab("shop")} />}

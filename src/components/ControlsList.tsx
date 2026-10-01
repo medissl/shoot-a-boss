@@ -12,7 +12,7 @@ export function ControlsList() {
     <div><b>JUMP / SLIDE</b><span>Circle buttons near fire</span></div>
     <div><b>WEAPON BAR</b><span>Pick sniper, rifle, shotgun, or knife</span></div>
     <div><b>BOMB / RELOAD / MARK / ZIP</b><span>Grenade, reload, Q mark, or jungle zipline</span></div>
-    <div><b>MAGIC</b><span>Cast your equipped elemental ball when ready</span></div>
+    <div><b>MAGIC</b><span>Cast your equipped spell when ready</span></div>
     <div><b>Ⅱ</b><span>Pause and check cards</span></div>
   </div>;
   return <div className="controls-list">
@@ -26,7 +26,7 @@ export function ControlsList() {
     <div><b>R / G</b><span>Reload / paper bomb</span></div>
     <div><b>E / SHIFT+E</b><span>Jungle zipline forward / back</span></div>
     <div><b>Q</b><span>Mark an enemy with a yellow diamond (30s cooldown)</span></div>
-    <div><b>F</b><span>Cast your equipped elemental ball</span></div>
+    <div><b>F</b><span>Cast your equipped spell</span></div>
     <div><b>ESC / P</b><span>Pause / see cards · P keeps Chrome fullscreen open</span></div>
   </div>;
 }

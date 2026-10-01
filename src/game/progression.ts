@@ -1,9 +1,10 @@
 export type UpgradeId =
   | "damage" | "accuracy" | "movement" | "reload" | "magazine" | "jump"
   | "maxHp" | "fireRate" | "grenadePower" | "knifeDamage" | "secondWind" | "bombBelt"
-  | "sniperFire" | "sniperFocus" | "sniperPierce" | "sniperBolt"
-  | "rifleFreeze" | "riflePrecision" | "rifleOverclock" | "riflePower"
-  | "shotgunPellets" | "shotgunChoke" | "shotgunSlow" | "shotgunClose"
+  | "sniperFire" | "sniperFocus" | "sniperPierce" | "sniperBolt" | "sniperSteady"
+  | "rifleFreeze" | "riflePrecision" | "rifleOverclock" | "riflePower" | "rifleOverdrive"
+  | "shotgunPellets" | "shotgunChoke" | "shotgunSlow" | "shotgunClose" | "shotgunImpact"
+  | "knifeFoot" | "knifeBleed" | "knifeFlank" | "knifeRun" | "knifeFinal"
   | "recon" | "sniperTwin" | "rifleSurge" | "shotgunDouble" | "ironWill"
   | "shieldOrbit" | "shieldReserve" | "shieldShatter" | "fireOrbit" | "vampireInk" | "swiftReset"
   | "magicPower" | "magicTempo" | "magicEcho" | "spellWard" | "fireBloom" | "crystalThorns" | "iceBarrier" | "waterHealing" | "thunderSpark";
@@ -11,7 +12,7 @@ export type UpgradeLevels = Record<UpgradeId, number>;
 export type Rarity = "common" | "rare" | "epic" | "legendary";
 export type UpgradeCard = {
   id: UpgradeId; name: string; description: string; glyph: string;
-  rarity: Rarity; maxStacks: number; weapon?: "sniper" | "rifle" | "shotgun";
+  rarity: Rarity; maxStacks: number; weapon?: "sniper" | "rifle" | "shotgun" | "knife";
 };
 
 export const UPGRADE_CARDS: UpgradeCard[] = [
@@ -24,25 +25,33 @@ export const UPGRADE_CARDS: UpgradeCard[] = [
   { id:"maxHp", name:"THICK SKIN", description:"+12 maximum HP per stack.", glyph:"♥", rarity:"common", maxStacks:3 },
   { id:"fireRate", name:"TRIGGER FINGER", description:"7% shorter firing cooldown per stack.", glyph:"⚡", rarity:"rare", maxStacks:2 },
   { id:"grenadePower", name:"BIGGER MESS", description:"+18% bomb damage and +8% radius per stack.", glyph:"◉", rarity:"rare", maxStacks:2 },
-  { id:"knifeDamage", name:"PAPER CUT", description:"+25% knife damage per stack.", glyph:"╱", rarity:"rare", maxStacks:2 },
+  { id:"knifeDamage", name:"SHARP EDGE", description:"+25% knife damage per stack.", glyph:"╱", rarity:"rare", maxStacks:2, weapon:"knife" },
   { id:"secondWind", name:"SECOND WIND", description:"Heal 6 HP on elimination.", glyph:"+", rarity:"rare", maxStacks:1 },
   { id:"bombBelt", name:"BOMB BELT", description:"+1 maximum paper bomb and refill immediately.", glyph:"○", rarity:"rare", maxStacks:2 },
   { id:"sniperFire", name:"BURNING INK", description:"Sniper hits burn enemies for 4 seconds.", glyph:"♨", rarity:"epic", maxStacks:1, weapon:"sniper" },
   { id:"sniperFocus", name:"DEADLINE FOCUS", description:"+15% aimed sniper damage.", glyph:"⌖", rarity:"rare", maxStacks:1, weapon:"sniper" },
   { id:"sniperPierce", name:"THROUGH THE PAGE", description:"Sniper pierces one additional enemy at 55% damage.", glyph:"⇥", rarity:"epic", maxStacks:1, weapon:"sniper" },
   { id:"sniperBolt", name:"FAST BOLT", description:"15% faster sniper follow-up.", glyph:"↻", rarity:"rare", maxStacks:1, weapon:"sniper" },
+  { id:"sniperSteady", name:"QUIET BREATH", description:"15% tighter sniper spread.", glyph:"⌖", rarity:"common", maxStacks:1, weapon:"sniper" },
   { id:"rifleFreeze", name:"COLD CALL", description:"Rifle hits briefly freeze enemies.", glyph:"❄", rarity:"epic", maxStacks:1, weapon:"rifle" },
   { id:"riflePrecision", name:"FINE PRINT", description:"18% tighter rifle spread per stack.", glyph:"◎", rarity:"common", maxStacks:2, weapon:"rifle" },
   { id:"rifleOverclock", name:"OVERTIME", description:"10% faster rifle fire.", glyph:"⚡", rarity:"rare", maxStacks:1, weapon:"rifle" },
   { id:"riflePower", name:"RED STAPLES", description:"+12% rifle damage.", glyph:"✦", rarity:"rare", maxStacks:1, weapon:"rifle" },
+  { id:"rifleOverdrive", name:"OVERDRIVE", description:"After 8 continuous shots, fire 15% faster until you stop or reload.", glyph:"≋", rarity:"epic", maxStacks:1, weapon:"rifle" },
   { id:"shotgunPellets", name:"EXTRA STAPLES", description:"+1 pellet per shotgun blast.", glyph:"⁙", rarity:"rare", maxStacks:1, weapon:"shotgun" },
   { id:"shotgunChoke", name:"TIGHT BINDING", description:"20% tighter shotgun spread.", glyph:"⌾", rarity:"common", maxStacks:1, weapon:"shotgun" },
   { id:"shotgunSlow", name:"HEAVY PAGES", description:"Shotgun hits slow enemies for 1.5 seconds.", glyph:"◆", rarity:"epic", maxStacks:1, weapon:"shotgun" },
   { id:"shotgunClose", name:"POINT BLANK", description:"+20% shotgun damage within 6 meters.", glyph:"✹", rarity:"rare", maxStacks:1, weapon:"shotgun" },
+  { id:"shotgunImpact", name:"PAPER IMPACT", description:"4 pellets on one target briefly stagger normal enemies; bosses are slowed.", glyph:"✷", rarity:"epic", maxStacks:1, weapon:"shotgun" },
+  { id:"knifeFoot", name:"LIGHT FOOT", description:"+8% movement speed while holding the knife.", glyph:"➜", rarity:"common", maxStacks:1, weapon:"knife" },
+  { id:"knifeBleed", name:"PAPER CUT", description:"Knife hits bleed for 3 small ticks over 1.5 seconds.", glyph:"╱", rarity:"rare", maxStacks:1, weapon:"knife" },
+  { id:"knifeFlank", name:"SIDE NOTE", description:"Knife hits from the side or rear deal 30% more damage.", glyph:"↶", rarity:"epic", maxStacks:1, weapon:"knife" },
+  { id:"knifeRun", name:"CUT AND RUN", description:"Knife hits grant a 12% movement burst for 1.5 seconds.", glyph:"➠", rarity:"epic", maxStacks:1, weapon:"knife" },
+  { id:"knifeFinal", name:"FINAL DRAFT", description:"Every third quick knife hit on one enemy adds a 45% paper slash.", glyph:"✕", rarity:"legendary", maxStacks:1, weapon:"knife" },
   { id:"recon", name:"ALL HANDS REPORT", description:"Q marks all surviving enemies for 7.5 seconds.", glyph:"◈", rarity:"epic", maxStacks:1 },
   { id:"sniperTwin", name:"TWIN SIGNATURE", description:"Sniper fires a second round for 45% damage.", glyph:"✧", rarity:"legendary", maxStacks:1, weapon:"sniper" },
   { id:"rifleSurge", name:"FULL AUTO AUDIT", description:"Every sixth rifle shot gains 65% damage.", glyph:"⚑", rarity:"legendary", maxStacks:1, weapon:"rifle" },
-  { id:"shotgunDouble", name:"DOUBLE ENTRY", description:"+2 shotgun pellets.", glyph:"❖", rarity:"legendary", maxStacks:1, weapon:"shotgun" },
+  { id:"shotgunDouble", name:"DOUBLE ENTRY", description:"+3 pellets on every third shotgun blast; damage aggregates per target.", glyph:"❖", rarity:"legendary", maxStacks:1, weapon:"shotgun" },
   { id:"ironWill", name:"FINAL NOTICE", description:"Gain 25 maximum HP and heal 25 immediately.", glyph:"✺", rarity:"legendary", maxStacks:1 },
   { id:"shieldOrbit", name:"ORBITAL GUARD", description:"Absorb one hit every 16 seconds.", glyph:"⬡", rarity:"legendary", maxStacks:1 },
   { id:"shieldReserve", name:"PAPER ARMOR", description:"Begin each stage with one extra shield charge per stack.", glyph:"▱", rarity:"epic", maxStacks:2 },
@@ -90,8 +99,9 @@ export function rollUpgradeChoices(level: number, rerollIndex: number, upgrades:
   const available = UPGRADE_CARDS.filter((card) => upgrades[card.id] < card.maxStacks && !excluded.includes(card.id) && (magicUnlocked || !["magicPower","magicTempo","magicEcho","spellWard","fireBloom","crystalThorns","iceBarrier","waterHealing","thunderSpark"].includes(card.id)) && (card.id !== "shieldShatter" || upgrades.shieldOrbit || upgrades.shieldReserve));
   const choices: UpgradeId[] = [];
   for (let slot = 0; slot < 3; slot++) {
-    const preferred = slot === 0 && preferredWeapon && random() < .7;
-    const pool = available.filter((card) => !choices.includes(card.id) && (preferred ? card.weapon === preferredWeapon : slot === 0 ? Boolean(card.weapon) : slot === 1 ? !card.weapon : true));
+    const preferred = slot === 0 && preferredWeapon && random() < .75;
+    const firstWeapon = choices[0] ? getUpgradeCard(choices[0]).weapon : undefined;
+    const pool = available.filter((card) => !choices.includes(card.id) && (preferred ? card.weapon === preferredWeapon : slot === 0 ? Boolean(card.weapon) : slot === 1 ? !card.weapon : !firstWeapon || firstWeapon === preferredWeapon || card.weapon !== firstWeapon));
     const candidates = pool.length ? pool : available.filter((card) => !choices.includes(card.id));
     if (!candidates.length) break;
     const roll = random(); let cumulative = 0; let rarity: Rarity = "common";

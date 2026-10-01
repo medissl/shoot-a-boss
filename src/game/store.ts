@@ -242,6 +242,7 @@ type GameStore = {
   shieldReadyAt: number;
   shieldCharges: number;
   speedBoostUntil: number;
+  knifeRushUntil: number;
   speedBoostActive: boolean;
   movementMode: MovementMode;
   reloading: boolean;
@@ -459,6 +460,7 @@ function freshRun(level: number, upgrades: UpgradeLevels, cycle = 0, gear: GearL
     hazardSuppressedUntil: 0,
     shieldCharges: Math.min(5, gear.aegis + upgrades.shieldReserve),
     speedBoostUntil: 0,
+    knifeRushUntil: 0,
     speedBoostActive: false,
     movementMode: "idle" as MovementMode,
     reloading: false,
@@ -988,6 +990,7 @@ export const useGameStore = create<GameStore>((set, get) => {
         movementMode: "idle",
         speedBoostActive: false,
         speedBoostUntil: 0,
+        knifeRushUntil: 0,
       });
       persist(get());
     },

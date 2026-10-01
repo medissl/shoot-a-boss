@@ -66,9 +66,9 @@ Managers, Paper Cutlets, Inkterns, flying couriers, statues, five office enemies
 
 ## Dream Desk and progression
 
-The Dream Desk has Loadout, Magic, Shop, and Arsenal tabs. Equip up to four owned Gear pieces, rank up five elemental spells with Force, Tempo, or Craft choices, buy supplies, and view weapon skins. Fire launches a projectile and leaves burning ground; Thunder strikes and chains; Water rains over an area; Ice erupts and freezes; Crystal builds a prison and trails. Normal spell cooldowns retain at least 45% of their base value after reductions.
+The Dream Desk has Loadout, Magic, Shop, and Arsenal tabs. Equip up to four owned Gear pieces, rank up five elemental spells with Force, Tempo, or Craft choices, buy supplies, and view weapon skins. Inferno Orb burns a path and leaves burning ground; Judgement Bolt strikes and chains; Rain Cloud drifts over an area; Glacial Eruption freezes and leaves frost; Crystal Prison forms shards and a control zone. Each spell gains distinct effects at tiers 5, 10, 15, and 20. Normal spell cooldowns retain at least 45% of their base value after reductions.
 
-Stage clears grant XP, Coins, and a Card draft on the first clear of that stage and cycle. Some drafts lead to an Evolution choice. Practice runs use temporary pickups but grant no permanent campaign rewards. Dream Cache events offer a temporary in-run benefit. Hearts, Gear, Magic, cosmetics, and campaign progress persist in browser storage.
+Stage clears grant XP, Coins, and a Card draft on the first clear of that stage and cycle. Each weapon has six dedicated Cards: one Common, two Rare, two Epic, and one Legendary. Drafts favor the weapon you use most while still offering other builds. Some drafts lead to an Evolution choice. Practice runs use temporary pickups but grant no permanent campaign rewards. Dream Cache events offer a temporary in-run benefit. Hearts, Gear, Magic, cosmetics, and campaign progress persist in browser storage.
 
 The Shop sells Gear and four weapon-specific cosmetic crates. A crate costs 300 Coins and awards one theme that weapon does not yet own. Each weapon has the default look plus 22 unlockable themes: 10 Rare, 7 Epic, and 5 Legendary. Themes alter the weapon drawing and its audio and visual effects while preserving the original weapon outline. Locked themes remain silhouettes until earned.
 

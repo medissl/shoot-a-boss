@@ -17,6 +17,7 @@ type Trace = {
   hit: boolean;
   startedAt: number;
   durationMs: number;
+  empowered: boolean;
 };
 
 type Impact = {
@@ -32,6 +33,7 @@ type HitPart = "head" | "body" | "leg";
 type HitSummary = {
   damage: number;
   part: HitPart;
+  pellets?: number;
 };
 
 const PART_PRIORITY: Record<HitPart, number> = {
@@ -72,11 +74,11 @@ function TraceLine({ trace }: { trace: Trace }) {
   return (
     <group ref={group} position={from} quaternion={quaternion} scale={[1, .001, 1]} userData={{ ignoreProjectile: true }}>
       <mesh>
-        <cylinderGeometry args={[.004, .008, 1, 6]} />
+        <cylinderGeometry args={[trace.empowered?.012:.004, trace.empowered?.018:.008, 1, 6]} />
         <meshBasicMaterial ref={core} color={trace.color} transparent opacity={.85} depthWrite={false} />
       </mesh>
       <mesh>
-        <cylinderGeometry args={[.018, .024, 1, 6]} />
+        <cylinderGeometry args={[trace.empowered?.04:.018, trace.empowered?.05:.024, 1, 6]} />
         <meshBasicMaterial ref={glow} color={trace.color} transparent opacity={.18} depthWrite={false} />
       </mesh>
     </group>
@@ -151,11 +153,16 @@ export function CombatSystem() {
   const emptyAlertAt = useRef(0);
   const autoFire = useRef<number | null>(null);
   const rifleShots = useRef(0);
+  const rifleStreak = useRef(0);
+  const shotgunShots = useRef(0);
+  const knifeCombo = useRef<{id:string;count:number;at:number}>({id:"",count:0,at:0});
   const nextTraceId = useRef(1);
   const nextImpactId = useRef(1);
   const [traces, setTraces] = useState<Trace[]>([]);
   const [impacts, setImpacts] = useState<Impact[]>([]);
   const screen = useGameStore((state) => state.screen);
+  const runId = useGameStore((state) => state.runId);
+  useEffect(()=>{rifleShots.current=0;rifleStreak.current=0;shotgunShots.current=0;knifeCombo.current={id:"",count:0,at:0};},[runId]);
   const weapon = useGameStore((state) => state.weapon);
   const scoped = useGameStore((state) => state.scoped);
   const reloading = useGameStore((state) => state.reloading);
@@ -184,7 +191,7 @@ export function CombatSystem() {
   });
 
   useEffect(() => {
-    function addTrace(from: THREE.Vector3, to: THREE.Vector3, hit: boolean) {
+    function addTrace(from: THREE.Vector3, to: THREE.Vector3, hit: boolean, empowered=false) {
       const id = nextTraceId.current++;
       const durationMs = Math.min(210, Math.max(95, from.distanceTo(to) * 9));
       const color = useGameStore.getState().equippedSkins[useGameStore.getState().weapon];
@@ -192,12 +199,13 @@ export function CombatSystem() {
         ...current.slice(-10),
         {
           id,
-          color: color === "default" ? hit ? "#ff6ea8" : "#5978e8" : skinColor(color),
+          color: empowered ? "#ff4b89" : color === "default" ? hit ? "#ff6ea8" : "#5978e8" : skinColor(color),
           from: [from.x, from.y, from.z],
           to: [to.x, to.y, to.z],
           hit,
           startedAt: performance.now(),
           durationMs,
+          empowered,
         },
       ]);
 
@@ -251,8 +259,7 @@ export function CombatSystem() {
       const state = useGameStore.getState();
       const stats = getUpgradeStats(state.upgrades);
       const now = performance.now();
-      const cooldown =
-        WEAPONS.knife.cooldownMs * stats.fireCooldown;
+      const cooldown = WEAPONS.knife.cooldownMs * stats.fireCooldown;
 
       if (now - lastShot.current < cooldown) return;
       lastShot.current = now;
@@ -288,11 +295,29 @@ export function CombatSystem() {
               : "body";
           const partMultiplier =
             part === "head" ? 1.6 : part === "leg" ? 0.65 : 1;
-          const damage =
+          let damage =
             WEAPONS.knife.damage * (now < state.crunchUntil ? 1.10 : 1) *
             stats.damage *
             stats.knifeDamage *
             partMultiplier;
+          if (state.upgrades.knifeFlank) {
+            let model:THREE.Object3D=first.object;
+            while(model.parent&&!model.userData.targetId)model=model.parent;
+            const facing = model.getWorldDirection(new THREE.Vector3());
+            const towardPlayer = camera.position.clone().sub(first.point).normalize();
+            if (facing.dot(towardPlayer) < .4) {damage *= 1.3;emitCardProc("SIDE NOTE","FLANK HIT",950);}
+          }
+          if (state.upgrades.knifeFinal) {
+            const combo=knifeCombo.current;
+            combo.count=combo.id===targetId&&now-combo.at<2500?combo.count+1:1;
+            combo.id=targetId;combo.at=now;
+            if(combo.count%3===0){damage*=1.45;emitCardProc("FINAL DRAFT","CROSS SLASH",900);
+              window.dispatchEvent(new CustomEvent("paint-splash",{detail:{position:[first.point.x,.025,first.point.z],size:.95}}));}
+          }
+          if (state.upgrades.knifeRun) {
+            useGameStore.setState({knifeRushUntil:now+1500});
+            emitCardProc("CUT AND RUN","MOVE!",1000);
+          }
           state.recordWeaponHit(targetId, "knife", damage);
 
           window.dispatchEvent(
@@ -312,6 +337,15 @@ export function CombatSystem() {
               detail: { id: targetId, damage, part },
             }),
           );
+          if(state.upgrades.knifeBleed){
+            const runId=state.runId;
+            for(let tick=1;tick<=3;tick++)window.setTimeout(()=>{
+              const live=useGameStore.getState();
+              if(live.runId!==runId||live.screen!=="playing"||live.eliminated.includes(targetId))return;
+              window.dispatchEvent(new CustomEvent("boss-hit",{detail:{id:targetId,damage:4,part:"body"}}));
+            },tick*500);
+            emitCardProc("PAPER CUT","BLEED",1200);
+          }
         } else if (propId) {
           window.dispatchEvent(
             new CustomEvent("prop-shot", {
@@ -370,7 +404,7 @@ export function CombatSystem() {
 
       const cooldown = config.cooldownMs * (now < state.crunchUntil ? .85 : 1) *
         (currentWeapon === "sniper" ? Math.pow(0.85, state.upgrades.sniperBolt) : stats.fireCooldown) *
-        (currentWeapon === "rifle" ? Math.pow(0.90, state.upgrades.rifleOverclock) : 1);
+        (currentWeapon === "rifle" ? Math.pow(0.90, state.upgrades.rifleOverclock) * (state.upgrades.rifleOverdrive && rifleStreak.current>=8 && now-lastShot.current<450 ? .85 : 1) : 1);
 
       if (now - lastShot.current < cooldown) return;
 
@@ -383,20 +417,28 @@ export function CombatSystem() {
       }
       state.recordWeaponShot(currentWeapon);
 
+      const previousShot=lastShot.current;
       lastShot.current = now;
 
-      if (currentWeapon === "rifle") rifleShots.current += 1;
+      if (currentWeapon === "rifle") {
+        rifleStreak.current=now-previousShot<450?rifleStreak.current+1:1;
+        rifleShots.current += 1;
+        if(state.upgrades.rifleOverdrive&&rifleStreak.current===8)emitCardProc("OVERDRIVE","FULL PRESSURE",900);
+      }
+      if (currentWeapon === "shotgun") shotgunShots.current += 1;
       const spread =
         (aimed ? config.aimedSpread : config.hipSpread) *
         stats.spread *
         (currentWeapon === "rifle" ? Math.pow(0.82, state.upgrades.riflePrecision) : 1) *
+        (currentWeapon === "sniper" ? Math.pow(.85,state.upgrades.sniperSteady) : 1) *
         (currentWeapon === "shotgun" ? Math.pow(0.8, state.upgrades.shotgunChoke) : 1);
       const hits = new Map<string, HitSummary>();
       const candidates = projectileMeshes(scene);
       const muzzle = weaponMuzzleWorldPosition(camera, gl.domElement, currentWeapon, aimed);
 
-      const pelletCount = config.pellets + (currentWeapon === "shotgun" ? state.upgrades.shotgunPellets + state.upgrades.shotgunDouble * 2 : 0);
-      if (currentWeapon === "shotgun" && state.upgrades.shotgunDouble) emitCardProc("DOUBLE ENTRY", "+2 PELLETS");
+      const doubleEntry=currentWeapon==="shotgun"&&Boolean(state.upgrades.shotgunDouble)&&shotgunShots.current%3===0;
+      const pelletCount = config.pellets + (currentWeapon === "shotgun" ? state.upgrades.shotgunPellets + (doubleEntry?3:0) : 0);
+      if (doubleEntry) emitCardProc("DOUBLE ENTRY", "+3 PELLETS",900);
       for (let pellet = 0; pellet < pelletCount; pellet += 1) {
         const raycaster = new THREE.Raycaster();
         const spreadX = (Math.random() - 0.5) * spread;
@@ -430,7 +472,7 @@ export function CombatSystem() {
           : undefined;
 
         if (muzzle && (currentWeapon !== "shotgun" || pellet < 3)) {
-          addTrace(muzzle, end, Boolean(targetId || propId || destructibleId));
+          addTrace(muzzle, end, Boolean(targetId || propId || destructibleId), (currentWeapon==="rifle"&&Boolean(state.upgrades.rifleSurge)&&rifleShots.current%6===0)||(currentWeapon==="rifle"&&Boolean(state.upgrades.rifleOverdrive)&&rifleStreak.current>=8));
         }
 
         if (!first) continue;
@@ -538,10 +580,11 @@ export function CombatSystem() {
 
         const previous = hits.get(targetId);
         if (!previous) {
-          hits.set(targetId, { damage, part: targetPart });
+          hits.set(targetId, { damage, part: targetPart, pellets:1 });
         } else {
           hits.set(targetId, {
             damage: previous.damage + damage,
+            pellets:(previous.pellets??0)+1,
             part:
               PART_PRIORITY[targetPart] > PART_PRIORITY[previous.part]
                 ? targetPart
@@ -619,6 +662,11 @@ export function CombatSystem() {
           applyEnemyStatus(id, state.runId, 0, 1500, .65, 2500);
           emitCardProc("HEAVY PAGES", "SLOWED", 1300);
         }
+        if (currentWeapon === "shotgun" && state.upgrades.shotgunImpact && (summary.pellets??0)>=4) {
+          const boss = id.includes("boss") || id.includes("dragon") || id.includes("hr") || id.includes("statue");
+          applyEnemyStatus(id,state.runId,boss?0:400,boss?650:0,.8,2800);
+          emitCardProc("PAPER IMPACT",boss?"STAGGERED":"STAGGER!",950);
+        }
         if (currentWeapon === "sniper" && state.upgrades.sniperFire) {
           emitCardProc("BURN NOTICE", "IGNITED", 1200);
           for (let tick = 1; tick <= 4; tick += 1) {
@@ -646,6 +694,7 @@ export function CombatSystem() {
         autoFire.current = null;
       }
       window.dispatchEvent(new Event("rifle-trigger-up"));
+      rifleStreak.current=0;
     }
 
     const mouseDown = (event: MouseEvent) => {
@@ -680,10 +729,7 @@ export function CombatSystem() {
         autoFire.current === null
       ) {
         const stats = getUpgradeStats(state.upgrades);
-        const interval = Math.max(
-          55,
-          WEAPONS.rifle.cooldownMs * stats.fireCooldown * Math.pow(0.90, state.upgrades.rifleOverclock),
-        );
+        const interval = Math.max(55, Math.min(WEAPONS.rifle.cooldownMs * stats.fireCooldown * Math.pow(.90,state.upgrades.rifleOverclock), state.upgrades.rifleOverdrive?55:Infinity));
 
         autoFire.current = window.setInterval(() => {
           const liveState = useGameStore.getState();
