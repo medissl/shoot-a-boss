@@ -304,6 +304,9 @@ export function CombatSystem() {
               },
             }),
           );
+          window.dispatchEvent(new CustomEvent("paint-splash", {
+            detail: { position: [first.point.x, 0.025, first.point.z], size: 0.36 },
+          }));
           window.dispatchEvent(
             new CustomEvent("boss-hit", {
               detail: { id: targetId, damage, part },

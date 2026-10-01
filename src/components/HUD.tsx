@@ -47,7 +47,6 @@ export function HUD() {
   const magicReadyAt = useGameStore((state) => state.magicReadyAt);
   const magic = useGameStore((state) => state.magic);
   const fullReport = useGameStore((state) => equippedGearRank(state, "lens") >= 5);
-  const evolutions = useGameStore((state) => state.evolutions);
   const crunchUntil = useGameStore((state) => state.crunchUntil);
   const paperTrailUntil = useGameStore((state) => state.paperTrailUntil);
   const [now, setNow] = useState(() => performance.now());
@@ -163,7 +162,6 @@ export function HUD() {
       </div>
       {now < crunchUntil && <div className="evolution-hud">✳ CRUNCH TIME · {Math.ceil((crunchUntil - now) / 1000)}S</div>}
       {now < paperTrailUntil && <div className="evolution-hud">╱ PAPER TRAIL · {Math.ceil((paperTrailUntil - now) / 1000)}S</div>}
-      {evolutions.length > 0 && <div className="hud-evolution-count">✳ {evolutions.length} EVOLUTION{evolutions.length === 1 ? "" : "S"}</div>}
       {selectedMagic && <div className="hud-magic"><span>F · {selectedMagic.toUpperCase()} LV {magic[selectedMagic]}</span><strong>{now < magicReadyAt ? `${Math.ceil((magicReadyAt - now)/1000)}s` : "READY ✦"}</strong></div>}
 
       <div className="hud-health">
@@ -208,7 +206,7 @@ export function HUD() {
         ))}
       </div>
       <div className="hud-owned-cards">
-        <span>▤ {UPGRADE_CARDS.reduce((sum, card) => sum + upgrades[card.id], 0)} CARDS{evolutions.length > 0 && <> · ✳ {evolutions.length} EVOLUTION{evolutions.length > 1 ? "S" : ""}</>}</span>
+        <span>▤ {UPGRADE_CARDS.reduce((sum, card) => sum + upgrades[card.id], 0)} CARDS</span>
       </div>
       <div className="hud-scan">Q · {scanTargets.length ? `MARKED ${scanTargets.length}` : scanCooldownUntil > now ? `RECHARGE ${Math.ceil((scanCooldownUntil - now) / 1000)}S` : "MARK ENEMY"}</div>
       <div className="hud-coins"><span className="doodle-coin" aria-hidden="true">◉</span> {coins} COINS</div>

@@ -70,7 +70,7 @@ export function GearShopScene({ onBack, onCrateActiveChange }: { onBack: () => v
     setDialogue(`${name} · RANK ${gear[id]+1}${wasEquipped || equippedGear.length < 4 ? " · EQUIPPED ✓" : " · STORED"}`);
   };
 
-  if (crate) return <CrateOpening key={crate} weapon={crate} onBack={() => setCrate(null)} />;
+  if (crate) return <CrateOpening key={crate} weapon={crate} onBack={() => { setCrate(null); setCategory("crates"); }} />;
   return <main className="gear-scene">
     <div className="gear-scene__rays" aria-hidden="true" />
     <div className="gear-scene__header">
@@ -95,7 +95,8 @@ export function GearShopScene({ onBack, onCrateActiveChange }: { onBack: () => v
           const cost = gearCost(item.id, rank);
           return <article key={item.id} className={`gear-item ${rank < maxRank && coins >= cost ? "is-affordable" : ""}`} data-tutorial={item.id === "vest" ? "shop-gear-card" : undefined}>
             <span className="gear-item__glyph" aria-hidden="true">{gearGlyphs[item.id]}</span>
-            <div className="gear-item__copy"><h3>{item.name}</h3><p>{item.detail}</p><small>RANK {rank} → {Math.min(maxRank,rank+1)} · {equippedGear.includes(item.id) ? "EQUIPPED" : rank ? "STORED" : "UNOWNED"}</small><button className="gear-details" onClick={()=>setDetails(details===item.id?null:item.id)}>DETAILS</button>{details===item.id&&<small>NEXT: {item.detail} · MASTERWORK: {masterwork[item.id]}</small>}</div>
+            <button type="button" className="gear-details" aria-label={`Details for ${item.name}`} onClick={()=>setDetails(item.id)}>i</button>
+            <div className="gear-item__copy"><h3>{item.name}</h3><p>{item.detail}</p><small>RANK {rank} → {Math.min(maxRank,rank+1)} · {equippedGear.includes(item.id) ? "EQUIPPED" : rank ? "STORED" : "UNOWNED"}</small></div>
             <button type="button" data-tutorial={item.id === "vest" ? "shop-buy-equip" : undefined} disabled={rank >= maxRank || coins < cost} onClick={() => purchase(item.id, item.name)}>
               {rank >= maxRank ? "MAXED" : `◉ ${cost} · ${equippedGear.includes(item.id) ? "UPGRADE" : equippedGear.length < 4 ? rank ? "UPGRADE & EQUIP" : "BUY & EQUIP" : "BUY · SWAP"}`}
             </button>
@@ -115,6 +116,7 @@ export function GearShopScene({ onBack, onCrateActiveChange }: { onBack: () => v
         <span className="shopkeeper__signature">YOUR FRIENDLY<br />PAPER DEALER</span>
       </aside>
     </div>
+    {details && <div className="gear-inspector-backdrop" onClick={()=>setDetails(null)}><section className="gear-inspector" role="dialog" aria-modal="true" aria-label={`${GEAR.find(item=>item.id===details)?.name} details`} onClick={event=>event.stopPropagation()}><button className="gear-inspector__close" onClick={()=>setDetails(null)} aria-label="Close details">×</button><span className="gear-item__glyph">{gearGlyphs[details]}</span><h2>{GEAR.find(item=>item.id===details)?.name}</h2><p>{GEAR.find(item=>item.id===details)?.detail}</p><p>RANK {gear[details]} / {gearCap(details)} · NEXT: {GEAR.find(item=>item.id===details)?.detail}</p><strong>MASTERWORK</strong><p>{masterwork[details]}</p></section></div>}
     <small className="creator-credit creator-credit--menu">Made by Medianto Susilo</small>
   </main>;
 }

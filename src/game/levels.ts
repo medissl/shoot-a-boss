@@ -142,15 +142,15 @@ export const LEVELS: LevelDefinition[] = [
   },
   {
     level: 10,
-    name: "THE HELL",
-    subtitle: "the fire below",
-    theme: "hell",
+    name: "THE LAST SHIFT",
+    subtitle: "one last office nightmare",
+    theme: "playground",
     difficulty: "ALMOST IMPOSSIBLE",
-    enemy: { speed: 1.42, vision: 1.35, damage: 1.48, bosses: 6, paperwork: 4, pens: 4, flying: 4, statues: 3, shredder: 2, clipboard: 1 },
+    enemy: { speed: 1.42, vision: 1.35, damage: 1.48, bosses: 6, paperwork: 4, pens: 4, flying: 4, statues: 3, sticky: 1, stapler: 1, clipboard: 2 },
   },
   {
-    level: 11, name: "PURGATORY SHIFT", subtitle: "one desk left", theme: "hell", difficulty: "NIGHTMARE",
-    enemy: { speed: 1.44, vision: 1.36, damage: 1.52, bosses: 4, paperwork: 3, pens: 2, flying: 2, statues: 1, sticky: 1, stapler: 1, shredder: 2, clipboard: 1 },
+    level: 11, name: "THE HELL", subtitle: "the fire below", theme: "hell", difficulty: "NIGHTMARE",
+    enemy: { speed: 1.44, vision: 1.36, damage: 1.52, bosses: 6, paperwork: 4, pens: 4, flying: 4, statues: 3, shredder: 2, clipboard: 1 },
   },
   {
     level: 12, name: "THE HEAVENS", subtitle: "final approval", theme: "heaven", difficulty: "FINAL",

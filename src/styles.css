@@ -2579,7 +2579,7 @@ button {
 .hud-xp{display:grid;gap:2px;min-width:140px;font:900 9px ui-monospace,monospace;color:#2548b8}.hud-xp i{height:5px;border:1px solid #2548b8;background:#fff}.hud-xp i b{display:block;height:100%;background:#e99464}
 .intensity-indicator{position:fixed;z-index:12;right:16px;top:65px;padding:5px 10px;border:2px solid #2548b8;background:#fffef8d9;color:#2548b8;font:900 10px ui-monospace,monospace;pointer-events:none}.intensity-indicator--surge{border-color:#d27f4c;color:#a3522d}.intensity-indicator--final-push{border-color:#bd4c66;color:#ad3d5d;background:#fff2f1}
 .scan-edge--passive{color:#7eb8ee!important;text-shadow:0 0 8px #2548b8!important;filter:none;animation:none;font-size:23px}
-.evolution-hud{position:fixed;left:50%;top:18%;transform:translateX(-50%);z-index:14;background:#ffe7b8;color:#96395d;border:3px solid #96395d;padding:7px 12px;font:1000 13px ui-rounded,sans-serif;box-shadow:4px 5px #2548b85e;pointer-events:none}.hud-evolution-count{position:fixed;right:15px;top:100px;color:#8b458e;background:#fff9e9d9;padding:4px 7px;border:2px solid #8b458e;font:900 10px ui-monospace,monospace}
+.evolution-hud{position:fixed;left:50%;top:18%;transform:translateX(-50%);z-index:14;background:#ffe7b8;color:#96395d;border:3px solid #96395d;padding:7px 12px;font:1000 13px ui-rounded,sans-serif;box-shadow:4px 5px #2548b85e;pointer-events:none}
 
 /* Completion pass: one route from stage clear to the next deadline. */
 .stage-node {display:flex;gap:0;padding:0;overflow:hidden;cursor:default}
@@ -2692,3 +2692,26 @@ button {
 .dream-desk__content .skill-scene--focused { padding-bottom:145px; }
 .loadout-page--focused .loadout-hero>.equipment-avatar { width:100px; transform:scale(.65); transform-origin:center; }
 @media(max-width:700px){.magic-element-picker { overflow-x:auto; grid-template-columns:repeat(5,minmax(78px,1fr)); }.loadout-page--focused .loadout-hero>.equipment-avatar { display:none; }}
+
+/* Shop details float above the fixed card grid. */
+.gear-item { position:relative; min-width:0; box-sizing:border-box; }
+.gear-item__copy { min-width:0; padding-right:29px; }
+.gear-item .gear-details { position:absolute; top:9px; right:9px; display:grid; place-items:center; width:27px; height:27px; margin:0; padding:0; border:2px solid #344e87; border-radius:50%; font:900 15px ui-rounded,sans-serif; z-index:1; }
+.gear-inspector-backdrop { position:fixed; inset:0; z-index:140; display:grid; place-items:center; padding:16px; background:#1b2d55a8; }
+.gear-inspector { position:relative; box-sizing:border-box; width:min(440px,100%); max-height:calc(100dvh - 32px); overflow:auto; padding:22px 26px; border:4px solid #344e87; border-radius:12px; background:#fffdf4; color:#273d76; box-shadow:9px 10px 0 #182d53; }
+.gear-inspector h2 { margin:8px 0; }.gear-inspector p { line-height:1.5; }.gear-inspector strong { color:#a35139; }
+.gear-inspector__close { position:absolute; top:10px; right:10px; width:32px; height:32px; border:2px solid #344e87; background:white; color:#273d76; cursor:pointer; font-size:22px; }
+.magic-element-picker { grid-template-columns:repeat(5,minmax(0,1fr)); }
+.magic-element-picker button { box-sizing:border-box; width:100%; min-width:0; height:88px; }
+.magic-element-picker button.is-active { border-width:2px; outline:2px solid #385c9d; outline-offset:-5px; }
+.hazard-hit-notice { top:31%; }
+.crate-scene { box-sizing:border-box; width:min(1200px,100%); min-height:min(100dvh,760px); margin-inline:auto; padding:clamp(18px,3vw,36px); border-inline:3px solid #2548b8; animation:crate-paper-enter .24s ease-out both; }
+.crate-scene { position:relative; }
+.crate-scene .crate-back { position:absolute; top:16px; left:16px; }
+.crate-scene .crate-box { width:min(380px,72vw); height:min(285px,42vh); }
+.crate-scene .crate-prize { width:min(780px,92%); box-sizing:border-box; }
+.crate-scene .crate-prize .skin-weapon-preview { width:min(620px,75vw); }
+@keyframes crate-paper-enter { from { opacity:0; translate:0 12px; } to { opacity:1; translate:0 0; } }
+@media (max-height:500px) { .hazard-hit-notice { top:37%; } .crate-scene { min-height:100dvh; } }
+
+.dream-desk--crate .crate-scene { max-height:none; min-height:clamp(410px,calc(100dvh - 140px),760px); overflow:visible; }

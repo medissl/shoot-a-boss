@@ -31,7 +31,7 @@ import {
   getLevelDefinition,
 } from "../game/levels";
 import { useGameStore } from "../game/store";
-import { setAttackPhase } from "../game/attackDirector";
+import { setAttackPhase, setApprovalPressure } from "../game/attackDirector";
 import { useTouchMode } from "../game/touch";
 
 export function GameCanvas() {
@@ -43,7 +43,7 @@ export function GameCanvas() {
   const eliminated = useGameStore((state) => state.eliminated.length);
   const screen = useGameStore((state) => state.screen);
   const enemyPositions = useGameStore((state) => state.enemyPositions);
-  const eventKind = currentLevel === 4 ? "PRIORITY DEADLINE" : currentLevel === 8 ? "PAPER JAM" : currentLevel === 9 ? "OVERTIME" : null;
+  const eventKind = currentLevel === 4 ? "PRIORITY DEADLINE" : currentLevel === 8 ? "PAPER JAM" : currentLevel === 9 ? "OVERTIME" : currentLevel === 12 ? "FINAL APPROVAL" : null;
   const [eventSeconds, setEventSeconds] = useState<number | null>(null);
   const [eventResult, setEventResult] = useState<string | null>(null);
   const [seals, setSeals] = useState<string[]>([]);
@@ -56,21 +56,24 @@ export function GameCanvas() {
   const resolve = (success: boolean) => {
     if (resolved.current) return;
     resolved.current = true;
-    setEventResult(success ? "COMPLETE · DREAM CACHE" : "EVENT EXPIRED");
+    setEventResult(eventKind === "FINAL APPROVAL" ? success ? "ACCEPTED ✓ · DREAM CACHE" : "REJECTED · JUDGEMENT SWEEP" : success ? "COMPLETE · DREAM CACHE" : "EVENT EXPIRED");
+    if (!success && eventKind === "FINAL APPROVAL") window.dispatchEvent(new Event("approval-rejected"));
+    window.dispatchEvent(new CustomEvent("world-sfx",{detail:{kind:success?"approvalSuccess":"approvalReject"}}));
     setMarkedTarget(null);
-    if (success) { grantDreamCache(); if (eventKind === "PAPER JAM") suppressHazard(20000); }
+    if (success) { grantDreamCache(); if (eventKind === "PAPER JAM" || eventKind === "FINAL APPROVAL") suppressHazard(18000); }
   };
   useEffect(() => {
-    if (!eventKind || eliminated < 2 || eventSeconds !== null || resolved.current || screen !== "playing") return;
+    if (!eventKind || eliminated < (eventKind === "FINAL APPROVAL" ? Math.ceil((targetCount-1)*.5) : 2) || eventSeconds !== null || resolved.current || screen !== "playing") return;
     const candidate = Object.keys(enemyPositions).find(id => id.startsWith("target-") && !useGameStore.getState().eliminated.includes(id));
     if (eventKind === "PRIORITY DEADLINE" && !candidate) return;
     const timer = window.setTimeout(() => {
       if (eventKind === "PRIORITY DEADLINE" && candidate) { setEventTarget(candidate); setMarkedTarget(candidate); }
       setKillsAtStart(eliminated);
-      setEventSeconds(eventKind === "OVERTIME" ? 20 : eventKind === "PAPER JAM" ? 30 : 25);
+      setEventSeconds(eventKind === "OVERTIME" ? 20 : eventKind === "FINAL APPROVAL" ? 35 : eventKind === "PAPER JAM" ? 30 : 25);
+      if (eventKind === "FINAL APPROVAL") window.dispatchEvent(new CustomEvent("world-sfx",{detail:{kind:"approvalStart"}}));
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [eventKind, eliminated, eventSeconds, enemyPositions, screen, setMarkedTarget]);
+  }, [eventKind, eliminated, eventSeconds, enemyPositions, screen, setMarkedTarget, targetCount]);
   const eventStarted = eventSeconds !== null;
   useEffect(() => {
     if (!eventStarted || eventResult) return;
@@ -82,7 +85,7 @@ export function GameCanvas() {
   useEffect(() => {
     if (eventSeconds === null || eventResult) return;
     if (eventKind === "PRIORITY DEADLINE" && eventTarget && useGameStore.getState().eliminated.includes(eventTarget)) resolve(true);
-    else if (eventKind === "PAPER JAM" && seals.length >= 3) resolve(true);
+    else if ((eventKind === "PAPER JAM" || eventKind === "FINAL APPROVAL") && seals.length >= 3) resolve(true);
     else if (eventKind === "OVERTIME" && (eventSeconds === 0 || eliminated - killsAtStart >= 3)) resolve(true);
     else if (eventSeconds === 0 || screen === "stageClear") resolve(false);
   });
@@ -94,14 +97,18 @@ export function GameCanvas() {
   useEffect(() => {
     const onProp = (event: Event) => {
       const id = (event as CustomEvent<{ id: string }>).detail.id;
-      if (!id.startsWith("dream-seal-") || eventSeconds === null || resolved.current) return;
+      if ((!id.startsWith("dream-seal-") && !id.startsWith("approval-seal-")) || eventSeconds === null || resolved.current) return;
+      if (id.startsWith("approval-seal-")) window.dispatchEvent(new CustomEvent("world-sfx",{detail:{kind:"approvalStamp"}}));
       setSeals(ids => ids.includes(id) ? ids : [...ids, id]);
     };
     window.addEventListener("prop-shot", onProp);
     return () => window.removeEventListener("prop-shot", onProp);
   }, [eventSeconds]);
+  useEffect(() => { setApprovalPressure(eventKind === "FINAL APPROVAL" && eventSeconds !== null && !eventResult); return () => setApprovalPressure(false); },[eventKind,eventSeconds,eventResult]);
   const definition = getLevelDefinition(currentLevel);
   const enemy = getEnemyTuning(currentLevel, ngPlusCycle);
+  // Spawn coordinates must stay fixed while the event timer updates the UI.
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization
   const spawnPool = useMemo(() => getEnemySpawnPool(currentLevel, runId, ngPlusCycle), [currentLevel, runId, ngPlusCycle]);
   const bossSpawns = spawnPool.slice(0, enemy.bosses);
   const paperSpawns = spawnPool.slice(
@@ -139,11 +146,11 @@ export function GameCanvas() {
   const [phaseNotice, setPhaseNotice] = useState("");
   const [dragonArrived, setDragonArrived] = useState(false);
   useEffect(() => {
-    if (currentLevel !== 12 || eliminated < roster.length || screen !== "playing" || dragonArrived) return;
+    if (currentLevel !== 12 || eliminated < roster.length || !resolved.current || screen !== "playing" || dragonArrived) return;
     const announce = window.setTimeout(() => setPhaseNotice("FINAL DEADLINE · THE PAPERWORK DRAGON"), 0);
     const arrive = window.setTimeout(() => setDragonArrived(true), 3000);
     return () => { window.clearTimeout(announce); window.clearTimeout(arrive); };
-  }, [currentLevel, eliminated, roster.length, screen, dragonArrived]);
+  }, [currentLevel, eliminated, roster.length, screen, dragonArrived, eventResult]);
   useEffect(() => {
     if (!dragonArrived) return;
     const clear = window.setTimeout(() => setPhaseNotice(""), 1400);
@@ -198,6 +205,13 @@ export function GameCanvas() {
                 <octahedronGeometry args={[.85, 0]} /><meshBasicMaterial color="#ffc84a" toneMapped={false} />
               </mesh>)}
 
+            {eventKind === "FINAL APPROVAL" && eventSeconds !== null && !eventResult && [[-14,3.4,-13],[14,3.4,8],[0,4.2,-22]].map((position,index) => seals.includes(`approval-seal-${index}`) ? null : <group key={index} position={position as [number,number,number]} userData={{propId:`approval-seal-${index}`}}>
+              <mesh><planeGeometry args={[2.8,3.4]}/><meshBasicMaterial color="#284a87" side={2}/></mesh>
+              <mesh position={[0,0,.035]}><planeGeometry args={[2.56,3.16]}/><meshBasicMaterial color="#fffaf0" side={2}/></mesh>
+              <mesh position={[0,.68,.08]}><circleGeometry args={[.65,32]}/><meshBasicMaterial color="#db5465" side={2}/></mesh>
+              <mesh position={[0,1.57,.11]}><boxGeometry args={[.8,.24,.05]}/><meshBasicMaterial color="#e4b861"/></mesh>
+              <mesh position={[0,-.54,.09]}><planeGeometry args={[1.9,.08]}/><meshBasicMaterial color="#81a0cd" side={2}/></mesh>
+            </group>)}
             {definition.theme === "gems" && <>
               <PaperworkMonster id="paper-inner" spawn={[-29, 0, 7]} />
               <PenMonster id="pen-mid" spawn={[22, 4.7, -4]} />
@@ -219,7 +233,7 @@ export function GameCanvas() {
 
       <HUD />
       {phaseNotice && <div className={`intensity-announcement intensity-announcement--${intensity.replace(" ", "-").toLowerCase()}`}>{phaseNotice}</div>}
-      {eventKind && eventSeconds !== null && <div className="dream-event" role="status"><b>{eventKind}</b><span>{eventResult ?? (eventKind === "PAPER JAM" ? `${seals.length}/3 SEALS · ${Math.ceil(eventSeconds)}S` : eventKind === "OVERTIME" ? `SURVIVE OR ELIMINATE 3 · ${Math.ceil(eventSeconds)}S` : `ELIMINATE MARKED TARGET · ${Math.ceil(eventSeconds)}S`)}</span></div>}
+      {eventKind && eventSeconds !== null && <div className="dream-event" role="status"><b>{eventKind}</b><span>{eventResult ?? (eventKind === "FINAL APPROVAL" ? `${3-seals.length} APPROVALS REMAIN · ${Math.ceil(eventSeconds)}S` : eventKind === "PAPER JAM" ? `${seals.length}/3 SEALS · ${Math.ceil(eventSeconds)}S` : eventKind === "OVERTIME" ? `SURVIVE OR ELIMINATE 3 · ${Math.ceil(eventSeconds)}S` : `ELIMINATE MARKED TARGET · ${Math.ceil(eventSeconds)}S`)}</span></div>}
       <MobileControls />
       <WeaponView />
       <MenuOverlay />

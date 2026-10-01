@@ -6,6 +6,7 @@ import { enemyHpScale, MAX_STAGE } from "../game/levels";
 import { BOSS_MAX_HP, PAPER_MONSTER_MAX_HP, PEN_MONSTER_MAX_HP } from "../game/config";
 import { getEnemyTuning } from "../game/levels";
 import { drawBoss } from "./Dummy";
+import { EnemyDoodle, type DoodleKind } from "./EnemyDoodle";
 import { OFFICE_ENEMIES, type OfficeKind } from "../game/officeEnemies";
 
 type Kind = "boss" | "ranged" | "paper" | "pen" | "fly" | "statue" | OfficeKind | "dragon";
@@ -35,22 +36,11 @@ function BossImage({ ranged }: { ranged: boolean }) {
 
 function Model({ kind }: { kind: Kind }) {
   if (kind === "boss" || kind === "ranged") return <BossImage ranged={kind === "ranged"} />;
-  if (kind in OFFICE_ENEMIES) {
-    const enemy=OFFICE_ENEMIES[kind as OfficeKind];
-    return <group position={[0,-.4,0]}>
-      <mesh position={[0,0,0]}><boxGeometry args={[kind==="stapler"?2.3:1.7,kind==="stapler"?1.2:2.4,1.1]}/><meshStandardMaterial color={enemy.color}/></mesh>
-      <mesh position={[0,kind==="stapler"?.6:1.45,.5]}><boxGeometry args={[1,.6,.65]}/><meshStandardMaterial color="#f9f7ee"/></mesh>
-      {[-1,1].map(side=><mesh key={side} position={[side*.62,-1,.2]}><boxGeometry args={[.3,.8,.45]}/><meshStandardMaterial color="#425d91"/></mesh>)}
-      {kind==="clipboard"&&<mesh position={[0,0,.65]}><boxGeometry args={[2.1,2.4,.12]}/><meshStandardMaterial color="#a5784c"/></mesh>}
-      {kind==="highlighter"&&<mesh position={[0,-1.35,0]} rotation={[0,0,Math.PI]}><coneGeometry args={[.6,.9,8]}/><meshStandardMaterial color="#d9ef5b"/></mesh>}
-      {kind==="shredder"&&Array.from({length:4},(_,i)=><mesh key={i} position={[(i-1.5)*.35,-1.5,.45]}><boxGeometry args={[.15,.9,.12]}/><meshStandardMaterial color="#f2f2e8"/></mesh>)}
-      {kind==="hr"&&<mesh position={[0,.35,.65]}><boxGeometry args={[.2,.9,.12]}/><meshStandardMaterial color="#d44853"/></mesh>}
-      {kind==="auditor"&&<mesh position={[0,-.1,.7]}><boxGeometry args={[1.3,1.4,.12]}/><meshStandardMaterial color="#81dbe8"/></mesh>}
-      {kind==="director"&&[-1,1].map(side=><mesh key={side} position={[side*1.1,.2,0]}><boxGeometry args={[.95,1.4,.15]}/><meshStandardMaterial color="#f7f3e9"/></mesh>)}
-    </group>;
+  if (kind in OFFICE_ENEMIES || kind === "dragon" || kind === "fly" || kind === "statue") {
+    const dragon=kind === "dragon";
+    return <EnemyDoodle kind={kind as DoodleKind} width={dragon?6.4:kind === "statue"?3.3:3.25} height={dragon?4.45:kind === "statue"?4:3.35} position={[0,dragon?-.15:0,0]}/>;
   }
-  if (kind==="dragon") return <group><mesh><boxGeometry args={[2.9,1.8,1.5]}/><meshStandardMaterial color="#f6f5ef"/></mesh><mesh position={[0,1,1]}><boxGeometry args={[1.5,1.1,1]}/><meshStandardMaterial color="#dcebf1"/></mesh>{[-1,1].map(side=><mesh key={side} position={[side*2.5,.35,0]} rotation={[0,0,side*.25]}><boxGeometry args={[3,1.7,.18]}/><meshStandardMaterial color="#f9f9f0"/></mesh>)}</group>;
-  return <group position={[0, kind === "fly" ? 0 : -0.35, 0]}>
+  return <group position={[0, -.35, 0]}>
     {kind === "paper" && <>
       <mesh><planeGeometry args={[2.2, 2.85]} /><meshBasicMaterial color="#2548b8" side={THREE.DoubleSide} /></mesh>
       <mesh position={[0, 0, 0.02]}><planeGeometry args={[2.05, 2.7]} /><meshBasicMaterial color="#fbfaf4" side={THREE.DoubleSide} /></mesh>
@@ -64,18 +54,6 @@ function Model({ kind }: { kind: Kind }) {
       <mesh position={[0, 1.3, 0.03]}><planeGeometry args={[0.79, 0.27]} /><meshBasicMaterial color="#ed5f61" side={THREE.DoubleSide} /></mesh>
       <mesh position={[0, -1.57, 0.04]} rotation={[0, 0, Math.PI]}><circleGeometry args={[0.47, 3]} /><meshBasicMaterial color="#293b8b" side={THREE.DoubleSide} /></mesh>
       {[-0.19, 0.19].map((x) => <mesh key={x} position={[x, 0.2, 0.05]}><circleGeometry args={[0.07, 12]} /><meshBasicMaterial color="#293b8b" /></mesh>)}
-    </>}
-    {kind === "fly" && <>
-      <mesh><icosahedronGeometry args={[1.12, 1]} /><meshStandardMaterial color="#8558dc" emissive="#402379" emissiveIntensity={0.35} /></mesh>
-      <mesh position={[0, 0.18, 0.88]}><sphereGeometry args={[0.48, 12, 8]} /><meshBasicMaterial color="#f7eaf6" /></mesh>
-      {[-1, 1].map((side) => <mesh key={side} position={[side * 1.25, 0, 0]} rotation={[0, 0, side * 0.4]}><coneGeometry args={[0.7, 2.1, 3]} /><meshStandardMaterial color="#c69cf1" side={THREE.DoubleSide} /></mesh>)}
-      {[-0.38, 0.38].map((x) => <mesh key={x} position={[x, -1.35, 0.42]} rotation={[Math.PI, 0, 0]}><coneGeometry args={[0.28, 0.86, 4]} /><meshBasicMaterial color="#e8eefc" /></mesh>)}
-    </>}
-    {kind === "statue" && <>
-      <mesh position={[0, -1.25, 0]}><cylinderGeometry args={[1, 1.18, 1.1, 7]} /><meshStandardMaterial color="#737884" /></mesh>
-      <mesh position={[0, 0.15, 0]}><boxGeometry args={[2.1, 1.85, 1.55]} /><meshStandardMaterial color="#8e94aa" /></mesh>
-      <mesh position={[0, 1.55, 0]}><dodecahedronGeometry args={[0.82, 0]} /><meshBasicMaterial color="#d1cad1" /></mesh>
-      <mesh position={[0, 1.6, 0.67]}><boxGeometry args={[0.75, 0.15, 0.22]} /><meshBasicMaterial color="#ed5f61" /></mesh>
     </>}
   </group>;
 }

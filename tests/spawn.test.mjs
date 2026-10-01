@@ -32,4 +32,8 @@ test('new campaign stages have enough reachable objective spawns', () => {
   }
   assert.equal(getLevelDefinition(12).theme,'heaven');
   assert.equal(getEnemyTuning(12).dragon,1);
+  assert.deepEqual([10,11,12].map(level => getLevelDefinition(level).name), ['THE LAST SHIFT','THE HELL','THE HEAVENS']);
+  assert.equal(getLevelDefinition(10).theme,'playground');
+  assert.equal(getLevelDefinition(11).theme,'hell');
+  assert.ok([10,11].every(level => !getEnemyTuning(level).dragon));
 });

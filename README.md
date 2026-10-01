@@ -4,7 +4,7 @@ A browser FPS drawn like a blue-ink notebook sketch. An exhausted office worker 
 
 ## Campaign
 
-Stages 1–12 revisit the Playground, Jungle, Gem Island, and Hell, then end in the Heaven office. Stage 11 is Purgatory Shift; Stage 12 is The Heavens. The final Paperwork Dragon arrives after a shorter prelude. Dream Anchors follow Stages 3, 6, and 9. A saved completion of the former Stage 10 finale continues at Stage 11.
+Stages 1–12 revisit the Playground, Jungle, Gem Island, and Hell, then end in the Heaven office. Stage 10 is The Last Shift on the Playground remix, Stage 11 is The Hell, and Stage 12 is The Heavens. The final Paperwork Dragon arrives after the prelude and the Final Approval seal event. Dream Anchors follow Stages 3, 6, and 9. A saved completion of the former Stage 10 finale continues at Stage 11.
 
 The roster includes managers, paperwork, pens, flying couriers, statues, five office enemies, and three named elite encounters. Red warning regions mark heavy attacks and map hazards. All new enemies count toward stage completion and use the same Scan, damage, and reward flow as the older roster.
 

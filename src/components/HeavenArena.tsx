@@ -1,9 +1,10 @@
-import { useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Edges } from "@react-three/drei";
 import { CuboidCollider, RigidBody } from "@react-three/rapier";
 import * as THREE from "three";
 import { useGameStore } from "../game/store";
+import { isApprovalPressure } from "../game/attackDirector";
 import { hazardDamage } from "../game/hazards";
 
 const BLUE = "#315fa5";
@@ -15,19 +16,27 @@ function JudgementRays() {
   const beams = useRef<(THREE.Mesh | null)[]>([]);
   const elapsed = useRef(0);
   const lastHit = useRef(-10);
+  const sweepAt = useRef(-Infinity);
+  useEffect(()=>{const onReject=()=>{sweepAt.current=performance.now();elapsed.current=0;};window.addEventListener("approval-rejected",onReject);return()=>window.removeEventListener("approval-rejected",onReject);},[]);
   useFrame((_, delta) => {
     const game = useGameStore.getState();
-    const enabled = game.screen === "playing" && !game.tutorialOpen && !Object.keys(game.enemyPositions).some(id => id.startsWith("dragon-") && !game.eliminated.includes(id));
-    if (enabled) elapsed.current += Math.min(delta, .1);
-    const phase = elapsed.current % 8;
-    const activeIndex = Math.floor(elapsed.current / 8) % raySites.length;
-    warning.current.forEach((mesh, i) => { if (mesh) mesh.visible = enabled && i === activeIndex && phase >= 4 && phase < 5; });
-    beams.current.forEach((mesh, i) => { if (mesh) mesh.visible = enabled && i === activeIndex && phase >= 5 && phase < 6; });
-    if (!enabled || phase < 5 || phase >= 6 || elapsed.current - lastHit.current < .8) return;
+    const enabled = game.screen === "playing" && !game.tutorialOpen && performance.now() >= game.hazardSuppressedUntil && !Object.keys(game.enemyPositions).some(id => id.startsWith("dragon-") && !game.eliminated.includes(id));
+    const sweepAge = (performance.now()-sweepAt.current)/1000;
+    const sweeping = sweepAge >= 0 && sweepAge < 4.8;
+    if (enabled && !sweeping) elapsed.current += Math.min(delta, .1);
+    const period = isApprovalPressure() ? 6.8 : 8;
+    const normalPhase = elapsed.current % period;
+    const phase = sweeping ? sweepAge % 1.6 : normalPhase;
+    const activeIndex = sweeping ? [0,2,4][Math.floor(sweepAge/1.6)] : Math.floor(elapsed.current / period) % raySites.length;
+    const warn = sweeping ? phase < .8 : phase >= period-4 && phase < period-3;
+    const strike = sweeping ? phase >= .8 : phase >= period-3 && phase < period-2;
+    warning.current.forEach((mesh, i) => { if (mesh) mesh.visible = enabled && i === activeIndex && warn; });
+    beams.current.forEach((mesh, i) => { if (mesh) mesh.visible = enabled && i === activeIndex && strike; });
+    if (!enabled || !strike || performance.now() - lastHit.current < 800) return;
     const [x, z] = raySites[activeIndex];
     const [px, py, pz] = game.playerPosition;
     if (Math.hypot(px - x, pz - z) < 4.5 && py < 4) {
-      lastHit.current = elapsed.current;
+      lastHit.current = performance.now();
       game.damagePlayer(hazardDamage(12, game.currentLevel, game.ngPlusCycle), [x, 2, z], "heavenBeam");
     }
   });
@@ -36,7 +45,7 @@ function JudgementRays() {
       <circleGeometry args={[4.5,32]}/><meshBasicMaterial color="#ef3042" transparent opacity={.48} depthWrite={false} side={THREE.DoubleSide}/>
     </mesh>
     <mesh ref={node => { beams.current[i] = node; }} position={[x,12,z]} visible={false}>
-      <cylinderGeometry args={[2.4,2.4,24,16]}/><meshBasicMaterial color="#a7eeff" transparent opacity={.72} depthWrite={false}/>
+      <cylinderGeometry args={[2.4,2.4,24,16]}/><meshBasicMaterial color="#ff9c76" transparent opacity={.55} depthWrite={false}/>
     </mesh>
   </group>)}</>;
 }
@@ -57,6 +66,29 @@ function CloudLifts(){
   </group>)}</>;
 }
 
+function FinalApprovalGate(){
+  const texture=useMemo(()=>{const canvas=document.createElement("canvas");canvas.width=768;canvas.height=512;const g=canvas.getContext("2d")!;
+    g.fillStyle="#fffdf3";g.strokeStyle="#285395";g.lineWidth=15;g.beginPath();g.roundRect(66,32,636,446,28);g.fill();g.stroke();
+    g.strokeStyle="#8aa7d6";g.lineWidth=3;for(let y=195;y<424;y+=43){g.beginPath();g.moveTo(107,y);g.lineTo(657,y);g.stroke();}
+    g.textAlign="center";g.fillStyle="#294b86";g.font="bold 48px ui-rounded, sans-serif";g.fillText("FINAL APPROVAL",384,112);
+    g.fillStyle="#d65a66";g.font="bold 30px ui-rounded, sans-serif";g.fillText("THE HEAVENS",384,164);
+    g.strokeStyle="#e6ba66";g.lineWidth=15;g.beginPath();g.arc(384,341,73,0,Math.PI*2);g.stroke();
+    g.fillStyle="#d65a66";g.font="bold 85px sans-serif";g.fillText("✓",384,372);
+    const t=new THREE.CanvasTexture(canvas);t.colorSpace=THREE.SRGBColorSpace;return t;},[]);
+  useEffect(()=>()=>texture.dispose(),[texture]);
+  return <group position={[0,0,-31]} userData={{ignoreProjectile:true}}>
+    <mesh position={[0,6,.8]}><planeGeometry args={[12,9]}/><meshBasicMaterial map={texture} transparent side={THREE.DoubleSide}/></mesh>
+    <mesh position={[0,12,0]}><torusGeometry args={[9,.18,8,48,Math.PI]}/><meshBasicMaterial color="#dfb969"/></mesh>
+    {[-1,1].map(side=><group key={side} position={[side*7,6,.5]}><mesh><cylinderGeometry args={[.6,.78,11,12]}/><meshBasicMaterial color="#f9f7e9"/></mesh><mesh position={[0,5.8,0]}><sphereGeometry args={[.9,12,8]}/><meshBasicMaterial color="#f4d887"/></mesh></group>)}
+  </group>;
+}
+
+function HeavenAmbience(){
+  const next=useRef(0);
+  useFrame(({clock})=>{if(clock.elapsedTime<next.current||useGameStore.getState().screen!=="playing")return;next.current=clock.elapsedTime+9;window.dispatchEvent(new CustomEvent("world-sfx",{detail:{kind:"heavenChime",position:[0,6,-31]}}));});
+  return null;
+}
+
 export function HeavenArena() {
   return <>
     <color attach="background" args={["#d7f0ff"]}/><fog attach="fog" args={["#d7f0ff", 65, 150]}/>
@@ -75,14 +107,14 @@ export function HeavenArena() {
     {platforms.map(([x,z],i)=><group key={i} position={[x,0,z]} userData={{ ignoreProjectile:true }}>
       <RigidBody type="fixed" colliders={false}><CuboidCollider args={[9.5,.25,9.5]} position={[0,2.25,0]}/><mesh position={[0,2.25,0]}><boxGeometry args={[19,.5,19]}/><meshStandardMaterial color="#e3f2fa"/><Edges color={BLUE}/></mesh></RigidBody>
       <mesh position={[0,2.56,0]}><boxGeometry args={[10,.1,10]}/><meshBasicMaterial color={i%2?"#eaf7ff":"#fffdfa"}/></mesh>
+      {[-5,-2.5,0,2.5,5].map(offset=><mesh key={offset} position={[offset,2.58,0]} rotation={[-Math.PI/2,0,0]}><planeGeometry args={[.045,18]}/><meshBasicMaterial color="#9eb7dc"/></mesh>)}
+      {[-7,7].map(offset=><mesh key={offset} position={[0,2.59,offset]} rotation={[-Math.PI/2,0,0]}><planeGeometry args={[18,.06]}/><meshBasicMaterial color="#9eb7dc"/></mesh>)}
       {[-1,1].map(side=><mesh key={side} position={[side*5,1.65,0]}><boxGeometry args={[.4,2.2,.4]}/><meshStandardMaterial color={BLUE}/></mesh>)}
     </group>)}
-    <group position={[0,0,-31]} userData={{ ignoreProjectile:true }}>
-      {[-1,1].map(side=><mesh key={side} position={[side*7,6,0]}><boxGeometry args={[1.1,12,1.3]}/><meshStandardMaterial color="#d7eaf8"/><Edges color={BLUE}/></mesh>)}
-      <mesh position={[0,11.7,0]}><boxGeometry args={[16,1.2,1.3]}/><meshStandardMaterial color="#f5d894"/><Edges color={BLUE}/></mesh>
-      <mesh position={[0,6,0]}><boxGeometry args={[9,9,.5]}/><meshStandardMaterial color="#f9fcff"/><Edges color={BLUE}/></mesh>
-    </group>
+    <FinalApprovalGate/>
     {Array.from({length:16},(_,i)=>{const a=i*2.399;return <mesh key={i} position={[Math.sin(a)*65,17+i%5*4,Math.cos(a)*60-10]} rotation={[.18,i,Math.sin(i)*.3]} userData={{ ignoreProjectile:true }}><boxGeometry args={[8+i%3*3,.16,5+i%4*2]}/><meshBasicMaterial color="#ffffff" transparent opacity={.65}/></mesh>;})}
+    {Array.from({length:10},(_,i)=>{const a=i*2.4;return <group key={`cloud-${i}`} position={[Math.sin(a)*67,11+i%4*5,Math.cos(a)*65-5]} userData={{ignoreProjectile:true}}>{[-1,0,1].map((side)=><mesh key={side} position={[side*3,Math.abs(side)*-.6,0]}><sphereGeometry args={[side===0?5:3.7,12,8]}/><meshBasicMaterial color="#fffefa" transparent opacity={.46} depthWrite={false}/></mesh>)}</group>;})}
+    <HeavenAmbience/>
     <CloudLifts/>
     <JudgementRays/>
   </>;

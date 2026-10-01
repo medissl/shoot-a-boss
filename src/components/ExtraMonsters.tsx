@@ -10,6 +10,7 @@ import { hasEnemyLineOfSight, moveWithAvoidance, safeEnemySpawn } from "../game/
 import { useGameStore } from "../game/store";
 import { ScanHalo } from "./ScanHalo";
 import { EnemyFeedback } from "./EnemyFeedback";
+import { EnemyDoodle } from "./EnemyDoodle";
 
 const STATUE_PERIOD = 20;
 const STATUE_WARNING = 5;
@@ -18,6 +19,7 @@ const STATUE_RADIUS = 5.5;
 
 export function ExtraMonster({ id, spawn, kind }: { id: string; spawn: [number, number, number]; kind: "fly" | "statue" }) {
   const root = useRef<THREE.Group>(null);
+  const art = useRef<THREE.Group>(null);
   const telegraph = useRef<THREE.Group>(null);
   const fire = useRef<THREE.Group>(null);
   const debris = useRef<THREE.Group>(null);
@@ -25,7 +27,6 @@ export function ExtraMonster({ id, spawn, kind }: { id: string; spawn: [number, 
   const attackBeam = useRef<THREE.Mesh>(null);
   const armed = useRef(false);
   const wasActive = useRef(false);
-  const wings = useRef<(THREE.Mesh | null)[]>([]);
   const awarenessUntil = useRef(0);
   const lastAttack = useRef(0);
   const lastDamage = useRef(0);
@@ -65,7 +66,7 @@ export function ExtraMonster({ id, spawn, kind }: { id: string; spawn: [number, 
       setHealth(hp.current);
       setHitFlash(true);
       if (hitTimer.current) window.clearTimeout(hitTimer.current);
-      hitTimer.current = window.setTimeout(() => setHitFlash(false), 330);
+      hitTimer.current = window.setTimeout(() => setHitFlash(false), 110);
       awarenessUntil.current = performance.now() + 5600;
       lastSeen.current.set(...useGameStore.getState().playerPosition);
       if (!hp.current) {
@@ -106,6 +107,7 @@ export function ExtraMonster({ id, spawn, kind }: { id: string; spawn: [number, 
       mesh.rotation.x = (kind === "fly" ? .27 : -.16) * fall;
       mesh.position.y = kind === "fly" ? THREE.MathUtils.lerp(deathOriginY.current, .95, fall) : -.12 * fall;
       mesh.scale.setScalar(age > 4 ? Math.max(.001, 5 - age) : 1);
+      const sprite=art.current?.children[0] as THREE.Mesh | undefined; if(sprite){const material=sprite.material as THREE.MeshBasicMaterial;material.opacity=age>4?Math.max(0,5-age):1;}
       if (debris.current) { debris.current.rotation.y += delta * 2; debris.current.scale.setScalar(1 + Math.min(age, .8) * .35); }
       return;
     }
@@ -120,6 +122,7 @@ export function ExtraMonster({ id, spawn, kind }: { id: string; spawn: [number, 
     const now = state.clock.elapsedTime;
     const motion = enemyMotionFactor(id, live.runId);
     const [px, py, pz] = live.playerPosition;
+    if (art.current) art.current.rotation.y = Math.atan2(px-mesh.position.x,pz-mesh.position.z)-mesh.rotation.y;
 
     if (kind === "fly") {
       if (motion <= 0) return;
@@ -137,7 +140,7 @@ export function ExtraMonster({ id, spawn, kind }: { id: string; spawn: [number, 
         const direction = new THREE.Vector3(target.x - mesh.position.x, 0, target.z - mesh.position.z);
         const distance = direction.length();
         if (dive.current === "recover" && now >= recoveryUntil.current && mesh.position.y > py + 4.3) dive.current = "cruise";
-        if (dive.current === "cruise" && seesPlayer && distance < 8 && now - lastAttack.current > Math.max(2.1, 3.9 - effectiveLevel * 0.09) && claimAttack(id, live.runId, level, 1500)) dive.current = "dive";
+        if (dive.current === "cruise" && seesPlayer && distance < 8 && now - lastAttack.current > Math.max(2.1, 3.9 - effectiveLevel * 0.09) && claimAttack(id, live.runId, level, 1500)) {dive.current = "dive";window.dispatchEvent(new CustomEvent("world-sfx",{detail:{kind:"flyAttack",position:[mesh.position.x,mesh.position.y,mesh.position.z]}}));}
         const desiredDistance = dive.current === "dive" ? 1.6 : 3.8;
         if (distance > desiredDistance) {
           const stride = direction.normalize().multiplyScalar(Math.min(distance - desiredDistance, (3.4 + effectiveLevel * 0.16) * tuning.speed * motion * delta));
@@ -151,7 +154,6 @@ export function ExtraMonster({ id, spawn, kind }: { id: string; spawn: [number, 
       }
       mesh.rotation.y = THREE.MathUtils.damp(mesh.rotation.y, Math.atan2(px - mesh.position.x, pz - mesh.position.z), 4, delta);
       if (seesPlayer && Math.floor(now * 2) !== Math.floor((now - delta) * 2)) window.dispatchEvent(new CustomEvent("world-sfx", { detail: { kind: "flyWing", position: [mesh.position.x, mesh.position.y, mesh.position.z] } }));
-      wings.current.forEach((wing, side) => { if (wing) wing.rotation.z = (side ? 1 : -1) * (0.35 + Math.sin(now * 12) * 0.32); });
       if (now - lastPosition.current > 0.14) {
         lastPosition.current = now;
         live.setEnemyPosition(id, [mesh.position.x, mesh.position.y, mesh.position.z]);
@@ -218,19 +220,16 @@ export function ExtraMonster({ id, spawn, kind }: { id: string; spawn: [number, 
   return <group ref={root} position={[safeSpawn[0], kind === "fly" ? 5.2 : 0, safeSpawn[2]]}>
     {dead && <group ref={debris} userData={{ ignoreProjectile: true }}>{[-1, 1].map(side => <mesh key={side} position={[side * 1.55, kind === "fly" ? .45 : 2.8, .3]} rotation={[side * .4, 0, side * .5]}><tetrahedronGeometry args={[kind === "fly" ? .4 : .55]} /><meshBasicMaterial color={kind === "fly" ? "#d7a7f6" : "#aab0b9"} transparent opacity={.7} /></mesh>)}</group>}
     <EnemyFeedback id={id} root={root} />
-    {kind === "fly" ? <>
-      <mesh userData={{ targetId: id, targetPart: "body" }} castShadow><icosahedronGeometry args={[1.2, 1]} /><meshStandardMaterial color={hitFlash ? "#ff363c" : "#8558dc"} emissive="#402379" emissiveIntensity={0.35} /></mesh>
-      <mesh position={[0, 0.72, 1.12]} userData={{ targetId: id, targetPart: "head" }}><sphereGeometry args={[0.61, 12, 8]} /><meshBasicMaterial color={hitFlash ? "#ff363c" : "#f7eaf6"} /></mesh>
-      {[-1, 1].map((side, i) => <mesh key={side} ref={(node) => { wings.current[i] = node; }} position={[side * 1.25, 0, 0]} userData={{ targetId: id, targetPart: "body" }}><coneGeometry args={[0.7, 2.1, 3]} /><meshStandardMaterial color={hitFlash ? "#ff363c" : "#c69cf1"} side={THREE.DoubleSide} /></mesh>)}
-      {[-0.38, 0.38].map((x) => <mesh key={x} position={[x, -1.35, 0.42]} rotation={[Math.PI, 0, 0]} userData={{ targetId: id, targetPart: "leg" }}>
-        <coneGeometry args={[0.28, 0.86, 4]} /><meshBasicMaterial color="#e8eefc" />
-      </mesh>)}
+    <group ref={art}><EnemyDoodle kind={kind} dead={dead} flash={hitFlash} width={kind === "fly" ? 3.9 : 4} height={kind === "fly" ? 3.5 : 5.1} position={[0,kind === "fly" ? .1 : 2.35,.26]}/></group>
+    {!dead && (kind === "fly" ? <>
+      <mesh position={[0,0,0]} userData={{targetId:id,targetPart:"body"}}><boxGeometry args={[1.7,1.8,1.1]}/><meshBasicMaterial colorWrite={false} depthWrite={false}/></mesh>
+      <mesh position={[0,.9,0]} userData={{targetId:id,targetPart:"head"}}><boxGeometry args={[1.25,.85,1]}/><meshBasicMaterial colorWrite={false} depthWrite={false}/></mesh>
+      {[-1,1].map(side=><mesh key={side} position={[side*.35,-1.35,0]} userData={{targetId:id,targetPart:"leg"}}><boxGeometry args={[.4,.7,.8]}/><meshBasicMaterial colorWrite={false} depthWrite={false}/></mesh>)}
     </> : <>
-      <mesh position={[0, 0.7, 0]} castShadow userData={{ targetId: id, targetPart: "leg" }}><cylinderGeometry args={[1.2, 1.4, 1.4, 7]} /><meshStandardMaterial color={hitFlash ? "#ff363c" : "#737884"} roughness={0.9} /></mesh>
-      <mesh position={[0, 2.1, 0]} castShadow userData={{ targetId: id, targetPart: "body" }}><boxGeometry args={[2.5, 2.2, 1.8]} /><meshStandardMaterial color={hitFlash ? "#ff363c" : "#8e94aa"} roughness={0.8} /></mesh>
-      <mesh position={[0, 4.02, 0.24]} castShadow userData={{ targetId: id, targetPart: "head" }}><dodecahedronGeometry args={[0.95, 0]} /><meshBasicMaterial color={hitFlash ? "#ff363c" : "#d1cad1"} /></mesh>
-      <mesh position={[0, 3.65, 0.7]} userData={{ ignoreProjectile: true }}><boxGeometry args={[0.85, 0.15, 0.22]} /><meshBasicMaterial color="#ed5f61" /></mesh>
-    </>}
+      <mesh position={[0,.75,0]} userData={{targetId:id,targetPart:"leg"}}><boxGeometry args={[2.4,1.3,1.4]}/><meshBasicMaterial colorWrite={false} depthWrite={false}/></mesh>
+      <mesh position={[0,2.15,0]} userData={{targetId:id,targetPart:"body"}}><boxGeometry args={[2.4,1.8,1.5]}/><meshBasicMaterial colorWrite={false} depthWrite={false}/></mesh>
+      <mesh position={[0,4,0]} userData={{targetId:id,targetPart:"head"}}><boxGeometry args={[1.55,1.2,1.3]}/><meshBasicMaterial colorWrite={false} depthWrite={false}/></mesh>
+    </>)}
     {kind === "statue" && <>
       <mesh ref={warningBeam} visible={false} userData={{ ignoreProjectile: true }}><cylinderGeometry args={[.09,.09,1,8]}/><meshBasicMaterial color="#ff5062" depthWrite={false} transparent opacity={.6}/></mesh>
       <mesh ref={attackBeam} visible={false} userData={{ ignoreProjectile: true }}><cylinderGeometry args={[.48,.48,1,12]}/><meshBasicMaterial color="#ff213a" toneMapped={false} depthWrite={false} transparent opacity={.88}/></mesh>

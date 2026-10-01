@@ -1,4 +1,4 @@
-import { Edges, Html } from "@react-three/drei";
+import { Html } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
@@ -10,15 +10,19 @@ import { isEnemyPositionBlocked, moveWithAvoidance, safeEnemySpawn } from "../ga
 import { useGameStore } from "../game/store";
 import { EnemyFeedback } from "./EnemyFeedback";
 import { ScanHalo } from "./ScanHalo";
+import { EnemyDoodle } from "./EnemyDoodle";
+import type { WorldSound } from "../game/worldSound";
 
 import { OFFICE_ENEMIES, type OfficeKind } from "../game/officeEnemies";
 const eliteKinds: OfficeKind[] = ["hr","auditor","director"];
 const isElite = (kind: OfficeKind) => eliteKinds.includes(kind);
 const aim = new THREE.Vector3();
+function cue(kind:WorldSound,position:[number,number,number]) {window.dispatchEvent(new CustomEvent("world-sfx",{detail:{kind,position}}));}
 
 export function OfficeEnemy({ id, spawn, kind }: { id: string; spawn: [number,number,number]; kind: OfficeKind }) {
   const profile = OFFICE_ENEMIES[kind];
   const root = useRef<THREE.Group>(null);
+  const art = useRef<THREE.Group>(null);
   const marker = useRef<THREE.Mesh>(null);
   const corridor = useRef<THREE.Mesh>(null);
   const projectile = useRef<THREE.Mesh>(null);
@@ -31,7 +35,7 @@ export function OfficeEnemy({ id, spawn, kind }: { id: string; spawn: [number,nu
   const [dead,setDead] = useState(false);
   const [flash,setFlash] = useState(false);
   const [pop,setPop] = useState(0);
-  const [exposed,setExposed] = useState(false);
+
   const deadAt = useRef(0);
   const phase = useRef<"idle"|"warn"|"strike"|"recover">("idle");
   const phaseTime = useRef(0);
@@ -63,11 +67,12 @@ export function OfficeEnemy({ id, spawn, kind }: { id: string; spawn: [number,nu
       if(popTimer.current)clearTimeout(popTimer.current);
       popTimer.current=window.setTimeout(()=>setPop(0),650);
       if (flashTimer.current) clearTimeout(flashTimer.current);
-      flashTimer.current = window.setTimeout(() => setFlash(false),220);
+      flashTimer.current = window.setTimeout(() => setFlash(false),110);
       if (hp.current <= 0) {
         deadAt.current = performance.now();
         if (root.current) root.current.userData.ignoreProjectile = true;
         setDead(true); eliminate(id);
+        cue(kind === "stapler" ? "staplerDeath" : kind === "shredder" ? "shredderDeath" : "paperDeath",[root.current?.position.x ?? 0,1,root.current?.position.z ?? 0]);
       }
     };
     const blast = (event: Event) => {
@@ -92,11 +97,13 @@ export function OfficeEnemy({ id, spawn, kind }: { id: string; spawn: [number,nu
       mesh.rotation.z=THREE.MathUtils.lerp(0,-.8,THREE.MathUtils.smoothstep(age,0,.8));
       mesh.position.y=kind==="highlighter"?THREE.MathUtils.lerp(3,0,Math.min(1,age)):0;
       mesh.scale.setScalar(age>4.7?Math.max(.001,5.7-age):1);
+      const sprite=art.current?.children[0] as THREE.Mesh | undefined; if(sprite){const material=sprite.material as THREE.MeshBasicMaterial;material.opacity=age>4.7?Math.max(0,5.7-age):1;}
       return;
     }
     const game=useGameStore.getState();
     if (game.screen!=="playing" || game.tutorialOpen) { if (telegraph) telegraph.visible=false;if(lane)lane.visible=false;if(shot)shot.visible=false; return; }
     const [px,py,pz]=game.playerPosition;
+    if(art.current){art.current.rotation.y=Math.atan2(px-mesh.position.x,pz-mesh.position.z)-mesh.rotation.y;art.current.rotation.z=kind==="clipboard"&&performance.now()<openUntil.current?-.17:0;}
     const dist=Math.hypot(px-mesh.position.x,pz-mesh.position.z);
     const motion=enemyMotionFactor(id,game.runId);
     if (now-lastPosition.current>.15) {
@@ -115,6 +122,7 @@ export function OfficeEnemy({ id, spawn, kind }: { id: string; spawn: [number,nu
       mesh.rotation.y=THREE.MathUtils.damp(mesh.rotation.y,Math.atan2(px-mesh.position.x,pz-mesh.position.z),6,delta);
       if (dist<profile.range && now-lastAttack.current>profile.cooldown && claimAttack(id,game.runId,level,Math.ceil((profile.warning+1)*1000))) {
         phase.current="warn";phaseTime.current=now;lastAttack.current=now;attackNumber.current++;
+        cue(kind === "highlighter" ? "markerCharge" : kind === "stapler" ? "staplerClick" : kind === "shredder" ? "shredderMotor" : kind === "sticky" ? "stickyPeel" : kind === "hr" ? "hrStamp" : kind === "auditor" ? "auditorPage" : kind === "director" ? "directorGavel" : "paperWarning",[mesh.position.x,1.6,mesh.position.z]);
         locked.current.set(px,0,pz);
         direction.current.set(px-mesh.position.x,0,pz-mesh.position.z).normalize();
         if(kind==="director"&&attackNumber.current%3===0){
@@ -124,6 +132,7 @@ export function OfficeEnemy({ id, spawn, kind }: { id: string; spawn: [number,nu
       }
     } else if (phase.current==="warn" && now-phaseTime.current>=profile.warning) {
       phase.current="strike";phaseTime.current=now;
+      cue(kind === "stapler" ? "staplerSnap" : kind === "shredder" ? "shredderMotor" : kind === "highlighter" ? "markerSweep" : kind === "sticky" ? "stickySlap" : kind === "clipboard" ? "clipboardThud" : kind === "hr" ? "hrStamp" : kind === "auditor" ? "auditorPage" : kind === "director" ? "directorGavel" : "officeAttack",[mesh.position.x,1.6,mesh.position.z]);
       if (kind==="stapler" || kind==="shredder" || kind==="hr") {
         // The launch direction stays fixed once the red lane has appeared.
         locked.current.copy(mesh.position).addScaledVector(direction.current,Math.min(profile.range,18));
@@ -148,20 +157,21 @@ export function OfficeEnemy({ id, spawn, kind }: { id: string; spawn: [number,nu
         phase.current="recover";phaseTime.current=now;
         if (kind==="clipboard"||kind==="auditor") {
           openUntil.current=performance.now()+(kind==="auditor"?2000:1000);
-          setExposed(true);
+
           if(exposeTimer.current)clearTimeout(exposeTimer.current);
-          exposeTimer.current=window.setTimeout(()=>setExposed(false),kind==="auditor"?2000:1000);
+          exposeTimer.current=window.setTimeout(()=>{},kind==="auditor"?2000:1000);
         }
       }
     } else if (phase.current==="recover" && now-phaseTime.current>(kind==="stapler"?.9:kind==="shredder"?1.2:isElite(kind)?1.5:1)) phase.current="idle";
     if (telegraph) {
       const charge=kind==="stapler"||kind==="shredder"||kind==="hr";
-      telegraph.visible=phase.current==="warn" && motion>0 && !charge;
+      telegraph.visible=(phase.current==="warn" || phase.current==="strike") && motion>0 && !charge;
       if (telegraph.visible) {
         mesh.updateWorldMatrix(true,false);
         telegraph.position.copy(mesh.worldToLocal(new THREE.Vector3(locked.current.x,.06,locked.current.z)));
         telegraph.scale.set(profile.radius*2,kind==="highlighter"||kind==="auditor"?16:profile.radius*2,1);
-        (telegraph.material as THREE.MeshBasicMaterial).opacity=.32+.15*Math.sin(now*22);
+        (telegraph.material as THREE.MeshBasicMaterial).opacity=phase.current==="strike"?.7:.32+.15*Math.sin(now*22);
+        (telegraph.material as THREE.MeshBasicMaterial).color.set(phase.current==="strike"?"#ffa24f":"#f1283b");
       }
     }
     if(lane){
@@ -181,27 +191,17 @@ export function OfficeEnemy({ id, spawn, kind }: { id: string; spawn: [number,nu
   const height=heavy?3.4:kind==="stapler"?1.45:kind==="sticky"?2:2.65;
   return <group ref={root} position={[safeSpawn[0],kind==="highlighter"?3:0,safeSpawn[2]]}>
     <EnemyFeedback id={id} root={root}/>
-    <mesh position={[0,height*.46,0]} castShadow userData={{targetId:id,targetPart:"body"}}>
-      {kind==="stapler"?<boxGeometry args={[2,1.1,2.6]}/>:kind==="highlighter"?<cylinderGeometry args={[.65,.65,2.1,8]}/>:<boxGeometry args={[heavy?2.4:1.35,height*.65,heavy?1.3:.6]}/>}
-      <meshStandardMaterial color={flash?"#ff4455":profile.color} roughness={.8}/>
-      <Edges color="#2548b8"/>
-    </mesh>
-    <mesh position={[0,height*.86,.3]} userData={{targetId:id,targetPart:"head"}}>
-      <boxGeometry args={[heavy?1.45:.95,.65,.55]}/><meshStandardMaterial color={flash?"#ff4455":"#f9f8ef"}/><Edges color="#2548b8"/>
-    </mesh>
-    {[-1,1].map(side=><group key={side}>
-      <mesh position={[side*(heavy?.78:.45),.24,0]} userData={{targetId:id,targetPart:"leg"}}><boxGeometry args={[.34,.52,.54]}/><meshStandardMaterial color="#546b9a"/><Edges color="#2548b8"/></mesh>
-      <mesh position={[side*.27,height*.9,.59]} userData={{ignoreProjectile:true}}><boxGeometry args={[.12,.12,.07]}/><meshBasicMaterial color={dead?"#293d73":"#ed4853"}/></mesh>
-    </group>)}
-    {kind==="clipboard"&&<mesh position={[0,1.7,.78]} userData={{targetId:id,targetPart:"body"}}><boxGeometry args={[2.45,2.5,.18]}/><meshStandardMaterial color="#826449"/><Edges color="#2548b8"/></mesh>}
-    {(kind==="sticky"||kind==="director")&&Array.from({length:3},(_,i)=><mesh key={i} position={[(i-1)*.5,height*.5,.42+i*.04]} rotation={[0,0,(i-1)*.14]} userData={{targetId:id,targetPart:"body"}}><planeGeometry args={[.75,.9]}/><meshBasicMaterial color={kind==="sticky"?"#ffe679":"#f7f3dc"} side={THREE.DoubleSide}/></mesh>)}
-    {kind==="hr"&&<mesh position={[0,2.8,.72]} userData={{ignoreProjectile:true}}><boxGeometry args={[.25,1.2,.08]}/><meshBasicMaterial color="#d74654"/></mesh>}
-    {kind==="auditor"&&<mesh position={[0,1.7,.84]} userData={{ignoreProjectile:true}}><boxGeometry args={[1.6,1.9,.18]}/><meshStandardMaterial color={exposed?"#fff4a5":"#7dd9e7"}/><Edges color="#2548b8"/></mesh>}
+    <group ref={art}><EnemyDoodle kind={kind} dead={dead} flash={flash} width={heavy?4.4:kind==="stapler"?3.5:3.1} height={heavy?4.1:kind==="stapler"?2.4:3.15} position={[0,heavy?1.75:kind==="stapler"?1.05:height*.49,.18]}/></group>
+    {!dead&&<>
+      <mesh position={[0,height*.5,0]} userData={{targetId:id,targetPart:"body"}}><boxGeometry args={[heavy?2.35:kind==="stapler"?2:1.3,height*.58,.9]}/><meshBasicMaterial colorWrite={false} depthWrite={false}/></mesh>
+      <mesh position={[0,kind==="highlighter"?1.48:kind==="clipboard"?2.26:height*.86,0]} userData={{targetId:id,targetPart:"head"}}><boxGeometry args={[heavy?1.4:kind==="stapler"?.85:1,height*.22,.85]}/><meshBasicMaterial colorWrite={false} depthWrite={false}/></mesh>
+      {[-1,1].map(side=><mesh key={side} position={[side*(heavy?.67:.38),.28,0]} userData={{targetId:id,targetPart:"leg"}}><boxGeometry args={[.36,.55,.8]}/><meshBasicMaterial colorWrite={false} depthWrite={false}/></mesh>)}
+      {kind==="clipboard"&&<mesh position={[0,1.7,.38]} userData={{targetId:id,targetPart:"body"}}><boxGeometry args={[2.45,2.5,.2]}/><meshBasicMaterial colorWrite={false} depthWrite={false}/></mesh>}
+    </>}
     <mesh ref={marker} rotation={[-Math.PI/2,0,0]} visible={false} userData={{ignoreProjectile:true}}>{kind==="highlighter"||kind==="auditor"?<planeGeometry args={[1,1]}/>:<circleGeometry args={[.5,32]}/>}<meshBasicMaterial color="#f1283b" transparent opacity={.4} depthWrite={false} side={THREE.DoubleSide}/></mesh>
     {(kind==="stapler"||kind==="shredder"||kind==="hr")&&<mesh ref={corridor} rotation={[-Math.PI/2,0,0]} visible={false} userData={{ignoreProjectile:true}}><planeGeometry args={[1,1]}/><meshBasicMaterial color="#ed283c" transparent opacity={.45} depthWrite={false} side={THREE.DoubleSide}/></mesh>}
     {kind==="sticky"&&<mesh ref={projectile} visible={false} userData={{ignoreProjectile:true}}><boxGeometry args={[.7,.6,.08]}/><meshBasicMaterial color="#ffe262"/></mesh>}
     {!dead&&<><ScanHalo id={id} size={heavy?2.7:1.5}/><Html position={[0,height+1,0]} center zIndexRange={[40,0]} style={{pointerEvents:"none"}}><div className="office-enemy-label"><b>{profile.name}</b><i style={{width:`${health/maxHp*100}%`}}/></div></Html></>}
     {pop>0&&<Html position={[0,height+.5,0]} center zIndexRange={[40,0]} style={{pointerEvents:"none"}}><div className="boss-damage-pop"><strong>{pop}</strong></div></Html>}
-    {dead&&<mesh position={[0,height*.8,.65]} userData={{ignoreProjectile:true}}><planeGeometry args={[.7,.3]}/><meshBasicMaterial color="#263c70" side={THREE.DoubleSide}/></mesh>}
   </group>;
 }
