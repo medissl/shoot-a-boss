@@ -58,9 +58,10 @@ export function PaperworkDragon({ id = "dragon-final" }: { id?: string }) {
   useEffect(()=>{
     const onHit=(event:Event)=>{
       const {id:target,damage,part}=(event as CustomEvent<{id:string;damage:number;part?:string}>).detail;
+      const sealIndex=SEALS.findIndex(name=>target===`${id}-seal-${name}`);
+      if (target!==id&&sealIndex<0) return;
       if (hp.current<=0) return;
       setFlash(true);if(flashTimer.current)clearTimeout(flashTimer.current);flashTimer.current=window.setTimeout(()=>setFlash(false),110);
-      const sealIndex=SEALS.findIndex(name=>target===`${id}-seal-${name}`);
       if (sealIndex>=0) {
         if (seals.current[sealIndex]<=0) return;
         seals.current[sealIndex]=Math.max(0,seals.current[sealIndex]-damage);

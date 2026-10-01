@@ -43,6 +43,7 @@ export function PlayerController() {
   const ziplineRoute = useRef<(typeof ZIPLINES)[number] | null>(null);
   const ziplineProgress = useRef(0);
   const stickySlowUntil = useRef(0);
+  const lastRecovery = useRef(-Infinity);
 
   const { camera, gl } = useThree();
   const cameraRef = useRef(camera);
@@ -265,6 +266,18 @@ export function PlayerController() {
 
     const now = performance.now();
     const position = rigid.translation();
+    if ((position.y < -12 || Math.abs(position.x) > 125 || Math.abs(position.z) > 125) && now - lastRecovery.current > 2500) {
+      lastRecovery.current = now;
+      ziplineRoute.current = null;
+      rigid.setGravityScale(1, true);
+      const safe = getPlayerSpawn(level);
+      rigid.setTranslation({ x: safe[0], y: safe[1], z: safe[2] }, true);
+      rigid.setLinvel({ x: 0, y: 0, z: 0 }, true);
+      setPlayerPosition(safe);
+      useGameStore.getState().damagePlayer(8, [position.x, position.y, position.z], true);
+      window.dispatchEvent(new CustomEvent("map-hazard-notice", { detail: { message: level === 12 ? "THE CLOUDS CATCH YOU" : "BACK INSIDE THE DREAM" } }));
+      return;
+    }
 
     const riding = ziplineRoute.current !== null;
     if (riding) {

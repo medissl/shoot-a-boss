@@ -2,6 +2,7 @@ import { Html } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
+import { ARENA_HALF_SIZE } from "../game/config";
 import { claimAttack } from "../game/attackDirector";
 import { reportBossHealth } from "../game/bossHud";
 import { useHitHealthBar } from "./useHitHealthBar";
@@ -169,7 +170,7 @@ export function OfficeEnemy({ id, spawn, kind }: { id: string; spawn: [number,nu
       const age=now-phaseTime.current;
       if (kind==="stapler" || kind==="shredder" || (kind==="hr"&&signature.current===0)) {
         const stride=direction.current.clone().multiplyScalar((kind==="stapler"?22:kind==="shredder"?18:16)*motion*delta);
-        if(!isEnemyPositionBlocked(mesh.position.x+stride.x,mesh.position.z+stride.z,isElite(kind)?2.2:1.4,level))mesh.position.add(stride);
+        if(Math.abs(mesh.position.x+stride.x)<ARENA_HALF_SIZE-2&&Math.abs(mesh.position.z+stride.z)<ARENA_HALF_SIZE-2&&!isEnemyPositionBlocked(mesh.position.x+stride.x,mesh.position.z+stride.z,isElite(kind)?2.2:1.4,level))mesh.position.add(stride);
         else {phase.current="recover";phaseTime.current=now;}
       }
       const [x,z]=[locked.current.x,locked.current.z];
