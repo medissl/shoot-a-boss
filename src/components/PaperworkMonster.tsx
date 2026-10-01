@@ -8,6 +8,7 @@ import { PAPER_MONSTER_MAX_HP } from "../game/config";
 import { enemyMotionFactor } from "../game/effects";
 import { enemyHpScale, getEnemyTuning } from "../game/levels";
 import { claimAttack } from "../game/attackDirector";
+import { useHitHealthBar } from "./useHitHealthBar";
 import { paperBlastDamage, type PaperBlast } from "../game/hazards";
 import {
   hasEnemyLineOfSight,
@@ -46,6 +47,7 @@ export function PaperworkMonster({
   const awarenessUntil = useRef(0);
   const nextRoamAt = useRef(0);
   const [hp, setHp] = useState(maxHp);
+  const { healthBarVisible, revealHealthBar } = useHitHealthBar();
   const [hit, setHit] = useState(false);
   const [dead, setDead] = useState(false);
   const [gone, setGone] = useState(false);
@@ -79,6 +81,7 @@ export function PaperworkMonster({
       if (detail.id !== id || dead || eliminated) return;
 
       awarenessUntil.current = performance.now() + 4200;
+      revealHealthBar();
       const nextHp = Math.max(0, hpRef.current - detail.damage);
       hpRef.current = nextHp;
       setHp(nextHp);
@@ -105,7 +108,7 @@ export function PaperworkMonster({
     window.addEventListener("boss-hit", handler as EventListener);
     return () =>
       window.removeEventListener("boss-hit", handler as EventListener);
-  }, [dead, eliminate, eliminated, id]);
+  }, [dead, eliminate, eliminated, id, revealHealthBar]);
 
   useEffect(() => {
     const blast = (event: Event) => {
@@ -319,7 +322,7 @@ export function PaperworkMonster({
         </mesh>
       )}
 
-      {!dead && (
+      {!dead && healthBarVisible && (
         <group position={[0, 2.18, 0.04]} userData={{ ignoreProjectile: true }}>
           <mesh>
             <planeGeometry args={[1.3, 0.06]} />

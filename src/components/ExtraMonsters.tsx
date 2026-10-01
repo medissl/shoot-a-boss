@@ -5,6 +5,7 @@ import * as THREE from "three";
 import { enemyMotionFactor } from "../game/effects";
 import { enemyHpScale, getEnemyTuning } from "../game/levels";
 import { claimAttack } from "../game/attackDirector";
+import { useHitHealthBar } from "./useHitHealthBar";
 import { paperBlastDamage, type PaperBlast } from "../game/hazards";
 import { hasEnemyLineOfSight, moveWithAvoidance, safeEnemySpawn } from "../game/navigation";
 import { useGameStore } from "../game/store";
@@ -51,6 +52,7 @@ export function ExtraMonster({ id, spawn, kind }: { id: string; spawn: [number, 
   const deadAt = useRef(0);
   const deathOriginY = useRef(0);
   const [health, setHealth] = useState(maxHp);
+  const { healthBarVisible, revealHealthBar } = useHitHealthBar();
   const [damagePops, setDamagePops] = useState<{id:number; amount:number; part:"head"|"body"|"leg"}[]>([]);
   const nextDamagePopId = useRef(0);
   const safeSpawn = useMemo(() => safeEnemySpawn(spawn, kind === "statue" ? 1.5 : 1.7, level), [spawn, kind, level]);
@@ -59,6 +61,7 @@ export function ExtraMonster({ id, spawn, kind }: { id: string; spawn: [number, 
     const onHit = (event: Event) => {
       const { id: target, damage, part } = (event as CustomEvent<{ id: string; damage: number; part?:"head"|"body"|"leg" }>).detail;
       if (target !== id || hp.current <= 0) return;
+      revealHealthBar();
       const popId = ++nextDamagePopId.current;
       setDamagePops((current) => [...current.slice(-3), {id:popId,amount:Math.round(damage),part:part??"body"}]);
       window.setTimeout(() => setDamagePops((current) => current.filter((pop) => pop.id !== popId)), 750);
@@ -78,7 +81,7 @@ export function ExtraMonster({ id, spawn, kind }: { id: string; spawn: [number, 
     };
     window.addEventListener("boss-hit", onHit);
     return () => { window.removeEventListener("boss-hit", onHit); if (hitTimer.current) window.clearTimeout(hitTimer.current); };
-  }, [eliminate, id, kind, spawn]);
+  }, [eliminate, id, kind, spawn, revealHealthBar]);
 
   useEffect(() => {
     const blast = (event: Event) => {
@@ -178,8 +181,9 @@ export function ExtraMonster({ id, spawn, kind }: { id: string; spawn: [number, 
     const warning = phase >= STATUE_PERIOD - STATUE_WARNING;
     const active = started && phase < STATUE_FIRE_SECONDS;
     if (warning && !wasWarning.current) {
-      armed.current = Math.hypot(px-mesh.position.x,pz-mesh.position.z) < 72*tuning.vision &&
-        hasEnemyLineOfSight(new THREE.Vector3(mesh.position.x,3.6,mesh.position.z),new THREE.Vector3(px,py+1,pz),level,.45);
+      armed.current = motion > 0 && Math.hypot(px-mesh.position.x,pz-mesh.position.z) < 72*tuning.vision &&
+        hasEnemyLineOfSight(new THREE.Vector3(mesh.position.x,3.6,mesh.position.z),new THREE.Vector3(px,py+1,pz),level,.45) &&
+        claimAttack(id,live.runId,level,(STATUE_WARNING+STATUE_FIRE_SECONDS)*1000);
       targetArea.current.set(px - mesh.position.x, Math.max(0,py-1.4), pz - mesh.position.z);
       if(armed.current)window.dispatchEvent(new CustomEvent("world-sfx",{detail:{kind:"statueCharge",position:[mesh.position.x,mesh.position.y,mesh.position.z]}}));
     }
@@ -248,7 +252,7 @@ export function ExtraMonster({ id, spawn, kind }: { id: string; spawn: [number, 
         })}
       </group>
     </>}
-    {!dead && <group position={[0, kind === "fly" ? 1.65 : 4.7, 0]} userData={{ ignoreProjectile: true }}>
+    {!dead && healthBarVisible && <group position={[0, kind === "fly" ? 1.65 : 4.7, 0]} userData={{ ignoreProjectile: true }}>
       <mesh scale={[Math.max(0.04, health / maxHp), 1, 1]}><boxGeometry args={[1.8, 0.09, 0.08]} /><meshBasicMaterial color="#fa5964" /></mesh>
     </group>}
     {damagePops.map((pop,index)=><Html key={pop.id} position={[0, (kind === "fly" ? 2.25 : 5.15)+index*.14,0]} center zIndexRange={[40,0]} style={{pointerEvents:"none"}}><div className={`boss-damage-pop boss-damage-pop--${pop.part}`}>{pop.part==="head"&&<span>HEADSHOT</span>}<strong>{pop.amount}</strong></div></Html>)}

@@ -8,6 +8,7 @@ import { PEN_MONSTER_MAX_HP } from "../game/config";
 import { enemyMotionFactor } from "../game/effects";
 import { enemyHpScale, getEnemyTuning } from "../game/levels";
 import { claimAttack } from "../game/attackDirector";
+import { useHitHealthBar } from "./useHitHealthBar";
 import { paperBlastDamage, type PaperBlast } from "../game/hazards";
 import {
   hasEnemyLineOfSight,
@@ -119,6 +120,7 @@ export function PenMonster({
   const awarenessUntil = useRef(0);
   const roamTarget = useRef(new THREE.Vector3());
   const [hp, setHp] = useState(maxHp);
+  const { healthBarVisible, revealHealthBar } = useHitHealthBar();
   const [dead, setDead] = useState(false);
   const [gone, setGone] = useState(false);
   const [projectiles, setProjectiles] = useState<Projectile[]>([]);
@@ -151,6 +153,7 @@ export function PenMonster({
       if (detail.id !== id || dead || eliminated) return;
 
       awarenessUntil.current = performance.now() + 4800;
+      revealHealthBar();
       const nextHp = Math.max(0, hpRef.current - detail.damage);
       hpRef.current = nextHp;
       setHp(nextHp);
@@ -178,7 +181,7 @@ export function PenMonster({
     window.addEventListener("boss-hit", handler as EventListener);
     return () =>
       window.removeEventListener("boss-hit", handler as EventListener);
-  }, [dead, eliminate, eliminated, id]);
+  }, [dead, eliminate, eliminated, id, revealHealthBar]);
 
   useEffect(() => {
     const blast = (event: Event) => {
@@ -409,7 +412,7 @@ export function PenMonster({
           </mesh>
         </>}
 
-        {!dead && (
+        {!dead && healthBarVisible && (
           <group position={[0, 3.05, 0.04]} userData={{ ignoreProjectile: true }}>
             <mesh>
               <planeGeometry args={[1.25, 0.06]} />

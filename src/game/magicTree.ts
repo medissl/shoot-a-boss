@@ -17,6 +17,9 @@ export function magicStats(kind:Element,rank:number,choices:MagicChoices){
   for(let tier=2;tier<=rank;tier++){if(isMilestone(tier))continue;const b=choices[kind]?.[tier]??"force";if(b==="force")force++;if(b==="tempo")tempo++;if(b==="craft")craft++;}
   return {damage:Math.round((d.base+(rank-1)*d.perTier)*(1+force*.045)),cooldown:Math.max(({fire:18,crystal:15,ice:16,water:14,thunder:16})[kind],+(d.cooldown-(rank-1)*.55-tempo*1.3).toFixed(1)),craft,milestone:Math.floor(rank/5)};
 }
+export function adjustedMagicCooldown(kind: Element, rank: number, choices: MagicChoices, reduction: number) {
+  return Math.max(ELEMENT_DESIGN[kind].cooldown * .45, magicStats(kind,rank,choices).cooldown * (1 - Math.min(.35,Math.max(0,reduction))));
+}
 export function magicNodeDetail(kind:Element,tier:number,branch:Branch){
   const d=ELEMENT_DESIGN[kind];
   if(tier===1)return `Learn ${kind} magic. ${d.identity}`;

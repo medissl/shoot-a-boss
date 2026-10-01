@@ -18,6 +18,7 @@ import { JungleThorns } from "./JungleThorns";
 import { ExtraMonster } from "./ExtraMonsters";
 import { OfficeEnemy } from "./OfficeEnemies";
 import { type OfficeKind } from "../game/officeEnemies";
+import { activeThreat, fieldCap, spawnCadence } from "../game/encounter";
 import { PaperworkDragon } from "./PaperworkDragon";
 import { CombatAura } from "./CombatAura";
 import { MagicSystem } from "./MagicSystem";
@@ -31,8 +32,19 @@ import {
   getLevelDefinition,
 } from "../game/levels";
 import { useGameStore } from "../game/store";
-import { setAttackPhase, setApprovalPressure } from "../game/attackDirector";
+import { getAttackPressure, setAttackPhase, setApprovalPressure } from "../game/attackDirector";
+import type { BossHealth } from "../game/bossHud";
 import { useTouchMode } from "../game/touch";
+
+function EncounterDebug({ runId, level, activeCap, pending, activeIds }: { runId: number; level: number; activeCap: number; pending: number; activeIds: string[] }) {
+  const [pressure, setPressure] = useState({ active: 0, major: 0, cap: 2, hazard: "ACTIVE" });
+  useEffect(() => {
+    const refresh = () => setPressure({ ...getAttackPressure(runId, level), hazard: useGameStore.getState().hazardSuppressedUntil > performance.now() ? "SUPPRESSED" : "ACTIVE" });
+    const timer = window.setInterval(refresh, 300); refresh();
+    return () => window.clearInterval(timer);
+  }, [runId, level]);
+  return <div className="encounter-debug">FIELD {activeIds.length}/{activeCap} · QUEUED {pending} · THREAT {activeThreat(activeIds)} · ATTACK {pressure.active}/{pressure.cap} · MAJOR {pressure.major} · HAZARD {pressure.hazard}</div>;
+}
 
 export function GameCanvas() {
   const touch = useTouchMode();
@@ -137,14 +149,23 @@ export function GameCanvas() {
     ...extraSpawns.slice(enemy.flying ?? 0, (enemy.flying ?? 0) + (enemy.statues ?? 0)).map((spawn, index) => ({ kind: "statue" as const, spawn, index })),
     ...officeRoster,
     ...eliteRoster,
-  ].sort((a, b) => a.index - b.index || ["boss", "paper", "pen", "fly", "statue", "sticky", "stapler", "highlighter", "shredder", "clipboard", "hr", "auditor", "director"].indexOf(a.kind) - ["boss", "paper", "pen", "fly", "statue", "sticky", "stapler", "highlighter", "shredder", "clipboard", "hr", "auditor", "director"].indexOf(b.kind));
+  ].sort((a, b) => ["hr", "auditor", "director", "boss", "paper", "stapler", "shredder", "pen", "fly", "sticky", "statue", "clipboard", "highlighter"].indexOf(a.kind) - ["hr", "auditor", "director", "boss", "paper", "stapler", "shredder", "pen", "fly", "sticky", "statue", "clipboard", "highlighter"].indexOf(b.kind) || a.index - b.index);
   const gemExtras = definition.theme === "gems" ? 3 : 0;
   const remainingRatio = (targetCount - eliminated) / Math.max(1, targetCount);
   const intensity = remainingRatio > .65 ? "OPENING" : remainingRatio > .30 ? "SURGE" : "FINAL PUSH";
-  const activeCap = Math.min(12, Math.max(4, 5 + Math.floor(currentLevel * .7) + (intensity === "FINAL PUSH" ? 2 : intensity === "SURGE" ? 1 : -1)));
+  const activeCap = fieldCap(currentLevel, intensity);
   const [spawnedCount, setSpawnedCount] = useState(() => Math.min(roster.length, Math.max(1, activeCap - gemExtras)));
   const [phaseNotice, setPhaseNotice] = useState("");
   const [dragonArrived, setDragonArrived] = useState(false);
+  const [bossHealth, setBossHealth] = useState<BossHealth | null>(null);
+  useEffect(() => {
+    const onHealth = (event: Event) => {
+      const data = (event as CustomEvent<BossHealth | { id: string; clear: true }>).detail;
+      setBossHealth(previous => "clear" in data ? previous?.id === data.id ? null : previous : data);
+    };
+    window.addEventListener("boss-health", onHealth);
+    return () => window.removeEventListener("boss-health", onHealth);
+  }, []);
   useEffect(() => {
     if (currentLevel !== 12 || eliminated < roster.length || !resolved.current || screen !== "playing" || dragonArrived) return;
     const announce = window.setTimeout(() => setPhaseNotice("FINAL DEADLINE · THE PAPERWORK DRAGON"), 0);
@@ -168,7 +189,7 @@ export function GameCanvas() {
   }, [intensity, screen]);
   useEffect(() => {
     if (screen !== "playing") return;
-    const cadence = intensity === "OPENING" ? 1250 : intensity === "SURGE" ? 950 : 690;
+    const cadence = spawnCadence(intensity);
     const timer = window.setInterval(() => setSpawnedCount(count => Math.min(roster.length, Math.max(count, Math.min(roster.length, activeCap + eliminated - gemExtras)), count + 1)), cadence);
     return () => window.clearInterval(timer);
   }, [activeCap, eliminated, gemExtras, intensity, roster.length, screen]);
@@ -232,6 +253,8 @@ export function GameCanvas() {
       </Canvas>
 
       <HUD />
+      {new URLSearchParams(window.location.search).has("debugBalance") && <EncounterDebug runId={runId} level={currentLevel} activeCap={activeCap} pending={Math.max(0, roster.length - spawnedCount)} activeIds={Object.keys(enemyPositions)} />}
+      {bossHealth && <div className="encounter-health" role="status"><b>{bossHealth.name}</b>{bossHealth.detail && <span>{bossHealth.detail}</span>}<div><i style={{ width: `${Math.max(0, bossHealth.health / bossHealth.maxHp * 100)}%` }} /></div></div>}
       {phaseNotice && <div className={`intensity-announcement intensity-announcement--${intensity.replace(" ", "-").toLowerCase()}`}>{phaseNotice}</div>}
       {eventKind && eventSeconds !== null && <div className="dream-event" role="status"><b>{eventKind}</b><span>{eventResult ?? (eventKind === "FINAL APPROVAL" ? `${3-seals.length} APPROVALS REMAIN · ${Math.ceil(eventSeconds)}S` : eventKind === "PAPER JAM" ? `${seals.length}/3 SEALS · ${Math.ceil(eventSeconds)}S` : eventKind === "OVERTIME" ? `SURVIVE OR ELIMINATE 3 · ${Math.ceil(eventSeconds)}S` : `ELIMINATE MARKED TARGET · ${Math.ceil(eventSeconds)}S`)}</span></div>}
       <MobileControls />

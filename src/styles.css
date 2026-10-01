@@ -2705,13 +2705,11 @@ button {
 .magic-element-picker button { box-sizing:border-box; width:100%; min-width:0; height:88px; }
 .magic-element-picker button.is-active { border-width:2px; outline:2px solid #385c9d; outline-offset:-5px; }
 .hazard-hit-notice { top:31%; }
-.crate-scene { box-sizing:border-box; width:min(1200px,100%); min-height:min(100dvh,760px); margin-inline:auto; padding:clamp(18px,3vw,36px); border-inline:3px solid #2548b8; animation:crate-paper-enter .24s ease-out both; }
-.crate-scene { position:relative; }
-.crate-scene .crate-back { position:absolute; top:16px; left:16px; }
-.crate-scene .crate-box { width:min(380px,72vw); height:min(285px,42vh); }
-.crate-scene .crate-prize { width:min(780px,92%); box-sizing:border-box; }
-.crate-scene .crate-prize .skin-weapon-preview { width:min(620px,75vw); }
-@keyframes crate-paper-enter { from { opacity:0; translate:0 12px; } to { opacity:1; translate:0 0; } }
-@media (max-height:500px) { .hazard-hit-notice { top:37%; } .crate-scene { min-height:100dvh; } }
-
-.dream-desk--crate .crate-scene { max-height:none; min-height:clamp(410px,calc(100dvh - 140px),760px); overflow:visible; }
+.dream-desk--crate .crate-scene { min-height:calc(100dvh - 145px); max-height:calc(100dvh - 145px); }
+.gear-scene__layout { min-height:560px; }
+.encounter-health { position:absolute; top:clamp(135px,18vh,175px); left:50%; transform:translateX(-50%); z-index:45; box-sizing:border-box; width:min(480px,64vw); padding:7px 12px; border:3px solid #2548b8; border-radius:9px; background:#fffdf5e9; color:#2548b8; text-align:center; font:900 13px ui-rounded,sans-serif; pointer-events:none; box-shadow:4px 5px #1b2d555c; }
+.encounter-health b,.encounter-health span { display:block; }
+.encounter-health span { font-size:10px; }
+.encounter-health div { height:10px; margin-top:5px; background:#b8c9ed; overflow:hidden; }
+.encounter-health i { display:block; height:100%; background:#d74b66; transition:width .15s; }
+.encounter-debug { position:absolute; z-index:48; top:8px; right:8px; padding:5px 8px; color:#fff; background:#1c315ecc; font:11px ui-monospace,monospace; pointer-events:none; }

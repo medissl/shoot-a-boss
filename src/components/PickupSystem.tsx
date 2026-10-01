@@ -20,6 +20,7 @@ function Pickup({
   const group = useRef<THREE.Group>(null);
   const [available, setAvailable] = useState(true);
   const respawnAt = useRef(0);
+  const collected = useRef(false);
   const refillGrenades = useGameStore((state) => state.refillGrenades);
   const grantSpeedBoost = useGameStore((state) => state.grantSpeedBoost);
 
@@ -28,9 +29,10 @@ function Pickup({
     if (!root) return;
 
     if (!available) {
-      if (performance.now() >= respawnAt.current) setAvailable(true);
+      if (performance.now() >= respawnAt.current) { collected.current=false; setAvailable(true); }
       return;
     }
+    if (collected.current) return;
 
     root.rotation.y += delta * 1.25;
     root.position.y =
@@ -40,12 +42,14 @@ function Pickup({
     if (root.position.distanceTo(player) < 1.25) {
       const live = useGameStore.getState();
       if (kind === "health" && live.hp >= live.maxHp) return;
-      if (kind === "ammo" && live.weapon !== "knife" && live.ammo[live.weapon].reserve >= WEAPONS[live.weapon].reserve) return;
+      const ammoWeapon = live.weapon === "knife" ? "rifle" : live.weapon;
+      if (kind === "ammo" && live.ammo[ammoWeapon].reserve >= WEAPONS[ammoWeapon].reserve) return;
+      collected.current=true;
       if (kind === "grenade") refillGrenades(equippedGearRank(live, "satchel") >= 5 && index % 3 === 0 ? 2 : 1);
       else if (kind === "speed") grantSpeedBoost(8000);
       else if (kind === "health") useGameStore.setState({ hp: Math.min(live.maxHp, live.hp + Math.ceil(live.maxHp * .20)) });
       else {
-        const weapon = live.weapon === "knife" ? "rifle" : live.weapon;
+        const weapon = ammoWeapon;
         useGameStore.setState({ ammo: { ...live.ammo, [weapon]: { ...live.ammo[weapon], reserve: Math.min(WEAPONS[weapon].reserve, live.ammo[weapon].reserve + Math.ceil(WEAPONS[weapon].reserve * .32)) } } });
       }
 

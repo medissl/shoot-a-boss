@@ -3,11 +3,13 @@ import { useFrame } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { enemyHpScale, getEnemyTuning } from "../game/levels";
+import { reportBossHealth } from "../game/bossHud";
+import { setDragonAttack } from "../game/attackDirector";
 import { paperBlastDamage, type PaperBlast } from "../game/hazards";
 import { useGameStore } from "../game/store";
 import { EnemyFeedback } from "./EnemyFeedback";
 import { ScanHalo } from "./ScanHalo";
-import { EnemyDoodle } from "./EnemyDoodle";
+import { DragonDoodle } from "./EnemyDoodle";
 import type { WorldSound } from "../game/worldSound";
 function cue(kind:WorldSound,position:[number,number,number]) {window.dispatchEvent(new CustomEvent("world-sfx",{detail:{kind,position}}));}
 
@@ -41,10 +43,18 @@ export function PaperworkDragon({ id = "dragon-final" }: { id?: string }) {
   const breathDirection = useRef(new THREE.Vector3(0,0,1));
   const lastDamage = useRef(-10);
   const lastPosition = useRef(0);
+  const lastWingSound = useRef(-5);
   const deathTimer = useRef<number | null>(null);
   const flashTimer = useRef<number | null>(null);
   const eliminate = useGameStore(s=>s.eliminate);
   const breathShape = useMemo(()=>{const shape=new THREE.Shape();shape.moveTo(0,0);shape.lineTo(-9,-18);shape.quadraticCurveTo(0,-20,9,-18);shape.lineTo(0,0);return shape;},[]);
+  useEffect(() => { setDragonAttack(true); return () => setDragonAttack(false); }, []);
+  useEffect(() => {
+    if (health <= 0) return;
+    const timer = window.setTimeout(() => reportBossHealth({ id, name: "THE PAPERWORK DRAGON", health, maxHp, detail: `PHASE ${health/maxHp>.65?1:health/maxHp>.35?2:3} · ${sealHp.filter(x=>x>0).length} SEALS` }), 0);
+    return () => window.clearTimeout(timer);
+  }, [id, health, maxHp, sealHp]);
+  useEffect(() => () => reportBossHealth({ id, clear: true }), [id]);
   useEffect(()=>{
     const onHit=(event:Event)=>{
       const {id:target,damage,part}=(event as CustomEvent<{id:string;damage:number;part?:string}>).detail;
@@ -56,6 +66,7 @@ export function PaperworkDragon({ id = "dragon-final" }: { id?: string }) {
         seals.current[sealIndex]=Math.max(0,seals.current[sealIndex]-damage);
         setSealHp([...seals.current]);
         if (!seals.current[sealIndex]) {
+          cue("dragonSeal",[root.current?.position.x??0,3,root.current?.position.z??0]);
           const remaining=seals.current.filter(value=>value>0).length;
           setPop(`SEAL BROKEN · ${remaining} REMAIN`);
           window.setTimeout(()=>setPop(""),1500);
@@ -65,13 +76,20 @@ export function PaperworkDragon({ id = "dragon-final" }: { id?: string }) {
       if (target!==id) return;
       const sealed=seals.current.some(value=>value>0);
       const dealt=damage*(sealed?.25:part==="head"?1.5:1);
+      if (sealed) setPop(`SEALED · ${Math.round(dealt)}`);
+      else cue("dragonHurt",[root.current?.position.x??0,3,root.current?.position.z??0]);
+      const beforePhase=hp.current/maxHp>.65?1:hp.current/maxHp>.35?2:3;
       hp.current=Math.max(0,hp.current-dealt);setHealth(hp.current);
-      setPop(`${Math.round(dealt)}`);window.setTimeout(()=>setPop(""),550);
+      const afterPhase=hp.current/maxHp>.65?1:hp.current/maxHp>.35?2:3;
+      if(afterPhase>beforePhase&&hp.current>0){setPop(`PHASE ${afterPhase} · FINAL NOTICE`);cue("dragonPhase",[root.current?.position.x??0,3,root.current?.position.z??0]);}
+      else setPop(sealed?`SEALED · ${Math.round(dealt)}`:`${Math.round(dealt)}`);
+      window.setTimeout(()=>setPop(""),afterPhase>beforePhase?1500:550);
       if (hp.current<=0) {
+        reportBossHealth({ id, clear: true });
         deathAt.current=performance.now();phase.current="recover";
         if(root.current)root.current.userData.ignoreProjectile=true;
         setDead(true);
-        cue("dragonCrash",[root.current?.position.x??0,3,root.current?.position.z??0]);
+        cue("dragonDeath",[root.current?.position.x??0,3,root.current?.position.z??0]);
         deathTimer.current=window.setTimeout(()=>eliminate(id),2300);
       }
     };
@@ -83,7 +101,7 @@ export function PaperworkDragon({ id = "dragon-final" }: { id?: string }) {
     };
     window.addEventListener("boss-hit",onHit);window.addEventListener("paper-grenade-explode",onBlast);
     return()=>{window.removeEventListener("boss-hit",onHit);window.removeEventListener("paper-grenade-explode",onBlast);if(deathTimer.current)window.clearTimeout(deathTimer.current);if(flashTimer.current)window.clearTimeout(flashTimer.current);};
-  },[id,eliminate]);
+  },[id,eliminate,maxHp]);
   useFrame((state,delta)=>{
     const mesh=root.current, marker=telegraph.current;
     if(!mesh)return;
@@ -95,11 +113,12 @@ export function PaperworkDragon({ id = "dragon-final" }: { id?: string }) {
       mesh.position.y=THREE.MathUtils.lerp(mesh.position.y,0,Math.min(1,delta*3));
       mesh.rotation.z=THREE.MathUtils.lerp(mesh.rotation.z,-1,Math.min(1,delta*2));
       mesh.scale.setScalar(age>5?Math.max(.001,6-age):1);
-      const sprite=art.current?.children[0] as THREE.Mesh | undefined; if(sprite){const material=sprite.material as THREE.MeshBasicMaterial;material.opacity=age>5?Math.max(0,6-age):1;}
+      art.current?.traverse(object => { if (object instanceof THREE.Mesh) (object.material as THREE.MeshBasicMaterial).opacity = age>5?Math.max(0,6-age):1; });
       return;
     }
     const game=useGameStore.getState();
     if(game.screen!=="playing"||game.tutorialOpen){if(marker)marker.visible=false;return;}
+    if(now-lastWingSound.current>2.4){lastWingSound.current=now;cue("dragonWing",[mesh.position.x,mesh.position.y,mesh.position.z]);}
     const [px,py,pz]=game.playerPosition;
     if(art.current){art.current.rotation.y=Math.atan2(px-mesh.position.x,pz-mesh.position.z)-mesh.rotation.y;art.current.scale.x=1+.025*Math.sin(now*3.2);art.current.rotation.z=phase.current==="attack"&&move.current==="DEADLINE DIVE"?-.11:0;}
     if(now-lastPosition.current>.14){lastPosition.current=now;game.setEnemyPosition(id,[mesh.position.x,mesh.position.y+2,mesh.position.z]);}
@@ -152,7 +171,7 @@ export function PaperworkDragon({ id = "dragon-final" }: { id?: string }) {
   });
   return <group ref={root} position={[0,13,-28]}>
     <EnemyFeedback id={id} root={root}/>
-    <group ref={art}><EnemyDoodle kind="dragon" dead={dead} flash={flash} width={13.5} height={9.2} position={[0,3.5,.15]}/></group>
+    <group ref={art}><DragonDoodle dead={dead} flash={flash} phase={phase} move={move}/></group>
     {!dead&&<>
       <mesh position={[0,2,0]} userData={{targetId:id,targetPart:"body"}}><boxGeometry args={[5,3.2,2.6]}/><meshBasicMaterial colorWrite={false} depthWrite={false}/></mesh>
       <mesh position={[0,4.7,.35]} userData={{targetId:id,targetPart:"head"}}><boxGeometry args={[3,1.8,2.2]}/><meshBasicMaterial colorWrite={false} depthWrite={false}/></mesh>
@@ -169,7 +188,7 @@ export function PaperworkDragon({ id = "dragon-final" }: { id?: string }) {
     <mesh ref={telegraph} rotation={[-Math.PI/2,0,0]} visible={false} userData={{ignoreProjectile:true}}><circleGeometry args={[1,32]}/><meshBasicMaterial color="#f32840" transparent opacity={.45} depthWrite={false} side={THREE.DoubleSide}/></mesh>
     <mesh ref={breathWarning} rotation={[-Math.PI/2,0,0]} visible={false} userData={{ignoreProjectile:true}}><shapeGeometry args={[breathShape]}/><meshBasicMaterial color="#ed263c" transparent opacity={.45} depthWrite={false} side={THREE.DoubleSide}/></mesh>
     {Array.from({length:6},(_,i)=><mesh key={i} ref={node=>{barrageWarnings.current[i]=node;}} rotation={[-Math.PI/2,0,0]} visible={false} userData={{ignoreProjectile:true}}><circleGeometry args={[2.2,16]}/><meshBasicMaterial color="#ed263c" transparent opacity={.38} depthWrite={false} side={THREE.DoubleSide}/></mesh>)}
-    {!dead&&<><ScanHalo id={id} size={5}/><Html position={[0,7,0]} center zIndexRange={[40,0]} style={{pointerEvents:"none"}}><div className="dragon-hp"><b>THE PAPERWORK DRAGON</b><span>PHASE {health/maxHp>.65?1:health/maxHp>.35?2:3} · {sealHp.filter(x=>x>0).length} SEALS</span><i style={{width:`${health/maxHp*100}%`}}/></div></Html></>}
+    {!dead&&<ScanHalo id={id} size={5}/>}
     {pop&&<Html position={[0,8.5,0]} center style={{pointerEvents:"none"}}><div className="dragon-pop">{pop}</div></Html>}
   </group>;
 }

@@ -1,6 +1,13 @@
 import { WEAPONS, type WeaponId } from "./config";
 import { enemyHpScale, getEnemyTuning, getLevelDefinition, getTargetCount, MAX_STAGE } from "./levels";
 
+export const THREAT_WEIGHTS = { bosses: 1, paperwork: .65, pens: 1.15, flying: 1.1, statues: 1.45, sticky: 1, stapler: 1.2, highlighter: 1.3, shredder: 1.6, clipboard: 1.5, elite: 4 } as const;
+export function stageThreat(level: number, cycle = 0) {
+  const enemy = getEnemyTuning(level, cycle);
+  const roster = Object.entries(THREAT_WEIGHTS).reduce((sum, [kind, weight]) => sum + (enemy[kind as keyof typeof THREAT_WEIGHTS] ?? 0) * weight, 0);
+  return +(roster + (getLevelDefinition(level).theme === "gems" ? 2.95 : 0)).toFixed(2);
+}
+
 function enemyRewards(level: number, cycle: number) {
   const e = getEnemyTuning(level, cycle);
   const gems = getLevelDefinition(level).theme === "gems";
@@ -29,4 +36,4 @@ export function weaponBalance(id: WeaponId, level: number, cycle = 0) {
     weapon.magazine * burst / (emptyMagazineSeconds + reloadMs / 1000);
   return { managerHp, burst, idealHits: shots, sustainedDps: Math.round(sustainedDps), idealTtkSeconds: +((shots - 1) * weapon.cooldownMs / 1000).toFixed(2) };
 }
-export function campaignCoinBudget() { return Array.from({ length: 10 }, (_, index) => stageCoinReward(index + 1, 0)).reduce((a, b) => a + b, 0); }
+export function campaignCoinBudget() { return Array.from({ length: MAX_STAGE }, (_, index) => stageCoinReward(index + 1, 0)).reduce((a, b) => a + b, 0); }

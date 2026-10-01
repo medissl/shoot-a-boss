@@ -1,4 +1,4 @@
-export type WorldSound = "bossStep"|"bossAttack"|"bossShot"|"paperStep"|"paperAttack"|"penShot"|"inkHit"|"flyWing"|"flyAttack"|"flyDeath"|"statueCharge"|"statueFire"|"statueDeath"|"thornGrow"|"thornHit"|"gemCharge"|"gemLaser"|"hellWarning"|"hellErupt"|"paperWind"|"surge"|"finalPush"|"cardProc"|"pickupHealth"|"pickupAmmo"|"pickupBomb"|"pickupSpeed"|"paperWarning"|"officeAttack"|"paperDeath"|"staplerClick"|"staplerSnap"|"staplerDeath"|"markerCharge"|"markerSweep"|"shredderMotor"|"shredderDeath"|"dragonRoar"|"dragonBreath"|"dragonCrash"|"approvalStart"|"approvalStamp"|"approvalSuccess"|"approvalReject"|"stickyPeel"|"stickySlap"|"clipboardThud"|"hrStamp"|"auditorPage"|"directorGavel"|"heavenChime";
+export type WorldSound = "bossStep"|"bossAttack"|"bossShot"|"paperStep"|"paperAttack"|"penShot"|"inkHit"|"flyWing"|"flyAttack"|"flyDeath"|"statueCharge"|"statueFire"|"statueDeath"|"thornGrow"|"thornHit"|"gemCharge"|"gemLaser"|"hellWarning"|"hellErupt"|"paperWind"|"surge"|"finalPush"|"cardProc"|"pickupHealth"|"pickupAmmo"|"pickupBomb"|"pickupSpeed"|"paperWarning"|"officeAttack"|"paperDeath"|"staplerClick"|"staplerSnap"|"staplerDeath"|"markerCharge"|"markerSweep"|"shredderMotor"|"shredderDeath"|"dragonRoar"|"dragonBreath"|"dragonCrash"|"dragonSeal"|"dragonPhase"|"dragonWing"|"dragonHurt"|"dragonDeath"|"approvalStart"|"approvalStamp"|"approvalSuccess"|"approvalReject"|"stickyPeel"|"stickySlap"|"clipboardThud"|"hrStamp"|"hrTape"|"hrReview"|"hrDeath"|"auditorPage"|"auditorBalance"|"auditorOpen"|"auditorDeath"|"directorGavel"|"directorRing"|"directorDelegate"|"directorDeath"|"heavenChime";
 type Preset={start:number;end:number;length:number;wave:OscillatorType;noise:number;filter:number;gain:number;interval:number};
 const presets:Record<WorldSound,Preset>={
  paperWarning:{start:650,end:380,length:.18,wave:"triangle",noise:.32,filter:1300,gain:.2,interval:280},
@@ -14,6 +14,11 @@ const presets:Record<WorldSound,Preset>={
  dragonRoar:{start:115,end:310,length:.9,wave:"sawtooth",noise:.72,filter:800,gain:.42,interval:900},
  dragonBreath:{start:990,end:90,length:1,wave:"sawtooth",noise:.8,filter:1800,gain:.43,interval:850},
  dragonCrash:{start:185,end:28,length:1.1,wave:"sawtooth",noise:.95,filter:500,gain:.48,interval:1000},
+ dragonSeal:{start:1850,end:180,length:.65,wave:"square",noise:.8,filter:3400,gain:.39,interval:130},
+ dragonPhase:{start:135,end:480,length:1.15,wave:"sawtooth",noise:.9,filter:1500,gain:.43,interval:1500},
+ dragonWing:{start:230,end:95,length:.42,wave:"triangle",noise:.86,filter:850,gain:.16,interval:1000},
+ dragonHurt:{start:390,end:110,length:.28,wave:"triangle",noise:.64,filter:1150,gain:.22,interval:260},
+ dragonDeath:{start:240,end:29,length:1.18,wave:"sawtooth",noise:.95,filter:740,gain:.5,interval:1500},
  approvalStart:{start:450,end:930,length:.68,wave:"sine",noise:.24,filter:2100,gain:.25,interval:600},
  approvalStamp:{start:280,end:95,length:.3,wave:"triangle",noise:.7,filter:1000,gain:.3,interval:160},
  approvalSuccess:{start:550,end:1150,length:.9,wave:"sine",noise:.1,filter:2300,gain:.3,interval:700},
@@ -22,8 +27,17 @@ const presets:Record<WorldSound,Preset>={
  stickySlap:{start:600,end:130,length:.25,wave:"triangle",noise:.6,filter:1900,gain:.25,interval:210},
  clipboardThud:{start:220,end:52,length:.32,wave:"triangle",noise:.42,filter:850,gain:.31,interval:250},
  hrStamp:{start:450,end:75,length:.44,wave:"square",noise:.7,filter:1600,gain:.36,interval:290},
+ hrTape:{start:180,end:870,length:.45,wave:"triangle",noise:.78,filter:1150,gain:.3,interval:350},
+ hrReview:{start:950,end:320,length:.33,wave:"square",noise:.62,filter:2350,gain:.25,interval:240},
+ hrDeath:{start:600,end:56,length:.8,wave:"square",noise:.85,filter:1100,gain:.42,interval:500},
  auditorPage:{start:840,end:245,length:.48,wave:"triangle",noise:.8,filter:2000,gain:.3,interval:250},
+ auditorBalance:{start:1220,end:420,length:.53,wave:"sine",noise:.55,filter:2700,gain:.31,interval:350},
+ auditorOpen:{start:640,end:1400,length:.39,wave:"sine",noise:.2,filter:2600,gain:.28,interval:300},
+ auditorDeath:{start:1360,end:68,length:.9,wave:"sine",noise:.77,filter:2100,gain:.38,interval:500},
  directorGavel:{start:300,end:64,length:.52,wave:"sawtooth",noise:.5,filter:890,gain:.39,interval:330},
+ directorRing:{start:160,end:860,length:.58,wave:"sawtooth",noise:.46,filter:1500,gain:.33,interval:430},
+ directorDelegate:{start:870,end:190,length:.45,wave:"triangle",noise:.35,filter:2000,gain:.27,interval:380},
+ directorDeath:{start:370,end:39,length:.95,wave:"sawtooth",noise:.86,filter:1100,gain:.42,interval:500},
  heavenChime:{start:740,end:1290,length:1.1,wave:"sine",noise:.08,filter:2800,gain:.13,interval:6500},
  bossStep:{start:92,end:45,length:.13,wave:"triangle",noise:.42,filter:420,gain:.24,interval:125},
  bossAttack:{start:180,end:68,length:.27,wave:"sawtooth",noise:.44,filter:860,gain:.3,interval:160},

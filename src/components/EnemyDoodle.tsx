@@ -1,4 +1,5 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
+import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import type { OfficeKind } from "../game/officeEnemies";
 
@@ -124,4 +125,53 @@ export function EnemyDoodle({kind,dead=false,flash=false,width,height,position=[
   const texture=useMemo(()=>{const t=new THREE.CanvasTexture(drawArt(kind,dead));t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=4;return t;},[kind,dead]);
   useEffect(()=>()=>texture.dispose(),[texture]);
   return <mesh position={position} userData={{ignoreProjectile:true}}><planeGeometry args={[width,height]}/><meshBasicMaterial map={texture} transparent alphaTest={.08} color={flash?"#ff8197":"#ffffff"} side={THREE.DoubleSide} depthWrite={false}/></mesh>;
+}
+
+const dragonPieces = [
+  { name: "leftWing", x: 0, y: 60, w: 185, h: 302, pivot: [185, 257] },
+  { name: "rightWing", x: 340, y: 60, w: 172, h: 302, pivot: [340, 257] },
+  { name: "head", x: 191, y: 55, w: 132, h: 177, pivot: [256, 225] },
+  { name: "tail", x: 370, y: 365, w: 127, h: 107, pivot: [370, 388] },
+] as const;
+
+/** The Dragon's illustrated pieces move independently while its hitboxes stay in world space. */
+export function DragonDoodle({ dead, flash, phase, move }: { dead: boolean; flash: boolean; phase: React.RefObject<string>; move: React.RefObject<string> }) {
+  const parts = useRef<(THREE.Group | null)[]>([]);
+  const textures = useMemo(() => {
+    const source = drawArt("dragon", dead);
+    source.getContext("2d")!.resetTransform();
+    const extracted = dragonPieces.map(piece => {
+      const canvas = document.createElement("canvas");
+      canvas.width = piece.w * 2; canvas.height = Math.ceil(piece.h * 1.5);
+      canvas.getContext("2d")!.drawImage(source, piece.x * 2, Math.round(piece.y * 1.5), canvas.width, canvas.height, 0, 0, canvas.width, canvas.height);
+      const texture = new THREE.CanvasTexture(canvas); texture.colorSpace = THREE.SRGBColorSpace;
+      source.getContext("2d")!.clearRect(piece.x * 2, Math.round(piece.y * 1.5), canvas.width, canvas.height);
+      return texture;
+    });
+    const body = new THREE.CanvasTexture(source); body.colorSpace = THREE.SRGBColorSpace;
+    return [body, ...extracted];
+  }, [dead]);
+  useEffect(() => () => textures.forEach(texture => texture.dispose()), [textures]);
+  useFrame(({ clock }) => {
+    const t = clock.elapsedTime;
+    const striking = phase.current === "attack";
+    const warning = phase.current === "warn";
+    const dive = move.current === "DEADLINE DIVE";
+    const [left, right, head, tail] = parts.current;
+    if (left) left.rotation.z = (striking && dive ? -.48 : .10 * Math.sin(t * 2.7));
+    if (right) right.rotation.z = (striking && dive ? .48 : -.10 * Math.sin(t * 2.7 + .7));
+    if (head) { head.rotation.z = warning ? .12 : striking ? -.16 : .045 * Math.sin(t * 1.35); head.position.y = 3.5 + (.5 - 225 / 512) * 9.2 + (warning ? .08 : 0); }
+    if (tail) tail.rotation.z = .15 * Math.sin(t * 2.1 - .9) + (striking && move.current === "RED TAPE RING" ? -.35 : 0);
+  });
+  const point = (x: number, y: number): [number, number] => [(x / 512 - .5) * 13.5, (.5 - y / 512) * 9.2];
+  return <group>
+    <mesh position={[0, 3.5, .15]} userData={{ ignoreProjectile: true }}><planeGeometry args={[13.5, 9.2]} /><meshBasicMaterial map={textures[0]} color={flash ? "#ff8197" : "#ffffff"} transparent alphaTest={.08} depthWrite={false} side={THREE.DoubleSide} /></mesh>
+    {dragonPieces.map((piece, index) => {
+      const [px, py] = point(piece.pivot[0], piece.pivot[1]);
+      const [cx, cy] = point(piece.x + piece.w / 2, piece.y + piece.h / 2);
+      return <group key={piece.name} ref={node => { parts.current[index] = node; }} position={[px, py + 3.5, .16 + index * .002]}>
+        <mesh position={[cx - px, cy - py, 0]} userData={{ ignoreProjectile: true }}><planeGeometry args={[piece.w / 512 * 13.5, piece.h / 512 * 9.2]} /><meshBasicMaterial map={textures[index + 1]} color={flash ? "#ff8197" : "#ffffff"} transparent alphaTest={.08} depthWrite={false} side={THREE.DoubleSide} /></mesh>
+      </group>;
+    })}
+  </group>;
 }

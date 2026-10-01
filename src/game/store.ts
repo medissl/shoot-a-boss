@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { GRENADE_COUNT, WEAPONS, type WeaponId } from "./config";
 import { stageCoinReward, stageXpReward } from "./balance";
 import { getPlayerSpawn, getTargetCount, MAX_STAGE } from "./levels";
-import { ELEMENTS, emptyMagicChoices, isMilestone, magicCost, magicStats, type Element, type Branch, type MagicChoices } from "./magicTree";
+import { ELEMENTS, adjustedMagicCooldown, emptyMagicChoices, isMilestone, magicCost, type Element, type Branch, type MagicChoices } from "./magicTree";
 import { SKIN_IDS, normalizeSkin, rollSkin, type SkinId } from "./skins";
 import { availableEvolutions, EVOLUTIONS, type EvolutionId } from "./evolutions";
 import { emitCardProc } from "./procFeedback";
@@ -857,7 +857,7 @@ export const useGameStore = create<GameStore>((set, get) => {
       const now = performance.now();
       if (state.screen !== "playing" || state.tutorialOpen || !kind || !state.magic[kind] || now < state.magicReadyAt) return false;
       const overtime = state.evolutions.includes("overtimeArcana") && (state.magicCastCount + 1) % 3 === 0;
-      set({ magicReadyAt: now + magicStats(kind, state.magic[kind], state.magicChoices).cooldown * (1 - Math.min(.35, activeGear(state).arcana * .01 + state.upgrades.magicTempo * .10)) * 1000,
+      set({ magicReadyAt: now + adjustedMagicCooldown(kind, state.magic[kind], state.magicChoices, activeGear(state).arcana * .01 + state.upgrades.magicTempo * .10) * 1000,
         magicCastCount: state.magicCastCount + 1,
         shieldCharges: state.upgrades.spellWard && state.shieldCharges === 0 ? 1 : state.shieldCharges });
       window.dispatchEvent(new CustomEvent("magic-cast", { detail: { kind, rank: state.magic[kind], overtime } }));

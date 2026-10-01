@@ -8,6 +8,7 @@ import { BOSS_MAX_HP } from "../game/config";
 import { enemyMotionFactor } from "../game/effects";
 import { enemyHpScale, getEnemyTuning } from "../game/levels";
 import { claimAttack } from "../game/attackDirector";
+import { useHitHealthBar } from "./useHitHealthBar";
 import { paperBlastDamage, type PaperBlast } from "../game/hazards";
 import {
   hasEnemyLineOfSight,
@@ -327,19 +328,13 @@ export function Dummy({
   const group = useRef<THREE.Group>(null);
   const warningRef = useRef<THREE.Mesh>(null);
   const shotRef = useRef<THREE.Mesh>(null);
-  const elite = useGameStore((state) => state.eventTarget === id);
-  const eliteSeen = useRef(false);
+  const { healthBarVisible, revealHealthBar } = useHitHealthBar();
   const initialState = useGameStore.getState();
   const finale = false;
   const baseHp = Math.round(BOSS_MAX_HP * enemyHpScale(initialState.currentLevel, initialState.ngPlusCycle) * (finale ? 2 : 1));
-  const maxHp = Math.round(baseHp * (eliteSeen.current ? 1.2 : 1));
+  const maxHp = baseHp;
   const [hp, setHp] = useState(maxHp);
   const hpRef = useRef(maxHp);
-  useEffect(() => {
-    if (!elite || eliteSeen.current) return;
-    const timer = window.setTimeout(() => { if (eliteSeen.current) return; eliteSeen.current = true; hpRef.current += Math.round(baseHp * .2); setHp(hpRef.current); }, 0);
-    return () => window.clearTimeout(timer);
-  }, [elite, baseHp]);
   const [pose, setPose] = useState<Pose>("idle");
   const [hitFlash, setHitFlash] = useState(false);
   const [damagePops, setDamagePops] = useState<DamagePop[]>([]);
@@ -385,7 +380,7 @@ export function Dummy({
   const ngPlusCycle = useGameStore((state) => state.ngPlusCycle);
   const effectiveLevel = currentLevel + ngPlusCycle * 12;
   const baseline = getEnemyTuning(currentLevel, ngPlusCycle);
-  const tuning = eliteSeen.current ? { ...baseline, speed: baseline.speed * 1.12, damage: baseline.damage * 1.15 } : baseline;
+  const tuning = baseline;
   const safeSpawn = useMemo(
     () => safeEnemySpawn(spawn, ENEMY_RADIUS, currentLevel),
     [currentLevel, spawn],
@@ -416,6 +411,7 @@ export function Dummy({
       const popId = nextDamagePopId.current++;
 
       awarenessUntil.current = performance.now() + 5000;
+      revealHealthBar();
       const nextHp = Math.max(0, hpRef.current - detail.damage);
       hpRef.current = nextHp;
       setHp(nextHp);
@@ -468,6 +464,7 @@ export function Dummy({
       if (!root || eliminated) return;
       const damage = paperBlastDamage(detail, [root.position.x, root.position.y + 1.3, root.position.z]);
       if (!damage) return;
+      revealHealthBar();
       const nextHp = Math.max(0, hpRef.current - damage);
       hpRef.current = nextHp;
       setHp(nextHp);
@@ -488,7 +485,7 @@ export function Dummy({
       window.removeEventListener("boss-impact", impactHandler as EventListener);
       window.removeEventListener("paper-grenade-explode", grenadeHandler as EventListener);
     };
-  }, [dead, eliminate, eliminated, id]);
+  }, [dead, eliminate, eliminated, id, revealHealthBar]);
 
   useFrame((state, delta) => {
     const root = group.current;
@@ -778,7 +775,7 @@ export function Dummy({
           </mesh>
         )}
 
-        {!dead && (
+        {!dead && healthBarVisible && (
           <group position={[0, 3.82, 0.04]} userData={{ ignoreProjectile: true }}>
           <mesh>
             <planeGeometry args={[1.82, 0.085]} />

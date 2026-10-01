@@ -74,7 +74,7 @@ export const LEVELS: LevelDefinition[] = [
     subtitle: "warm-up shift",
     theme: "playground",
     difficulty: "VERY EASY",
-    enemy: { speed: 0.78, vision: 0.8, damage: 0.65, bosses: 4, paperwork: 0, pens: 0 },
+    enemy: { speed: 0.78, vision: 0.8, damage: 0.70, bosses: 4, paperwork: 0, pens: 0 },
   },
   {
     level: 2,
@@ -90,7 +90,7 @@ export const LEVELS: LevelDefinition[] = [
     subtitle: "shiny deadlines",
     theme: "gems",
     difficulty: "EASY +",
-    enemy: { speed: 1, vision: 0.98, damage: 0.9, bosses: 4, paperwork: 1, pens: 1, flying: 1 },
+    enemy: { speed: 0.98, vision: 0.98, damage: 0.86, bosses: 3, paperwork: 1, pens: 1, flying: 1 },
   },
   {
     level: 4,
@@ -98,7 +98,7 @@ export const LEVELS: LevelDefinition[] = [
     subtitle: "back to the office",
     theme: "playground",
     difficulty: "NORMAL",
-    enemy: { speed: 1.06, vision: 1.04, damage: 1, bosses: 5, paperwork: 2, pens: 2, statues: 1, sticky: 1, elite: 1 },
+    enemy: { speed: 1.03, vision: 1.02, damage: 0.94, bosses: 4, paperwork: 1, pens: 1, sticky: 1, elite: 1 },
   },
   {
     level: 5,
@@ -106,7 +106,7 @@ export const LEVELS: LevelDefinition[] = [
     subtitle: "the jungle noticed you",
     theme: "jungle",
     difficulty: "NORMAL +",
-    enemy: { speed: 1.12, vision: 1.1, damage: 1.08, bosses: 5, paperwork: 2, pens: 2, flying: 2, statues: 1, stapler: 1 },
+    enemy: { speed: 1.07, vision: 1.05, damage: 1.00, bosses: 4, paperwork: 2, pens: 1, flying: 1, statues: 1, stapler: 1 },
   },
   {
     level: 6,
@@ -114,7 +114,7 @@ export const LEVELS: LevelDefinition[] = [
     subtitle: "nothing stays calm",
     theme: "gems",
     difficulty: "HARD",
-    enemy: { speed: 1.18, vision: 1.15, damage: 1.16, bosses: 4, paperwork: 2, pens: 2, flying: 2, statues: 1, highlighter: 1, elite: 1 },
+    enemy: { speed: 1.10, vision: 1.08, damage: 1.06, bosses: 3, paperwork: 1, pens: 1, flying: 1, statues: 1, highlighter: 1, elite: 1 },
   },
   {
     level: 7,
@@ -122,7 +122,7 @@ export const LEVELS: LevelDefinition[] = [
     subtitle: "the shift fights back",
     theme: "playground",
     difficulty: "HARD +",
-    enemy: { speed: 1.24, vision: 1.2, damage: 1.24, bosses: 5, paperwork: 3, pens: 3, flying: 2, statues: 2, sticky: 1, clipboard: 1 },
+    enemy: { speed: 1.13, vision: 1.10, damage: 1.10, bosses: 4, paperwork: 2, pens: 2, flying: 1, statues: 1, sticky: 1, clipboard: 1 },
   },
   {
     level: 8,
@@ -130,7 +130,7 @@ export const LEVELS: LevelDefinition[] = [
     subtitle: "no quiet path left",
     theme: "jungle",
     difficulty: "VERY HARD",
-    enemy: { speed: 1.3, vision: 1.25, damage: 1.32, bosses: 5, paperwork: 3, pens: 3, flying: 3, statues: 3, stapler: 1, clipboard: 1, elite: 1 },
+    enemy: { speed: 1.16, vision: 1.13, damage: 1.15, bosses: 3, paperwork: 1, pens: 1, flying: 1, statues: 1, stapler: 1, clipboard: 1, elite: 1 },
   },
   {
     level: 9,
@@ -138,7 +138,7 @@ export const LEVELS: LevelDefinition[] = [
     subtitle: "everything is hunting",
     theme: "gems",
     difficulty: "BRUTAL",
-    enemy: { speed: 1.36, vision: 1.3, damage: 1.4, bosses: 5, paperwork: 3, pens: 3, flying: 3, statues: 2, highlighter: 1, clipboard: 1 },
+    enemy: { speed: 1.19, vision: 1.16, damage: 1.20, bosses: 3, paperwork: 2, pens: 1, flying: 1, statues: 1, highlighter: 1, clipboard: 1 },
   },
   {
     level: 10,
@@ -146,15 +146,15 @@ export const LEVELS: LevelDefinition[] = [
     subtitle: "one last office nightmare",
     theme: "playground",
     difficulty: "ALMOST IMPOSSIBLE",
-    enemy: { speed: 1.42, vision: 1.35, damage: 1.48, bosses: 6, paperwork: 4, pens: 4, flying: 4, statues: 3, sticky: 1, stapler: 1, clipboard: 2 },
+    enemy: { speed: 1.22, vision: 1.19, damage: 1.25, bosses: 4, paperwork: 2, pens: 2, flying: 2, statues: 1, sticky: 1, stapler: 1, clipboard: 1 },
   },
   {
     level: 11, name: "THE HELL", subtitle: "the fire below", theme: "hell", difficulty: "NIGHTMARE",
-    enemy: { speed: 1.44, vision: 1.36, damage: 1.52, bosses: 6, paperwork: 4, pens: 4, flying: 4, statues: 3, shredder: 2, clipboard: 1 },
+    enemy: { speed: 1.25, vision: 1.22, damage: 1.31, bosses: 4, paperwork: 2, pens: 2, flying: 2, statues: 1, shredder: 2, clipboard: 1 },
   },
   {
     level: 12, name: "THE HEAVENS", subtitle: "final approval", theme: "heaven", difficulty: "FINAL",
-    enemy: { speed: 1.46, vision: 1.38, damage: 1.56, bosses: 3, paperwork: 2, pens: 1, flying: 3, statues: 2, highlighter: 2, clipboard: 1, dragon: 1 },
+    enemy: { speed: 1.28, vision: 1.25, damage: 1.36, bosses: 3, paperwork: 2, pens: 1, flying: 2, statues: 1, highlighter: 1, clipboard: 1, dragon: 1 },
   },
 ];
 

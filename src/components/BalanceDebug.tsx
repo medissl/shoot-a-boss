@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { WEAPONS } from "../game/config";
-import { campaignCoinBudget, weaponBalance } from "../game/balance";
+import { campaignCoinBudget, stageThreat, weaponBalance } from "../game/balance";
 import { enemyHpScale, getEnemyTuning, getTargetCount } from "../game/levels";
 import { emptyUpgrades, getUpgradeCard, rollUpgradeChoices } from "../game/progression";
 import { xpToNextLevel, useGameStore } from "../game/store";
@@ -16,7 +16,8 @@ export function BalanceDebug() {
   const tuning = getEnemyTuning(state.currentLevel, state.ngPlusCycle);
   const hp = Math.round(250 * enemyHpScale(state.currentLevel, state.ngPlusCycle));
   return <aside className="balance-debug"><b>BALANCE DEBUG · READ ONLY</b><p>Stage {state.currentLevel} · Cycle {state.ngPlusCycle} · {getTargetCount(state.currentLevel, state.ngPlusCycle)} targets · {state.eliminated.length} eliminated</p>
-    <p>Speed {tuning.speed.toFixed(2)} · Vision {tuning.vision.toFixed(2)} · Damage {tuning.damage.toFixed(2)} · Manager HP {hp}</p>
+    <p>Speed {tuning.speed.toFixed(2)} · Vision {tuning.vision.toFixed(2)} · Damage {tuning.damage.toFixed(2)} · Manager HP {hp} · Roster threat {stageThreat(state.currentLevel,state.ngPlusCycle)}</p>
+    <p>Roster {Object.entries(tuning).filter(([key,value])=>!["speed","vision","damage"].includes(key) && value).map(([key,value])=>`${key} ${value}`).join(" · ")}</p>
     <p>LV {state.playerLevel} · XP {state.xp}/{xpToNextLevel(state.playerLevel)} · SP {state.skillPoints} · ◉ {state.coins} · ♥ {state.hearts}</p>
     <p>Claims {state.claimedRewards.length} · Anchor Stage {state.anchor.level} · Gear {state.equippedGear.length}/4 · Evolutions {state.evolutions.join(", ") || "none"} · Campaign coins {campaignCoinBudget()}</p>
     <p>10k drafts: {odds}</p>

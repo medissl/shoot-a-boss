@@ -316,10 +316,10 @@ export function PlayerController() {
     const pickupSpeed =
       now < useGameStore.getState().speedBoostUntil ? 1.25 : 1;
     const knifeSpeed = weapon === "knife" ? 1.2 : 1;
-    const speedMultiplier =
+    const speedMultiplier = Math.min(1.8,
       pickupSpeed * upgradeStats.movement * knifeSpeed * (now < stickySlowUntil.current ? .8 : 1) * (now < useGameStore.getState().paperTrailUntil ? 1.2 : 1) *
       (1 + equippedGearRank(useGameStore.getState(), "boots") * 0.025 + (equippedGearRank(useGameStore.getState(), "boots") >= 5 && sprintStartedAt.current && now - sprintStartedAt.current >= 2000 ? .05 : 0) +
-      (now < useGameStore.getState().skateBoostUntil ? .08 : 0));
+      (now < useGameStore.getState().skateBoostUntil ? .08 : 0)));
 
     const nearGround =
       position.y <= 1.52 ||
