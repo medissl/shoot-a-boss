@@ -1,4 +1,5 @@
 export const GRENADE_COUNT = 3;
+export const HEADSHOT_MULTIPLIER = 1.6;
 export const BOSS_MAX_HP = 250;
 export const PAPER_MONSTER_MAX_HP = 105;
 export const PEN_MONSTER_MAX_HP = 145;

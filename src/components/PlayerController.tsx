@@ -57,10 +57,8 @@ export function PlayerController() {
 
   useEffect(() => {
     const slow = (event: Event) => { stickySlowUntil.current = Math.max(stickySlowUntil.current, (event as CustomEvent<{until:number}>).detail.until); };
-    const lift = () => {const rigid=body.current;if(rigid){const velocity=rigid.linvel();rigid.setLinvel({x:velocity.x,y:8.7,z:velocity.z},true);}};
     window.addEventListener("sticky-slow", slow);
-    window.addEventListener("heaven-cloud-lift", lift);
-    return () => {window.removeEventListener("sticky-slow", slow);window.removeEventListener("heaven-cloud-lift", lift);};
+    return () => window.removeEventListener("sticky-slow", slow);
   }, []);
 
   useEffect(() => {

@@ -1,3 +1,4 @@
+import { Hitbox } from "./Hitbox";
 import { ScanHalo } from "./ScanHalo";
 import { EnemyFeedback } from "./EnemyFeedback";
 import { Html } from "@react-three/drei";
@@ -398,18 +399,9 @@ export function PenMonster({
         </group>
 
         {!dead && <>
-          <mesh position={[0, 2.66, 0.055]} userData={{ targetId: id, targetPart: "head" }}>
-            <planeGeometry args={[0.98, 0.62]} />
-            <meshBasicMaterial transparent opacity={0} depthWrite={false} side={THREE.DoubleSide} />
-          </mesh>
-          <mesh position={[0, 1.51, 0.055]} userData={{ targetId: id, targetPart: "body" }}>
-            <planeGeometry args={[1.16, 1.68]} />
-            <meshBasicMaterial transparent opacity={0} depthWrite={false} side={THREE.DoubleSide} />
-          </mesh>
-          <mesh position={[0, 0.36, 0.055]} userData={{ targetId: id, targetPart: "leg" }}>
-            <planeGeometry args={[1.16, 0.62]} />
-            <meshBasicMaterial transparent opacity={0} depthWrite={false} side={THREE.DoubleSide} />
-          </mesh>
+          <Hitbox id={id} part="head" position={[0, 2.66, 0.055]} size={[1.08, .68, .5]}/>
+          <Hitbox id={id} part="body" position={[0, 1.51, 0.055]} size={[1.16, 1.68, .5]}/>
+          <Hitbox id={id} part="leg" position={[0, 0.36, 0.055]} size={[1.16, .62, .5]}/>
         </>}
 
         {!dead && healthBarVisible && (

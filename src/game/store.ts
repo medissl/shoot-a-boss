@@ -20,6 +20,7 @@ type Champion = { cycle: number; level: number; hearts: number; upgrades: Upgrad
 type DreamAnchor = { level: number; cycle: number; upgrades: UpgradeLevels; evolutions: EvolutionId[] };
 export type TutorialId = "controls" | "cards" | "xp" | "levelUp" | "skillPoint" | "magic" | "magicAwakened" | "coins" | "gear" | "shop" | "crates" | "hearts" | "anchor" | "scan" | "evolution";
 export type HazardKind = "thorn" | "gemLaser" | "lava" | "eruption" | "paperStorm" | "heavenBeam";
+export type HeavenPhase = "prelude" | "seals" | "dragonIntro" | "dragon" | "complete";
 const hazardLabels: Record<HazardKind, string> = { thorn: "THORNS", gemLaser: "GEM LASER", lava: "LAVA", eruption: "ERUPTION", paperStorm: "PAPER STORM", heavenBeam: "JUDGEMENT RAY" };
 function notifyHazard(kind: HazardKind | boolean, amount: number, blocked = false) {
   if (typeof kind !== "string") return;
@@ -193,6 +194,8 @@ type GameStore = {
   magicCastCount: number;
   expenseCooldownUntil: number;
   eventTarget: string | null;
+  heavenPhase: HeavenPhase;
+  approvalSeals: number[];
   hazardSuppressedUntil: number;
   claimedRewards: string[];
   tutorialSeen: boolean;
@@ -298,6 +301,8 @@ type GameStore = {
   grantSpeedBoost: (durationMs?: number) => void;
   grantDreamCache: () => void;
   setEventTarget: (id: string | null) => void;
+  breakApprovalSeal: (index: number) => void;
+  startDragonFight: () => void;
   suppressHazard: (durationMs: number) => void;
   damagePlayer: (amount: number, source?: [number, number, number], hazard?: HazardKind | boolean) => void;
   eliminate: (id: string) => void;
@@ -457,6 +462,8 @@ function freshRun(level: number, upgrades: UpgradeLevels, cycle = 0, gear: GearL
     magicCastCount: 0,
     expenseCooldownUntil: 0,
     eventTarget: null as string | null,
+    heavenPhase: "prelude" as HeavenPhase,
+    approvalSeals: [] as number[],
     hazardSuppressedUntil: 0,
     shieldCharges: Math.min(5, gear.aegis + upgrades.shieldReserve),
     speedBoostUntil: 0,
@@ -1132,6 +1139,15 @@ export const useGameStore = create<GameStore>((set, get) => {
       }, durationMs + 60);
     },
     setEventTarget: (eventTarget) => set({ eventTarget }),
+    breakApprovalSeal: (index) => {
+      const state=get();
+      if(state.currentLevel!==12||state.screen!=="playing"||state.heavenPhase!=="seals"||index<0||index>2||state.approvalSeals.includes(index))return;
+      const approvalSeals=[...state.approvalSeals,index];
+      set({approvalSeals,heavenPhase:approvalSeals.length===3?"dragonIntro":"seals"});
+    },
+    startDragonFight: () => {
+      if(get().currentLevel===12&&get().screen==="playing"&&get().heavenPhase==="dragonIntro")set({heavenPhase:"dragon"});
+    },
     suppressHazard: (durationMs) => set({ hazardSuppressedUntil: performance.now() + durationMs }),
     grantDreamCache: () => {
       const state = get();
@@ -1204,6 +1220,7 @@ export const useGameStore = create<GameStore>((set, get) => {
     eliminate: (id) => {
       const state = get();
       if (state.screen !== "playing" || state.eliminated.includes(id)) return;
+      if (state.currentLevel===12 && id==="dragon-final" && state.heavenPhase!=="dragon") return;
 
       const eliminated = [...state.eliminated, id];
       const killingWeapon = state.lastHitWeapon[id];
@@ -1231,7 +1248,15 @@ export const useGameStore = create<GameStore>((set, get) => {
         }),
       );
 
-      if (killCount >= state.targetCount) {
+      if (state.currentLevel===12 && (id!=="dragon-final" || state.heavenPhase!=="dragon")) {
+        set({eliminated, hp:nextHp, ammo, enemyPositions, scanTargets:state.scanTargets.filter(target=>target!==id),
+          recentKills, crunchUntil:crunchActive?now+5000:state.crunchUntil,
+          crunchCooldownUntil:crunchActive?now+10000:state.crunchCooldownUntil,
+          paperTrailUntil:state.evolutions.includes("paperTrail")&&state.weapon==="knife"?now+3500:state.paperTrailUntil,
+          heavenPhase:state.heavenPhase==="prelude"&&killCount>=state.targetCount-1?"seals":state.heavenPhase});
+        return;
+      }
+      if (killCount >= state.targetCount && (state.currentLevel!==12 || id==="dragon-final"&&state.heavenPhase==="dragon")) {
         if (state.practiceActive) {
           set({ eliminated, enemyPositions, screen: "practiceResult", hp: nextHp, lastClearMs: performance.now() - state.stageStartedAt });
           return;
@@ -1270,6 +1295,7 @@ export const useGameStore = create<GameStore>((set, get) => {
           writeChampion(champion);
           set({
             eliminated,
+            heavenPhase: state.currentLevel===12?"complete":state.heavenPhase,
             hp: nextHp,
             unlockedLevel,
             champion,

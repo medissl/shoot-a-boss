@@ -1,3 +1,4 @@
+import { Hitbox } from "./Hitbox";
 import { ScanHalo } from "./ScanHalo";
 import { EnemyFeedback } from "./EnemyFeedback";
 import { Html } from "@react-three/drei";
@@ -755,24 +756,15 @@ export function Dummy({
         </mesh>
 
         {!dead && (
-          <mesh position={[0, 2.88, 0.08]} userData={{ targetId: id, targetPart: "head" }}>
-          <planeGeometry args={[1.2, 0.88]} />
-          <meshBasicMaterial transparent opacity={0} depthWrite={false} side={THREE.DoubleSide} />
-          </mesh>
+          <Hitbox id={id} part="head" position={[0, 2.88, 0.08]} size={[1.38, 1.0, .55]}/>
         )}
 
         {!dead && (
-          <mesh position={[0, 1.82, 0.07]} userData={{ targetId: id, targetPart: "body" }}>
-          <planeGeometry args={[2.3, 1.24]} />
-          <meshBasicMaterial transparent opacity={0} depthWrite={false} side={THREE.DoubleSide} />
-          </mesh>
+          <Hitbox id={id} part="body" position={[0, 1.82, 0.07]} size={[2.3, 1.24, .5]}/>
         )}
 
         {!dead && (
-          <mesh position={[0, 0.64, 0.09]} userData={{ targetId: id, targetPart: "leg" }}>
-          <planeGeometry args={[1.35, 1.16]} />
-          <meshBasicMaterial transparent opacity={0} depthWrite={false} side={THREE.DoubleSide} />
-          </mesh>
+          <Hitbox id={id} part="leg" position={[0, 0.64, 0.09]} size={[1.35, 1.16, .5]}/>
         )}
 
         {!dead && healthBarVisible && (

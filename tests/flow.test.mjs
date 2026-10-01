@@ -154,7 +154,28 @@ test('a clean campaign can advance through all twelve result flows', () => {
   useGameStore.getState().closeTutorial();
   for (let level = 1; level <= 12; level++) {
     const count = useGameStore.getState().targetCount;
-    for (let i = 0; i < count; i++) useGameStore.getState().eliminate(`stage-${level}-target-${i}`);
+    if(level===12){
+      assert.equal(useGameStore.getState().heavenPhase,'prelude');
+      useGameStore.getState().breakApprovalSeal(0);
+      useGameStore.getState().eliminate('dragon-final');
+      assert.equal(useGameStore.getState().screen,'playing');
+      assert.deepEqual(useGameStore.getState().approvalSeals,[]);
+      for(let i=0;i<count-1;i++)useGameStore.getState().eliminate(`stage-${level}-target-${i}`);
+      assert.equal(useGameStore.getState().heavenPhase,'seals');
+      assert.equal(useGameStore.getState().screen,'playing');
+      useGameStore.getState().breakApprovalSeal(0);
+      useGameStore.getState().breakApprovalSeal(0);
+      useGameStore.getState().breakApprovalSeal(1);
+      assert.deepEqual(useGameStore.getState().approvalSeals,[0,1]);
+      useGameStore.getState().breakApprovalSeal(2);
+      assert.equal(useGameStore.getState().heavenPhase,'dragonIntro');
+      useGameStore.getState().eliminate('dragon-final');
+      assert.equal(useGameStore.getState().screen,'playing');
+      useGameStore.getState().startDragonFight();
+      assert.equal(useGameStore.getState().heavenPhase,'dragon');
+      useGameStore.getState().eliminate('dragon-final');
+      assert.equal(useGameStore.getState().heavenPhase,'complete');
+    } else for (let i = 0; i < count; i++) useGameStore.getState().eliminate(`stage-${level}-target-${i}`);
     assert.equal(useGameStore.getState().screen, 'stageClear');
     dismissLessons();
     while (['stageClear', 'levelUp', 'reward'].includes(useGameStore.getState().screen)) {

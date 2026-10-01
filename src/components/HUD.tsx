@@ -25,6 +25,8 @@ export function HUD() {
   const eliminated = useGameStore((state) => state.eliminated.length);
   const targetCount = useGameStore((state) => state.targetCount);
   const currentLevel = useGameStore((state) => state.currentLevel);
+  const heavenPhase = useGameStore((state) => state.heavenPhase);
+  const approvalSeals = useGameStore((state) => state.approvalSeals.length);
   const scoped = useGameStore((state) => state.scoped);
   const equippedSkin = useGameStore((state) => state.equippedSkins[state.weapon]);
   const scopeTheme = getSkin(equippedSkin);
@@ -157,8 +159,8 @@ export function HUD() {
       )}
 
       <div className="hud-targets">
-        <span>targets left</span>
-        <strong>{Math.max(0, targetCount - eliminated)}</strong>
+        <span>{currentLevel===12&&heavenPhase==="seals"?"SEALS BROKEN":currentLevel===12&&heavenPhase==="dragonIntro"?"FINAL REVIEW":currentLevel===12&&heavenPhase==="dragon"?"DRAGON":"targets left"}</span>
+        <strong>{currentLevel===12&&heavenPhase==="seals"?`${approvalSeals} / 3`:currentLevel===12&&heavenPhase==="dragonIntro"?"!":currentLevel===12&&heavenPhase==="dragon"?"BOSS":Math.max(0,targetCount-eliminated-(currentLevel===12?1:0))}</strong>
       </div>
       {now < crunchUntil && <div className="evolution-hud">✳ CRUNCH TIME · {Math.ceil((crunchUntil - now) / 1000)}S</div>}
       {now < paperTrailUntil && <div className="evolution-hud">╱ PAPER TRAIL · {Math.ceil((paperTrailUntil - now) / 1000)}S</div>}

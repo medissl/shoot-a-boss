@@ -1,3 +1,4 @@
+import { Hitbox } from "./Hitbox";
 import { ScanHalo } from "./ScanHalo";
 import { EnemyFeedback } from "./EnemyFeedback";
 import { Edges, Html } from "@react-three/drei";
@@ -296,30 +297,13 @@ export function PaperworkMonster({
       </mesh>
 
       {!dead && (
-        <mesh
-          position={[0, 1.68, 0.07]}
-          userData={{ targetId: id, targetPart: "head" }}
-        >
-          <planeGeometry args={[1.62, 0.82]} />
-          <meshBasicMaterial transparent opacity={0} depthWrite={false} side={THREE.DoubleSide} />
-        </mesh>
+        <Hitbox id={id} part="head" position={[0, 1.68, 0.07]} size={[1.72, .9, .5]}/>
       )}
       {!dead && (
-        <mesh position={[0, 0.92, 0.07]} userData={{ targetId: id, targetPart: "body" }}>
-          <planeGeometry args={[1.62, 0.7]} />
-          <meshBasicMaterial transparent opacity={0} depthWrite={false} side={THREE.DoubleSide} />
-        </mesh>
+        <Hitbox id={id} part="body" position={[0, 0.92, 0.07]} size={[1.62, .7, .5]}/>
       )}
       {!dead && (
-        <mesh position={[0, 0.3, 0.07]} userData={{ targetId: id, targetPart: "leg" }}>
-          <planeGeometry args={[1.62, 0.54]} />
-          <meshBasicMaterial
-            transparent
-            opacity={0}
-            depthWrite={false}
-            side={THREE.DoubleSide}
-          />
-        </mesh>
+        <Hitbox id={id} part="leg" position={[0, 0.3, 0.07]} size={[1.62, .54, .5]}/>
       )}
 
       {!dead && healthBarVisible && (

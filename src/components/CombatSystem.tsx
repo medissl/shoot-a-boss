@@ -1,7 +1,7 @@
 import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
-import { WEAPONS, type WeaponId } from "../game/config";
+import { HEADSHOT_MULTIPLIER, WEAPONS, type WeaponId } from "../game/config";
 import { applyEnemyStatus } from "../game/effects";
 import { getUpgradeStats } from "../game/progression";
 import { getSkin, skinColor, type SkinId } from "../game/skins";
@@ -294,7 +294,7 @@ export function CombatSystem() {
               ? rawPart
               : "body";
           const partMultiplier =
-            part === "head" ? 1.6 : part === "leg" ? 0.65 : 1;
+            part === "head" ? HEADSHOT_MULTIPLIER : part === "leg" ? 0.65 : 1;
           let damage =
             WEAPONS.knife.damage * (now < state.crunchUntil ? 1.10 : 1) *
             stats.damage *
@@ -551,7 +551,7 @@ export function CombatSystem() {
 
         const partMultiplier =
           targetPart === "head"
-            ? 1.6
+            ? HEADSHOT_MULTIPLIER
             : targetPart === "leg"
               ? 0.65
               : 1;
@@ -604,7 +604,7 @@ export function CombatSystem() {
         const echoEnd = echoFirst?.point.clone() ?? echoRay.ray.at(config.maxRange, new THREE.Vector3());
         const echoPart: HitPart = echoFirst?.object.userData.targetPart === "head" ? "head" : echoFirst?.object.userData.targetPart === "leg" ? "leg" : "body";
         const primary = echoTarget ? hits.get(echoTarget) : null;
-        const echoDamage = primary ? primary.damage * .45 : config.damage * stats.damage * .45 * (echoPart === "head" ? 1.6 : echoPart === "leg" ? .65 : 1);
+        const echoDamage = primary ? primary.damage * .45 : config.damage * stats.damage * .45 * (echoPart === "head" ? HEADSHOT_MULTIPLIER : echoPart === "leg" ? .65 : 1);
         const shotRun = state.runId;
         const echoOrigin = muzzle?.clone();
         window.setTimeout(() => {

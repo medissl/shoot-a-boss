@@ -1,3 +1,4 @@
+import { Hitbox } from "./Hitbox";
 import { Html } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -41,6 +42,7 @@ export function OfficeEnemy({ id, spawn, kind }: { id: string; spawn: [number,nu
   const [dead,setDead] = useState(false);
   const [flash,setFlash] = useState(false);
   const [pop,setPop] = useState(0);
+  const [popPart,setPopPart] = useState("body");
 
   const deadAt = useRef(0);
   const phase = useRef<"idle"|"warn"|"strike"|"recover">("idle");
@@ -79,7 +81,7 @@ export function OfficeEnemy({ id, spawn, kind }: { id: string; spawn: [number,nu
       }
       if (kind === "auditor" && performance.now() < openUntil.current) damage *= 1.5;
       hp.current = Math.max(0,hp.current-damage);
-      setHealth(hp.current); setPop(Math.round(damage)); setFlash(true);
+      setHealth(hp.current); setPop(Math.round(damage));setPopPart(data.part??"body"); setFlash(true);
       if(popTimer.current)clearTimeout(popTimer.current);
       popTimer.current=window.setTimeout(()=>setPop(0),650);
       if (flashTimer.current) clearTimeout(flashTimer.current);
@@ -238,10 +240,10 @@ export function OfficeEnemy({ id, spawn, kind }: { id: string; spawn: [number,nu
     <EnemyFeedback id={id} root={root}/>
     <group ref={art}><EnemyDoodle kind={kind} dead={dead} flash={flash} width={heavy?4.4:kind==="stapler"?3.5:3.1} height={heavy?4.1:kind==="stapler"?2.4:3.15} position={[0,heavy?1.75:kind==="stapler"?1.05:height*.49,.18]}/></group>
     {!dead&&<>
-      <mesh position={[0,height*.5,0]} userData={{targetId:id,targetPart:"body"}}><boxGeometry args={[heavy?2.35:kind==="stapler"?2:1.3,height*.58,.9]}/><meshBasicMaterial colorWrite={false} depthWrite={false}/></mesh>
-      <mesh position={[0,kind==="highlighter"?1.48:kind==="clipboard"?2.26:height*.86,0]} userData={{targetId:id,targetPart:"head"}}><boxGeometry args={[heavy?1.4:kind==="stapler"?.85:1,height*.22,.85]}/><meshBasicMaterial colorWrite={false} depthWrite={false}/></mesh>
-      {[-1,1].map(side=><mesh key={side} position={[side*(heavy?.67:.38),.28,0]} userData={{targetId:id,targetPart:"leg"}}><boxGeometry args={[.36,.55,.8]}/><meshBasicMaterial colorWrite={false} depthWrite={false}/></mesh>)}
-      {kind==="clipboard"&&<mesh position={[0,1.7,.38]} userData={{targetId:id,targetPart:"body"}}><boxGeometry args={[2.45,2.5,.2]}/><meshBasicMaterial colorWrite={false} depthWrite={false}/></mesh>}
+      <Hitbox id={id} part="body" position={[0,height*.43,0]} size={[heavy?2.35:kind==="stapler"?2:1.3,height*.53,.9]}/>
+      <Hitbox id={id} part="head" position={[0,kind==="highlighter"?1.48:kind==="clipboard"?2.7:height*.86,.2]} size={[heavy?1.6:kind==="stapler"?.95:1.1,height*.26,1.02]}/>
+      {[-1,1].map(side=><Hitbox key={side} id={id} part="leg" position={[side*(heavy?.67:.38),.28,0]} size={[.36,.55,.8]}/>)}
+      {kind==="clipboard"&&<Hitbox id={id} part="body" position={[0,1.45,.38]} size={[2.45,1.8,.2]}/>}
     </>}
     <mesh ref={marker} rotation={[-Math.PI/2,0,0]} visible={false} userData={{ignoreProjectile:true}}>{kind==="highlighter"||kind==="auditor"?<planeGeometry args={[1,1]}/>:<circleGeometry args={[.5,32]}/>}<meshBasicMaterial color="#f1283b" transparent opacity={.4} depthWrite={false} side={THREE.DoubleSide}/></mesh>
     {(kind==="stapler"||kind==="shredder"||kind==="hr"||kind==="sticky")&&<mesh ref={corridor} rotation={[-Math.PI/2,0,0]} visible={false} userData={{ignoreProjectile:true}}><planeGeometry args={[1,1]}/><meshBasicMaterial color="#ed283c" transparent opacity={.45} depthWrite={false} side={THREE.DoubleSide}/></mesh>}
@@ -249,6 +251,6 @@ export function OfficeEnemy({ id, spawn, kind }: { id: string; spawn: [number,nu
     {isElite(kind)&&[0,1,2].map(i=><mesh key={`form-${i}`} ref={node=>{formWarnings.current[i]=node;}} rotation={[-Math.PI/2,0,0]} visible={false} userData={{ignoreProjectile:true}}><circleGeometry args={[1,28]}/><meshBasicMaterial color="#ed283c" transparent opacity={.35} depthWrite={false} side={THREE.DoubleSide}/></mesh>)}
     {isElite(kind)&&[0,1,2].map(i=><mesh key={`drop-${i}`} ref={node=>{formDrops.current[i]=node;}} visible={false} userData={{ignoreProjectile:true}}><planeGeometry args={[1.3,1.7]}/><meshBasicMaterial color={kind==="auditor"?"#c5f6fb":"#fff8e1"} side={THREE.DoubleSide} depthWrite={false}/></mesh>)}
     {!dead&&<><ScanHalo id={id} size={heavy?2.7:1.5}/>{!isElite(kind)&&healthBarVisible&&<Html position={[0,height+1,0]} center zIndexRange={[40,0]} style={{pointerEvents:"none"}}><div className="office-enemy-label"><b>{profile.name}</b><i style={{width:`${health/maxHp*100}%`}}/></div></Html>}</>}
-    {pop>0&&<Html position={[0,height+.5,0]} center zIndexRange={[40,0]} style={{pointerEvents:"none"}}><div className="boss-damage-pop"><strong>{pop}</strong></div></Html>}
+    {pop>0&&<Html position={[0,height+.5,0]} center zIndexRange={[40,0]} style={{pointerEvents:"none"}}><div className={`boss-damage-pop boss-damage-pop--${popPart}`}>{popPart==="head"&&<span>HEADSHOT</span>}<strong>{pop}</strong></div></Html>}
   </group>;
 }

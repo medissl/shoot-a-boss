@@ -210,7 +210,7 @@ const JUNGLE_BLOCKERS: NavBlocker[] = [
 const GEM_BLOCKERS: NavBlocker[] = [];
 
 const HELL_BLOCKERS: NavBlocker[] = [];
-const HEAVEN_BLOCKERS: NavBlocker[] = [[-27,-26],[27,-26],[-27,24],[27,24]].map(([x,z])=>({x,z,w:19,d:19}));
+const HEAVEN_BLOCKERS: NavBlocker[] = [[-11,-7],[11,-7],[-12,-24],[12,-24]].map(([x,z])=>({x,z,w:2.6,d:2.6}));
 
 export function getLevelBlockers(level: number): NavBlocker[] {
   const theme = getLevelDefinition(level).theme;

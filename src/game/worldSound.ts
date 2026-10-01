@@ -1,4 +1,4 @@
-export type WorldSound = "bossStep"|"bossAttack"|"bossShot"|"paperStep"|"paperAttack"|"penShot"|"inkHit"|"flyWing"|"flyAttack"|"flyDeath"|"statueCharge"|"statueFire"|"statueDeath"|"thornGrow"|"thornHit"|"gemCharge"|"gemLaser"|"hellWarning"|"hellErupt"|"paperWind"|"surge"|"finalPush"|"cardProc"|"pickupHealth"|"pickupAmmo"|"pickupBomb"|"pickupSpeed"|"paperWarning"|"officeAttack"|"paperDeath"|"staplerClick"|"staplerSnap"|"staplerDeath"|"markerCharge"|"markerSweep"|"shredderMotor"|"shredderDeath"|"dragonRoar"|"dragonBreath"|"dragonCrash"|"dragonSeal"|"dragonPhase"|"dragonWing"|"dragonHurt"|"dragonDeath"|"approvalStart"|"approvalStamp"|"approvalSuccess"|"approvalReject"|"stickyPeel"|"stickySlap"|"clipboardThud"|"hrStamp"|"hrTape"|"hrReview"|"hrDeath"|"auditorPage"|"auditorBalance"|"auditorOpen"|"auditorDeath"|"directorGavel"|"directorRing"|"directorDelegate"|"directorDeath"|"heavenChime";
+export type WorldSound = "bossStep"|"bossAttack"|"bossShot"|"paperStep"|"paperAttack"|"penShot"|"inkHit"|"flyWing"|"flyAttack"|"flyDeath"|"statueCharge"|"statueFire"|"statueDeath"|"thornGrow"|"thornHit"|"gemCharge"|"gemLaser"|"hellWarning"|"hellErupt"|"paperWind"|"surge"|"finalPush"|"cardProc"|"pickupHealth"|"pickupAmmo"|"pickupBomb"|"pickupSpeed"|"paperWarning"|"officeAttack"|"paperDeath"|"staplerClick"|"staplerSnap"|"staplerDeath"|"markerCharge"|"markerSweep"|"shredderMotor"|"shredderDeath"|"dragonRoar"|"dragonBreath"|"dragonCrash"|"dragonSeal"|"dragonPhase"|"dragonWing"|"dragonHurt"|"dragonDeath"|"dragonBreathWarn"|"dragonDiveWarn"|"dragonBarrageWarn"|"dragonTapeWarn"|"judgementWarn"|"judgementRise"|"gateTear"|"gateSuction"|"approvalStart"|"approvalStamp"|"approvalSuccess"|"approvalReject"|"stickyPeel"|"stickySlap"|"clipboardThud"|"hrStamp"|"hrTape"|"hrReview"|"hrDeath"|"auditorPage"|"auditorBalance"|"auditorOpen"|"auditorDeath"|"directorGavel"|"directorRing"|"directorDelegate"|"directorDeath"|"heavenChime";
 type Preset={start:number;end:number;length:number;wave:OscillatorType;noise:number;filter:number;gain:number;interval:number};
 const presets:Record<WorldSound,Preset>={
  paperWarning:{start:650,end:380,length:.18,wave:"triangle",noise:.32,filter:1300,gain:.2,interval:280},
@@ -12,6 +12,14 @@ const presets:Record<WorldSound,Preset>={
  shredderMotor:{start:190,end:95,length:.55,wave:"sawtooth",noise:.9,filter:700,gain:.35,interval:400},
  shredderDeath:{start:240,end:36,length:.85,wave:"sawtooth",noise:.85,filter:520,gain:.4,interval:250},
  dragonRoar:{start:115,end:310,length:.9,wave:"sawtooth",noise:.72,filter:800,gain:.42,interval:900},
+ dragonBreathWarn:{start:260,end:920,length:.92,wave:"sawtooth",noise:.24,filter:1050,gain:.38,interval:900},
+ dragonDiveWarn:{start:1150,end:190,length:.96,wave:"triangle",noise:.45,filter:2150,gain:.38,interval:900},
+ dragonBarrageWarn:{start:870,end:410,length:.86,wave:"square",noise:.68,filter:2700,gain:.32,interval:900},
+ dragonTapeWarn:{start:170,end:710,length:.85,wave:"triangle",noise:.42,filter:1320,gain:.37,interval:900},
+ judgementWarn:{start:890,end:540,length:.55,wave:"sine",noise:.17,filter:2300,gain:.36,interval:700},
+ judgementRise:{start:1080,end:1640,length:.38,wave:"triangle",noise:.19,filter:3300,gain:.31,interval:600},
+ gateTear:{start:420,end:80,length:1.05,wave:"sawtooth",noise:.9,filter:1150,gain:.43,interval:1500},
+ gateSuction:{start:90,end:640,length:1.1,wave:"triangle",noise:.85,filter:950,gain:.38,interval:1500},
  dragonBreath:{start:990,end:90,length:1,wave:"sawtooth",noise:.8,filter:1800,gain:.43,interval:850},
  dragonCrash:{start:185,end:28,length:1.1,wave:"sawtooth",noise:.95,filter:500,gain:.48,interval:1000},
  dragonSeal:{start:1850,end:180,length:.65,wave:"square",noise:.8,filter:3400,gain:.39,interval:130},

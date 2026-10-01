@@ -58,9 +58,9 @@ The menus are organized around Play Dream, Dream Desk, Archives, and Options.
 | 9 | Gem Siege | Gems | Overtime event |
 | 10 | The Last Shift | Playground | The final office rush |
 | 11 | The Hell | Hell | Shredder Rollers, stone bridges, and lava |
-| 12 | The Heavens | Heaven | Final Approval, then the Paperwork Dragon |
+| 12 | The Heavens | Heaven | Clear the defenders, break three gate seals, then defeat the Paperwork Dragon |
 
-Dream Anchors follow Stages 3, 6, and 9. A saved completion of the former Stage 10 finale continues at Stage 11. Stage 12 counts the Dragon as its final required target; approval seals are event objects rather than enemies.
+Dream Anchors follow Stages 3, 6, and 9. A saved completion of the former Stage 10 finale continues at Stage 11. Stage 12 has one explicit progression: defeat eleven defenders, shoot the three Rejection Seals attached to the Final Approval Gate, watch the gate open, then defeat the Dragon. The seals have no countdown; the stage cannot clear before the Dragon falls.
 
 Managers, Paper Cutlets, Inkterns, flying couriers, statues, five office enemies, and three named bosses have distinct roles. Red warning shapes announce heavy attacks and map hazards. Normal enemy health appears briefly after a hit; named boss health appears at the top of the screen. Enemy arrivals and attack slots are paced by stage and by Opening, Surge, and Final Push phases.
 
@@ -74,7 +74,9 @@ The Shop sells Gear and four weapon-specific cosmetic crates. A crate costs 300 
 
 ## Combat
 
-The Paper Sniper, rifle, shotgun, and knife have separate magazine, range, damage, and cooldown rules. Guns aim with a camera-center ray; their world-space tracers leave the weapon muzzle toward the hit point. Head, body, and leg hits provide damage feedback. Scan marks targets, the paper grenade deals area damage, and equipped Magic adds elemental attacks. Boss seals, shield openings, cover, movement, and warning regions matter as much as raw damage.
+The Paper Sniper, rifle, shotgun, and knife have separate magazine, range, damage, and cooldown rules. Guns aim with a camera-center ray; their world-space tracers leave the weapon muzzle toward the hit point. Head, body, and leg hits provide damage feedback with a shared 1.6× head multiplier. Scan marks targets, the paper grenade deals area damage, and equipped Magic adds elemental attacks. Boss seals, shield openings, cover, movement, and warning regions matter as much as raw damage.
+
+The Heavens has an arrival area, open courtyard, and gate arena with cover. Judgement Rays show a red warning and play a chime before striking; they stop during the Dragon fight. The Dragon announces Breath, Dive, Form Barrage, and Red Tape with distinct sounds and visible target regions. Its binder seals absorb damage until broken, and the grounded Dive recovery exposes its head for close-range attacks. `?debugBalance=1` also displays head, body, leg, and special weakpoint hitboxes in distinct wireframe colors. Paper Cutlet's face-bearing top region has a head volume; no head-bearing enemy relies on a flat visual sprite for hit detection.
 
 | Input | Action |
 | --- | --- |

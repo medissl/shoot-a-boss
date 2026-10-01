@@ -1,18 +1,15 @@
 const slots = new Map<string, { runId: number; until: number; major: boolean; elite: boolean }>();
 let phase: "OPENING" | "SURGE" | "FINAL PUSH" = "OPENING";
 let eliteUntil = 0;
-let approvalPressure = false;
 let dragonAttack = false;
 let previousRunId = -1;
-export function setApprovalPressure(active: boolean) { approvalPressure = active; }
 export function setDragonAttack(active: boolean) { dragonAttack = active; }
-export function isApprovalPressure() { return approvalPressure; }
 export function setAttackPhase(next: typeof phase) { phase = next; }
 function cleanSlots(runId: number, now: number) {
   if (previousRunId !== runId) { previousRunId = runId; eliteUntil = 0; slots.clear(); }
   for (const [key, slot] of slots) if (slot.runId !== runId || slot.until <= now) slots.delete(key);
 }
-function capFor(level: number) { return Math.max(2, (level <= 3 ? 2 : level <= 9 ? 3 : 4) + (phase !== "OPENING" && level >= 4 && level <= 9 ? 1 : 0) - (approvalPressure ? 1 : 0)); }
+function capFor(level: number) { return Math.max(2, (level <= 3 ? 2 : level <= 9 ? 3 : 4) + (phase !== "OPENING" && level >= 4 && level <= 9 ? 1 : 0)); }
 export function getAttackPressure(runId: number, level: number) {
   cleanSlots(runId, performance.now());
   return { active: slots.size, major: [...slots.values()].filter(slot => slot.major).length, cap: capFor(level) };
