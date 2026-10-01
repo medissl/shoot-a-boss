@@ -112,6 +112,6 @@ Add `?debugBalance=1` to inspect the current stage, roster, threat, attack slots
 
 ## Current status
 
-The game is actively being improved, especially around balancing, encounter feel, boss polish, and visual playtesting. The campaign, progression, maps, weapons, cards, Magic, Gear, cosmetics, save system, Practice, and NG+ are implemented on the working branch.
+The game is actively being improved, especially around balancing, encounter feel, boss polish, and visual playtesting. The campaign, progression, maps, weapons, cards, Magic, Gear, cosmetics, save system, Practice, and NG+ are implemented in the current build.
 
 Made by **Medianto Susilo**.
