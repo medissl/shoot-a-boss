@@ -227,13 +227,13 @@ export function ExtraMonster({ id, spawn, kind }: { id: string; spawn: [number, 
     <EnemyFeedback id={id} root={root} />
     <group ref={art}><EnemyDoodle kind={kind} dead={dead} flash={hitFlash} width={kind === "fly" ? 3.9 : 4} height={kind === "fly" ? 3.5 : 5.1} position={[0,kind === "fly" ? .1 : 2.35,.26]}/></group>
     {!dead && (kind === "fly" ? <>
-      <Hitbox id={id} part="body" position={[0,-.22,0]} size={[1.7,1.45,1.1]}/>
-      <Hitbox id={id} part="head" position={[0,.92,.12]} size={[1.38,.92,1.18]}/>
+      <Hitbox id={id} part="body" position={[0,-.3,0]} size={[1.7,1.4,1.1]}/>
+      <Hitbox id={id} part="head" position={[0,.65,.25]} size={[1.38,1.02,1.18]}/>
       {[-1,1].map(side=><Hitbox key={side} id={id} part="leg" position={[side*.35,-1.35,0]} size={[.4,.7,.8]}/>)}
     </> : <>
       <Hitbox id={id} part="leg" position={[0,.75,0]} size={[2.4,1.3,1.4]}/>
       <Hitbox id={id} part="body" position={[0,2.15,0]} size={[2.4,1.8,1.5]}/>
-      <Hitbox id={id} part="head" position={[0,4,0]} size={[1.7,1.3,1.4]}/>
+      <Hitbox id={id} part="head" position={[0,3.25,.26]} size={[1.7,1.3,1.4]}/>
     </>)}
     {kind === "statue" && <>
       <mesh ref={warningBeam} visible={false} userData={{ ignoreProjectile: true }}><cylinderGeometry args={[.09,.09,1,8]}/><meshBasicMaterial color="#ff5062" depthWrite={false} transparent opacity={.6}/></mesh>
