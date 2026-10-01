@@ -151,7 +151,7 @@ function GemLasers() {
       return Math.hypot(x - gem[0], z - gem[2]) < radius && Math.abs(y - gem[1]) < 8;
     })) {
       const closest = cycleCache.current.indices.map((index) => gems[index]).sort((a, b) => Math.hypot(x - a[0], z - a[2]) - Math.hypot(x - b[0], z - b[2]))[0];
-      live.damagePlayer(hazardDamage(9, live.currentLevel, live.ngPlusCycle), closest, true);
+      live.damagePlayer(hazardDamage(9, live.currentLevel, live.ngPlusCycle), closest, "gemLaser");
       lastHit.current = time;
     }
   });

@@ -1,4 +1,4 @@
-export type WorldSound = "bossStep"|"bossAttack"|"bossShot"|"paperStep"|"paperAttack"|"penShot"|"inkHit"|"flyWing"|"flyAttack"|"flyDeath"|"statueCharge"|"statueFire"|"statueDeath"|"thornGrow"|"gemCharge"|"gemLaser"|"hellWarning"|"hellErupt"|"paperWind"|"surge"|"finalPush"|"cardProc"|"pickupHealth"|"pickupAmmo"|"pickupBomb"|"pickupSpeed";
+export type WorldSound = "bossStep"|"bossAttack"|"bossShot"|"paperStep"|"paperAttack"|"penShot"|"inkHit"|"flyWing"|"flyAttack"|"flyDeath"|"statueCharge"|"statueFire"|"statueDeath"|"thornGrow"|"thornHit"|"gemCharge"|"gemLaser"|"hellWarning"|"hellErupt"|"paperWind"|"surge"|"finalPush"|"cardProc"|"pickupHealth"|"pickupAmmo"|"pickupBomb"|"pickupSpeed";
 type Preset={start:number;end:number;length:number;wave:OscillatorType;noise:number;filter:number;gain:number;interval:number};
 const presets:Record<WorldSound,Preset>={
  bossStep:{start:92,end:45,length:.13,wave:"triangle",noise:.42,filter:420,gain:.24,interval:125},
@@ -15,6 +15,7 @@ const presets:Record<WorldSound,Preset>={
  statueFire:{start:1050,end:105,length:.85,wave:"sawtooth",noise:.62,filter:2300,gain:.42,interval:1800},
  statueDeath:{start:160,end:38,length:.95,wave:"sawtooth",noise:.84,filter:730,gain:.49,interval:180},
  thornGrow:{start:90,end:740,length:.67,wave:"triangle",noise:.82,filter:1700,gain:.39,interval:2000},
+ thornHit:{start:490,end:120,length:.12,wave:"triangle",noise:.62,filter:1450,gain:.25,interval:500},
  gemCharge:{start:580,end:1460,length:.44,wave:"sine",noise:.18,filter:4100,gain:.23,interval:1200},
  gemLaser:{start:1720,end:290,length:.86,wave:"sawtooth",noise:.51,filter:3200,gain:.38,interval:2200},
  hellWarning:{start:160,end:76,length:.52,wave:"triangle",noise:.35,filter:650,gain:.23,interval:1800},

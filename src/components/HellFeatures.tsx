@@ -120,7 +120,7 @@ export function HellHazards() {
     if (inRiver || inImpact) {
       const source = inImpact ? positions.find(({ x, z, radius }) => Math.hypot(px - x, pz - z) < radius) : null;
       const live = useGameStore.getState();
-      live.damagePlayer(hazardDamage(inImpact ? 14 : 7, live.currentLevel, live.ngPlusCycle), [source?.x ?? lavaX.reduce((a, b) => Math.abs(px - a) < Math.abs(px - b) ? a : b), 0, source?.z ?? pz], true);
+      live.damagePlayer(hazardDamage(inImpact ? 14 : 7, live.currentLevel, live.ngPlusCycle), [source?.x ?? lavaX.reduce((a, b) => Math.abs(px - a) < Math.abs(px - b) ? a : b), 0, source?.z ?? pz], inImpact ? "eruption" : "lava");
       lastDamage.current = t;
     }
   });

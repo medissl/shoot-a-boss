@@ -173,7 +173,7 @@ export function GameCanvas() {
               </mesh>)}
 
             {definition.theme === "gems" && <>
-              <PaperworkMonster id="paper-inner" spawn={[0, 0, -4]} />
+              <PaperworkMonster id="paper-inner" spawn={[-29, 0, 7]} />
               <PenMonster id="pen-mid" spawn={[22, 4.7, -4]} />
               <PenMonster id="pen-peak" spawn={[0, 16.7, 21]} />
             </>}

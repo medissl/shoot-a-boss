@@ -54,12 +54,15 @@ export function HUD() {
   const [pickupNotice, setPickupNotice] = useState("");
   const [emptyAlert, setEmptyAlert] = useState(false);
   const [hazardNotice, setHazardNotice] = useState("");
-  const [procNotice, setProcNotice] = useState<{ label: string; detail: string } | null>(null);
+  const [procNotices, setProcNotices] = useState<{ id: number; label: string; detail: string }[]>([]);
+  const [hazardHit, setHazardHit] = useState<{ label: string; amount: number; blocked: boolean } | null>(null);
   const [damageFlashKey, setDamageFlashKey] = useState(0);
   const [damageDirection, setDamageDirection] = useState("front");
   const [scanDirections, setScanDirections] = useState<{ id: string; edge: string; offset: number; distance: number; vertical: string; scan: boolean }[]>([]);
   const [killPulseKey, setKillPulseKey] = useState(0);
   const emptyTimer = useRef<number | null>(null);
+  const procId = useRef(0);
+  const hazardTimer = useRef<number | null>(null);
   const level = getLevelDefinition(currentLevel);
   useEffect(() => {
     const interval = window.setInterval(() => setNow(performance.now()), 300);
@@ -94,11 +97,16 @@ export function HUD() {
     const scanHandler = (event: Event) => setScanDirections((event as CustomEvent<{ id: string; edge: string; offset: number; distance: number; vertical: string; scan: boolean }[]>).detail);
     const killHandler = () => setKillPulseKey((current) => current + 1);
     const hazardHandler = (event: Event) => setHazardNotice((event as CustomEvent<{ message: string }>).detail.message);
-    let procTimer = 0;
     const procHandler = (event: Event) => {
-      setProcNotice((event as CustomEvent<{ label: string; detail: string }>).detail);
-      clearTimeout(procTimer);
-      procTimer = window.setTimeout(() => setProcNotice(null), 1100);
+      const detail = (event as CustomEvent<{ label: string; detail: string }>).detail;
+      const id = ++procId.current;
+      setProcNotices(current => [...current.slice(-1), { id, ...detail }]);
+      window.setTimeout(() => setProcNotices(current => current.filter(item => item.id !== id)), 1300);
+    };
+    const hazardHitHandler = (event: Event) => {
+      setHazardHit((event as CustomEvent<{ label: string; amount: number; blocked: boolean }>).detail);
+      if (hazardTimer.current) window.clearTimeout(hazardTimer.current);
+      hazardTimer.current = window.setTimeout(() => setHazardHit(null), 900);
     };
 
     window.addEventListener("pickup-collected", pickupHandler as EventListener);
@@ -108,6 +116,7 @@ export function HUD() {
     window.addEventListener("map-hazard-notice", hazardHandler);
     window.addEventListener("scan-directions", scanHandler);
     window.addEventListener("card-proc", procHandler);
+    window.addEventListener("hazard-damage", hazardHitHandler);
 
     return () => {
       if (emptyTimer.current) window.clearTimeout(emptyTimer.current);
@@ -118,7 +127,8 @@ export function HUD() {
       window.removeEventListener("map-hazard-notice", hazardHandler);
       window.removeEventListener("scan-directions", scanHandler);
       window.removeEventListener("card-proc", procHandler);
-      clearTimeout(procTimer);
+      window.removeEventListener("hazard-damage", hazardHitHandler);
+      if (hazardTimer.current) window.clearTimeout(hazardTimer.current);
     };
   }, []);
 
@@ -198,12 +208,7 @@ export function HUD() {
         ))}
       </div>
       <div className="hud-owned-cards">
-        <span>YOUR CARDS · {UPGRADE_CARDS.reduce((sum, card) => sum + upgrades[card.id], 0)}</span>
-        <div className="hud-owned-cards__list">{UPGRADE_CARDS.filter((card) => upgrades[card.id] > 0).map((card) =>
-          <div key={card.id} className={`hud-card rarity--${card.rarity}`} title={card.description}>
-            <b>{card.glyph}</b><span>{card.name}</span>{upgrades[card.id] > 1 && <small>×{upgrades[card.id]}</small>}
-          </div>)}</div>
-        <small>ESC · CARD INVENTORY FOR DETAILS</small>
+        <span>▤ {UPGRADE_CARDS.reduce((sum, card) => sum + upgrades[card.id], 0)} CARDS{evolutions.length > 0 && <> · ✳ {evolutions.length} EVOLUTION{evolutions.length > 1 ? "S" : ""}</>}</span>
       </div>
       <div className="hud-scan">Q · {scanTargets.length ? `MARKED ${scanTargets.length}` : scanCooldownUntil > now ? `RECHARGE ${Math.ceil((scanCooldownUntil - now) / 1000)}S` : "MARK ENEMY"}</div>
       <div className="hud-coins"><span className="doodle-coin" aria-hidden="true">◉</span> {coins} COINS</div>
@@ -256,7 +261,8 @@ export function HUD() {
 
       {pickupNotice && <div className="pickup-notice">{pickupNotice}</div>}
       {hazardNotice && <div className="hazard-notice">⚠ {hazardNotice}</div>}
-      {procNotice && <div className="card-proc-notice">✳ {procNotice.label}<small>{procNotice.detail}</small></div>}
+      {hazardHit && <div className="hazard-hit-notice">⚠ {hazardHit.label}<small>{hazardHit.blocked ? "BLOCKED" : `-${hazardHit.amount} HP`}</small></div>}
+      {procNotices.length > 0 && <div className="card-proc-stack">{procNotices.map(notice => <div key={notice.id} className="card-proc-notice">✳ {notice.label}<small>{notice.detail}</small></div>)}</div>}
 
       {emptyAlert && (
         <div className="empty-mag-message">

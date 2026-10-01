@@ -275,10 +275,10 @@ export function CombatSystem() {
 
         if (targetId || propId || destructibleId) {
           addImpact(first.point);
-          window.dispatchEvent(new Event("knife-impact"));
         }
 
         if (targetId) {
+          window.dispatchEvent(new Event("knife-impact"));
           const rawPart = first.object.userData.targetPart as
             | HitPart
             | undefined;
@@ -392,9 +392,7 @@ export function CombatSystem() {
       const candidates = projectileMeshes(scene);
       const muzzle = weaponMuzzleWorldPosition(camera, gl.domElement, currentWeapon, aimed);
 
-      const pelletCount = currentWeapon === "sniper" && state.upgrades.sniperTwin ? 2 :
-        config.pellets + (currentWeapon === "shotgun" ? state.upgrades.shotgunPellets + state.upgrades.shotgunDouble * 2 : 0);
-      if (currentWeapon === "sniper" && state.upgrades.sniperTwin) emitCardProc("TWIN SIGNATURE", "SECOND ROUND");
+      const pelletCount = config.pellets + (currentWeapon === "shotgun" ? state.upgrades.shotgunPellets + state.upgrades.shotgunDouble * 2 : 0);
       if (currentWeapon === "shotgun" && state.upgrades.shotgunDouble) emitCardProc("DOUBLE ENTRY", "+2 PELLETS");
       for (let pellet = 0; pellet < pelletCount; pellet += 1) {
         const raycaster = new THREE.Raycaster();
@@ -402,7 +400,7 @@ export function CombatSystem() {
         const spreadY = (Math.random() - 0.5) * spread;
         raycaster.far = config.maxRange;
         raycaster.setFromCamera(
-          new THREE.Vector2(spreadX + (currentWeapon === "sniper" && pellet === 1 ? 0.003 : 0), spreadY),
+          new THREE.Vector2(spreadX, spreadY),
           camera,
         );
 
@@ -515,7 +513,6 @@ export function CombatSystem() {
 
         let damage =
           config.damage *
-          (currentWeapon === "sniper" && pellet === 1 ? 0.45 : 1) *
           partMultiplier *
           stats.damage * (now < state.crunchUntil ? 1.10 : 1) * (1 + equippedGearRank(state, "barrel") * 0.03) * (state.freshPrintShots > 0 ? 1.05 : 1) *
           (currentWeapon === "sniper" ? (aimed ? 1 + state.upgrades.sniperFocus * 0.15 : 1) : 1) *
@@ -548,6 +545,34 @@ export function CombatSystem() {
                 : previous.part,
           });
         }
+      }
+
+      // The echo is a separate, delayed hit. It never enters the normal on-hit
+      // loop, so Burning Ink and other status effects apply only from the primary.
+      if (currentWeapon === "sniper" && state.upgrades.sniperTwin) {
+        const echoRay = new THREE.Raycaster();
+        echoRay.far = config.maxRange;
+        echoRay.setFromCamera(new THREE.Vector2(.003, 0), camera);
+        const echoFirst = firstProjectileIntersection(echoRay.intersectObjects(candidates, false));
+        const echoTarget = echoFirst ? inheritedUserData(echoFirst.object, "targetId") : undefined;
+        const echoEnd = echoFirst?.point.clone() ?? echoRay.ray.at(config.maxRange, new THREE.Vector3());
+        const echoPart: HitPart = echoFirst?.object.userData.targetPart === "head" ? "head" : echoFirst?.object.userData.targetPart === "leg" ? "leg" : "body";
+        const primary = echoTarget ? hits.get(echoTarget) : null;
+        const echoDamage = primary ? primary.damage * .45 : config.damage * stats.damage * .45 * (echoPart === "head" ? 1.6 : echoPart === "leg" ? .65 : 1);
+        const shotRun = state.runId;
+        const echoOrigin = muzzle?.clone();
+        window.setTimeout(() => {
+          const live = useGameStore.getState();
+          if (live.runId !== shotRun || live.screen !== "playing") return;
+          if (echoOrigin) addTrace(echoOrigin, echoEnd, Boolean(echoTarget));
+          window.dispatchEvent(new Event("weapon-twin-echo"));
+          emitCardProc("TWIN SIGNATURE", "ECHO SHOT", 400);
+          if (!echoTarget || live.eliminated.includes(echoTarget)) return;
+          addImpact(echoEnd);
+          live.recordWeaponHit(echoTarget, "sniper", echoDamage);
+          window.dispatchEvent(new CustomEvent("boss-hit", { detail: { id: echoTarget, damage: echoDamage, part: echoPart } }));
+          window.dispatchEvent(new CustomEvent("boss-impact", { detail: { id: echoTarget, part: echoPart, point: [echoEnd.x, echoEnd.y, echoEnd.z] } }));
+        }, 70);
       }
 
       if (currentWeapon === "sniper" && state.upgrades.sniperPierce > 0) {

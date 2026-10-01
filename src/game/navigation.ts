@@ -11,6 +11,15 @@ function caveWall(x: number, z: number, padding: number) {
     radius < CAVE_WALL_RADIUS + 1.8 + padding;
 }
 
+/** Floor spawns must stay off the spiral ramp and inside the cavern wall. */
+export function isGemGroundSpawnValid(x: number, z: number, radius = .8) {
+  const distance = Math.hypot(x, z - CAVE_CENTER_Z);
+  if (distance < 27.5 + radius || distance > CAVE_WALL_RADIUS - 3.2 - radius) return false;
+  if (caveWall(x, z, radius + 1.2)) return false;
+  const largeCrystals: [number, number][] = [[-42,5],[43,-18],[-23,-5],[-13,-15],[8,-6],[18,11],[2,-28],[25,-16],[21,4],[31,-20],[12,-26],[-36,24],[37,24]];
+  return largeCrystals.every(([cx, cz]) => Math.hypot(x - cx, z - cz) > 2.7 + radius);
+}
+
 export function isEnemyPositionBlocked(
   x: number,
   z: number,
@@ -44,7 +53,8 @@ export function safeEnemySpawn(
   radius: number,
   level: number,
 ): [number, number, number] {
-  if (!isEnemyPositionBlocked(spawn[0], spawn[2], radius, level)) return spawn;
+  const valid = (x: number, z: number) => !isEnemyPositionBlocked(x, z, radius, level) && (getLevelDefinition(level).theme !== "gems" || spawn[1] > 1 || isGemGroundSpawnValid(x, z, radius));
+  if (valid(spawn[0], spawn[2])) return spawn;
 
   for (let ring = 1; ring <= 9; ring += 1) {
     const distance = ring * 2.25;
@@ -60,10 +70,11 @@ export function safeEnemySpawn(
         -ARENA_HALF_SIZE + radius + 1,
         ARENA_HALF_SIZE - radius - 1,
       );
-      if (!isEnemyPositionBlocked(x, z, radius, level)) return [x, 0, z];
+      if (valid(x, z)) return [x, 0, z];
     }
   }
 
+  if (getLevelDefinition(level).theme === "gems") return [-29, 0, 7];
   return [0, 0, 0];
 }
 

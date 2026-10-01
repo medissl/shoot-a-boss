@@ -29,6 +29,7 @@ export function MainMenu() {
   const [returnTo, setReturnTo] = useState<"home" | "stages">(state.preStage || state.currentLevel > 1 ? "stages" : "home");
   const [deskTab, setDeskTab] = useState<DeskTab>(state.postStageReturn ? "magic" : new URLSearchParams(location.search).has("arsenal") ? "arsenal" : "loadout");
   const [archiveTab, setArchiveTab] = useState<ArchiveTab>("story");
+  const [crateActive, setCrateActive] = useState(false);
   useEffect(() => {
     const open = (event: Event) => {
       const tab = (event as CustomEvent<string>).detail;
@@ -89,10 +90,10 @@ export function MainMenu() {
       <div className="dream-desk__content">
         {deskTab === "loadout" && <EquipmentHub />}
         {deskTab === "magic" && <SkillTree onBack={back} />}
-        {deskTab === "shop" && <GearShopScene onBack={back} />}
+        {deskTab === "shop" && <GearShopScene onBack={back} onCrateActiveChange={setCrateActive} />}
         {deskTab === "arsenal" && <Arsenal onBack={back} />}
       </div>
-      {state.preStage && !state.postStageReturn && <footer className="prestage-footer"><div><small>{state.preStage.practice ? "PRACTICE · NO HEARTS / COINS / XP / CARDS" : state.champion?.ready ? "NG+ · NEXT DEADLINE" : "NEXT DEADLINE"}</small><h2>LEVEL {state.preStage.level} · {LEVELS[state.preStage.level - 1].name}</h2><span>{state.preStage.practice ? "Practice does not change your campaign." : `${state.equippedGear.length}/4 GEAR · ${selectedSpell} · ${activeCards.length} CARDS`}</span></div><button onClick={() => enterStageAfterCurtain(state.startPreparedStage)}>START {state.preStage.practice ? "PRACTICE" : `LEVEL ${state.preStage.level}`} →</button></footer>}
+      {state.preStage && !state.postStageReturn && !crateActive && <footer className="prestage-footer"><div><small>{state.preStage.practice ? "PRACTICE · NO HEARTS / COINS / XP / CARDS" : state.champion?.ready ? "NG+ · NEXT DEADLINE" : "NEXT DEADLINE"}</small><h2>LEVEL {state.preStage.level} · {LEVELS[state.preStage.level - 1].name}</h2><span>{state.preStage.practice ? "Practice does not change your campaign." : `${state.equippedGear.length}/4 GEAR · ${selectedSpell} · ${activeCards.length} CARDS`}</span></div><button onClick={() => enterStageAfterCurtain(state.startPreparedStage)}>START {state.preStage.practice ? "PRACTICE" : `LEVEL ${state.preStage.level}`} →</button></footer>}
     </div>}
     {scene === "archives" && <div className="dream-archives">
       <header><button onClick={back}><ChevronLeft size={17} /> MENU</button><h1>ARCHIVES</h1></header>

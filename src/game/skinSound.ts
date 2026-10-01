@@ -1,6 +1,6 @@
 import { getSkin, type SkinId } from './skins';
 import type { WeaponId } from './config';
-type Action='fire'|'equip'|'cock'|'reload'|'knife-hit';
+export type SkinAction='fire'|'equip'|'cock'|'reload'|'knife-hit';
 type Wave=OscillatorType;
 type Timbre={pitch:number;fall:number;wave:Wave;noise:number;filter:BiquadFilterType;cut:number;echo:number;harmonic:number;attack:number};
 /** Individually tuned timbres. The same family is processed separately for each weapon. */
@@ -31,8 +31,8 @@ const voices:Record<string,Timbre>={
 const noiseCache=new WeakMap<AudioContext,AudioBuffer>();
 const last=new Map<string,number>();
 function noiseBuffer(ctx:AudioContext){let b=noiseCache.get(ctx);if(b)return b;b=ctx.createBuffer(1,Math.ceil(ctx.sampleRate*.65),ctx.sampleRate);const out=b.getChannelData(0);for(let i=0;i<out.length;i++)out[i]=Math.random()*2-1;noiseCache.set(ctx,b);return b;}
-/** Complete theme sound. No original weapon recording is mixed into this signal. */
-export function playSkinSound(ctx:AudioContext,id:SkinId,action:Action,volume:number,weapon:WeaponId){
+/** Theme character layered under the recorded mechanical weapon sound. */
+export function playSkinAccent(ctx:AudioContext,id:SkinId,action:SkinAction,volume:number,weapon:WeaponId){
  const theme=getSkin(id);if(!theme||volume<=0)return;
  const key=`${id}:${weapon}:${action}`,now=performance.now();
  if(now-(last.get(key)??-Infinity)<(action==='fire'?(weapon==='rifle'?67:100):action==='knife-hit'?90:300))return;
@@ -40,7 +40,7 @@ export function playSkinSound(ctx:AudioContext,id:SkinId,action:Action,volume:nu
  const t=voices[theme.sound];if(!t)return;
  const profile={rifle:{pitch:1.08,length:.27,body:.96},shotgun:{pitch:.65,length:.49,body:1.18},sniper:{pitch:.46,length:.75,body:1.24},knife:{pitch:1.67,length:.29,body:.85}}[weapon];
  const at=ctx.currentTime+.002;
- const master=ctx.createGain();master.gain.value=Math.min(.95,Math.max(.02,volume*1.05*profile.body));
+ const master=ctx.createGain();master.gain.value=Math.min(.42,Math.max(.01,volume*.43*profile.body));
  const limiter=ctx.createDynamicsCompressor();limiter.threshold.value=-11;limiter.knee.value=9;limiter.ratio.value=5;limiter.attack.value=.002;limiter.release.value=.18;
  master.connect(limiter).connect(ctx.destination);
  const duration=action==='fire'?profile.length:action==='knife-hit'?.35:action==='reload'?.64:.37;
@@ -58,10 +58,8 @@ export function playSkinSound(ctx:AudioContext,id:SkinId,action:Action,volume:nu
      trigger(0,.65,.21,2.2,t.cut*1.9);
      trigger(.075,.55,.16,.77,t.cut*.8);
    }else{
-     // Mechanical crack, pressure body, and the theme's tail form one complete shot.
-     trigger(0,1,.095,1.9,t.cut*2.1);
-     trigger(.018,.82,duration,.77,t.cut);
-     trigger(Math.min(.1,duration*.31),.34,Math.min(.32,duration*.65),t.harmonic,t.cut*1.25);
+     trigger(0,.62,.085,2.1,t.cut*1.8);
+     trigger(.018,.34,Math.min(.38,duration),t.harmonic,t.cut*1.35);
    }
  }else if(action==='reload'){
    trigger(0,.66,.13,2.4,t.cut*1.55);

@@ -3,7 +3,7 @@ import { useGameStore, type GameScreen, type MagicType } from "../game/store";
 import type { WeaponId } from "../game/config";
 import { getLevelDefinition } from "../game/levels";
 import { playWorldSound, resumeWorldSound, type WorldSound } from "../game/worldSound";
-import { playSkinSound } from "../game/skinSound";
+import { playWeaponEvent } from "../game/weaponAudio";
 
 const A = {
   introBgm: "/audio/IntroMenuBGM.mp3",
@@ -20,16 +20,6 @@ const A = {
   speed: "/audio/SpeedBoost.mp3",
   grenadeCock: "/audio/GrenadeCocking.mp3",
   grenadeExplode: "/audio/GrenadeExplode.mp3",
-  rifleCock: "/audio/RifleCocking.mp3",
-  rifleReload: "/audio/RifleReload.mp3",
-  rifleOne: "/audio/RifleShoot1Time.mp3",
-  rifleBurst: "/audio/RifleShoot3Times.mp3",
-  shotgunCock: "/audio/ShotgunCocking.mp3",
-  shotgunReload: "/audio/ShotgunReload.m4a",
-  shotgunShoot: "/audio/ShotgunShoot.mp3",
-  sniperCock: "/audio/SniperCocking.mp3",
-  sniperReload: "/audio/SniperReload.mp3",
-  sniperShoot: "/audio/SniperShoot.mp3",
   magic: {fire:"/audio/FireBall.mp3",crystal:"/audio/CrystalBall.mp3",ice:"/audio/IceBall.mp3",water:"/audio/WaterBall.mp3",thunder:"/audio/ThunderBall.mp3"},
   reveal:"/audio/RevealSFX.mp3", crateDrop:"/audio/CaseDrop.mp3",crateUnlock:"/audio/CaseLockOpen.mp3",crateSpin:"/audio/CaseSpinRoulette.mp3",crateReveal:"/audio/CaseRevealItem.mp3",
   kills: [
@@ -40,24 +30,6 @@ const A = {
     "/audio/Kill5.mp3",
   ],
 } as const;
-
-const cocking: Partial<Record<WeaponId, string>> = {
-  sniper: A.sniperCock,
-  rifle: A.rifleCock,
-  shotgun: A.shotgunCock,
-};
-
-const reloads: Partial<Record<WeaponId, string>> = {
-  sniper: A.sniperReload,
-  rifle: A.rifleReload,
-  shotgun: A.shotgunReload,
-};
-
-const reloadGain: Partial<Record<WeaponId, number>> = {
-  sniper: 0.9,
-  rifle: 0.8,
-  shotgun: 0.75,
-};
 
 function bgmFor(screen: GameScreen, level: number) {
   if (!["playing", "paused", "stageClear", "levelUp", "reward", "upgrade", "evolution", "won", "lost", "practiceResult"].includes(screen)) return A.introBgm;
@@ -90,10 +62,6 @@ export function AudioManager() {
   const bgmPath = useRef<string | null>(null);
 
   const stepLoop = useRef<{ path: string; audio: HTMLAudioElement } | null>(null);
-  const rifleBurstTimer = useRef<number | null>(null);
-  const rifleHoldTimer = useRef<number | null>(null);
-  const rifleHeld = useRef(false);
-  const rifleBursts = useRef(new Set<HTMLAudioElement>());
   const oneShots = useRef(new Set<HTMLAudioElement>());
   const boostedContext = useRef<AudioContext | null>(null);
 
@@ -138,14 +106,17 @@ export function AudioManager() {
     [sfxLevel],
   );
 
-  const playTheme = useCallback((weapon:WeaponId,action:"fire"|"equip"|"cock"|"reload"|"knife-hit") => {
-    if (!unlocked.current || useGameStore.getState().screen!=="playing" || typeof AudioContext==="undefined")return;
-    const skin=useGameStore.getState().equippedSkins[weapon];
-    if(skin==="default")return;
-    const context=boostedContext.current??new AudioContext();boostedContext.current=context;
-    void context.resume().catch(()=>undefined);
-    playSkinSound(context,skin,action,sfxLevel(1.25),weapon);
-  },[sfxLevel]);
+  const playWeapon = useCallback((weapon: WeaponId, action: "fire" | "equip" | "cock" | "reload" | "knife-hit") => {
+    if (!unlocked.current || useGameStore.getState().screen !== "playing") return;
+    const skin = useGameStore.getState().equippedSkins[weapon];
+    let context: AudioContext | undefined;
+    if (skin !== "default" && typeof AudioContext !== "undefined") {
+      context = boostedContext.current ?? new AudioContext();
+      boostedContext.current = context;
+      void context.resume().catch(() => undefined);
+    }
+    playWeaponEvent(weapon, skin, action, playOne, context, sfxLevel(.9));
+  }, [playOne, sfxLevel]);
 
   const playMenuSound = useCallback((kind: "open" | "select" | "confirm") => {
     if (!unlocked.current || !menuAudio.current) return;
@@ -197,60 +168,6 @@ export function AudioManager() {
     if (audio.paused) void audio.play().catch(() => undefined);
   }, [bgmLevel, ensureBgmAudio]);
 
-  const stopRifleBurst = useCallback(() => {
-    rifleHeld.current = false;
-
-    if (rifleHoldTimer.current !== null) {
-      window.clearTimeout(rifleHoldTimer.current);
-      rifleHoldTimer.current = null;
-    }
-
-    if (rifleBurstTimer.current !== null) {
-      window.clearTimeout(rifleBurstTimer.current);
-      rifleBurstTimer.current = null;
-    }
-
-    rifleBursts.current.forEach((audio) => {
-      audio.pause();
-      audio.currentTime = 0;
-    });
-    rifleBursts.current.clear();
-  }, []);
-
-  const startSmoothRifleBurst = useCallback(() => {
-    const spawnBurst = () => {
-      if (!rifleHeld.current || !unlocked.current) return;
-
-      const audio = new Audio(A.rifleBurst);
-      audio.preload = "auto";
-      audio.volume = sfxLevel(0.8);
-      rifleBursts.current.add(audio);
-
-      const scheduleNext = () => {
-        if (!rifleHeld.current) return;
-        const durationMs = Number.isFinite(audio.duration)
-          ? audio.duration * 1000
-          : 300;
-
-        // Small overlap hides the encoded silence at the clip boundary.
-        rifleBurstTimer.current = window.setTimeout(
-          spawnBurst,
-          Math.max(110, durationMs - 90),
-        );
-      };
-
-      if (audio.readyState >= 1) scheduleNext();
-      else audio.addEventListener("loadedmetadata", scheduleNext, { once: true });
-
-      const cleanup = () => rifleBursts.current.delete(audio);
-      audio.addEventListener("ended", cleanup, { once: true });
-      audio.addEventListener("error", cleanup, { once: true });
-      void audio.play().catch(cleanup);
-    };
-
-    spawnBurst();
-  }, [sfxLevel]);
-
   useEffect(() => {
     const unlock = () => {
       if (unlocked.current) return;
@@ -261,10 +178,7 @@ export function AudioManager() {
       requestBgm(bgmFor(state.screen, state.currentLevel));
 
       if (state.screen === "playing") {
-        const path = cocking[state.weapon];
-        if (useGameStore.getState().equippedSkins[state.weapon] === "default") {
-          if (path) playOne(path, 0.72);
-        } else playTheme(state.weapon,"equip");
+        playWeapon(state.weapon, state.weapon === "knife" ? "equip" : "cock");
       }
     };
 
@@ -279,7 +193,7 @@ export function AudioManager() {
       window.removeEventListener("pointerdown", unlock);
       window.removeEventListener("keydown", unlock);
     };
-  }, [playOne, playTheme, requestBgm]);
+  }, [playWeapon, requestBgm]);
 
   useEffect(() => {
     requestBgm(bgmFor(screen, currentLevel));
@@ -371,11 +285,8 @@ export function AudioManager() {
 
   useEffect(() => {
     if (!reloading || !reloadingWeapon) return;
-    const path = reloads[reloadingWeapon];
-    if (!path) return;
-    if (useGameStore.getState().equippedSkins[reloadingWeapon] === "default") playOne(path, reloadGain[reloadingWeapon] ?? 0.25);
-    else playTheme(reloadingWeapon,"reload");
-  }, [playOne, reloading, reloadingWeapon, playTheme]);
+    playWeapon(reloadingWeapon, "reload");
+  }, [reloading, reloadingWeapon, playWeapon]);
 
   useEffect(() => {
     const wanted: string | null =
@@ -419,33 +330,17 @@ export function AudioManager() {
     const weaponSelected = (event: Event) => {
       const selected = (event as CustomEvent<{ weapon: WeaponId }>).detail.weapon;
       if (useGameStore.getState().screen === "playing") {
-        const path = cocking[selected];
-        if (useGameStore.getState().equippedSkins[selected] === "default") { if (path) playOne(path, 0.72); }
-        else playTheme(selected,"cock");
+        playWeapon(selected, selected === "knife" ? "equip" : "cock");
       }
     };
 
     const weaponFire = (event: Event) => {
       const fired = (event as CustomEvent<{ weapon: WeaponId }>).detail.weapon;
-      const themed = useGameStore.getState().equippedSkins[fired] !== "default";
-      if (themed) { playTheme(fired,"fire"); return; }
-      if (fired === "sniper") playOne(A.sniperShoot, 0.95, 1.6);
-      if (fired === "shotgun") playOne(A.shotgunShoot, 0.85);
+      playWeapon(fired, "fire");
     };
 
-    const rifleDown = () => {
-      if (!unlocked.current || rifleHeld.current || useGameStore.getState().equippedSkins.rifle !== "default") return;
-      rifleHeld.current = true;
-      playOne(A.rifleOne, 0.75);
-
-      rifleHoldTimer.current = window.setTimeout(() => {
-        if (!rifleHeld.current || !unlocked.current) return;
-        startSmoothRifleBurst();
-      }, 185);
-    };
-
-    const rifleUp = () => stopRifleBurst();
-    const knifeImpact = () => playTheme("knife","knife-hit");
+    const knifeImpact = () => playWeapon("knife", "knife-hit");
+    const twinEcho = () => playWorldSound("cardProc", useGameStore.getState().sfxVolume * .45);
     const grenadeCock = () => playOne(A.grenadeCock, 0.75);
     const grenadeExplode = () => playOne(A.grenadeExplode, 1.35);
     const magicCast = (event: Event) => playOne(A.magic[(event as CustomEvent<{kind:MagicType}>).detail.kind], 1);
@@ -480,8 +375,7 @@ export function AudioManager() {
 
     window.addEventListener("weapon-selected", weaponSelected as EventListener);
     window.addEventListener("weapon-fired", weaponFire as EventListener);
-    window.addEventListener("rifle-trigger-down", rifleDown);
-    window.addEventListener("rifle-trigger-up", rifleUp);
+    window.addEventListener("weapon-twin-echo", twinEcho);
     window.addEventListener("knife-impact", knifeImpact);
     window.addEventListener("grenade-cocked", grenadeCock);
     window.addEventListener("magic-cast", magicCast);
@@ -500,11 +394,9 @@ export function AudioManager() {
     window.addEventListener("boss-killed", killed as EventListener);
 
     return () => {
-      stopRifleBurst();
       window.removeEventListener("weapon-selected", weaponSelected as EventListener);
       window.removeEventListener("weapon-fired", weaponFire as EventListener);
-      window.removeEventListener("rifle-trigger-down", rifleDown);
-      window.removeEventListener("rifle-trigger-up", rifleUp);
+      window.removeEventListener("weapon-twin-echo", twinEcho);
       window.removeEventListener("knife-impact", knifeImpact);
       window.removeEventListener("grenade-cocked", grenadeCock);
       window.removeEventListener("magic-cast", magicCast);
@@ -522,11 +414,7 @@ export function AudioManager() {
       window.removeEventListener("pickup-collected", pickup as EventListener);
       window.removeEventListener("boss-killed", killed as EventListener);
     };
-  }, [playOne, playTheme, startSmoothRifleBurst, stopRifleBurst]);
-
-  useEffect(() => {
-    if (screen !== "playing") stopRifleBurst();
-  }, [screen, stopRifleBurst]);
+  }, [playOne, playWeapon]);
 
   useEffect(
     () => () => {
@@ -535,10 +423,9 @@ export function AudioManager() {
         bgmAudio.current.src = "";
       }
       stepLoop.current?.audio.pause();
-      stopRifleBurst();
       oneShots.current.forEach((audio) => audio.pause());
     },
-    [stopRifleBurst],
+    [],
   );
 
   return null;

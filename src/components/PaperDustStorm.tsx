@@ -118,7 +118,7 @@ export function PaperDustStorm() {
     }
     const [x, y, z] = live.playerPosition;
     if (Math.abs(x - region.x) < region.w / 2 && Math.abs(z - region.z) < region.d / 2 && y < 8) {
-      live.damagePlayer(hazardDamage(11, live.currentLevel, live.ngPlusCycle), [region.x, 0, region.z], true);
+      live.damagePlayer(hazardDamage(11, live.currentLevel, live.ngPlusCycle), [region.x, 0, region.z], "paperStorm");
       hitAt.current = elapsed;
     }
   });

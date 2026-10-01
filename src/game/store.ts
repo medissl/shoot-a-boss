@@ -19,6 +19,13 @@ type AmmoState = Record<WeaponId, { mag: number; reserve: number }>;
 type Champion = { cycle: number; level: number; hearts: number; upgrades: UpgradeLevels; ready: boolean };
 type DreamAnchor = { level: number; cycle: number; upgrades: UpgradeLevels; evolutions: EvolutionId[] };
 export type TutorialId = "controls" | "cards" | "xp" | "levelUp" | "skillPoint" | "magic" | "magicAwakened" | "coins" | "gear" | "shop" | "crates" | "hearts" | "anchor" | "scan" | "evolution";
+export type HazardKind = "thorn" | "gemLaser" | "lava" | "eruption" | "paperStorm" | "heavenBeam";
+const hazardLabels: Record<HazardKind, string> = { thorn: "THORNS", gemLaser: "GEM LASER", lava: "LAVA", eruption: "ERUPTION", paperStorm: "PAPER STORM", heavenBeam: "JUDGEMENT RAY" };
+function notifyHazard(kind: HazardKind | boolean, amount: number, blocked = false) {
+  if (typeof kind !== "string") return;
+  window.dispatchEvent(new CustomEvent("hazard-damage", { detail: { kind, label: hazardLabels[kind], amount: Math.round(amount), blocked } }));
+  if (kind === "thorn") window.dispatchEvent(new CustomEvent("world-sfx", { detail: { kind: "thornHit" } }));
+}
 export const SAVE_VERSION = 2;
 type TutorialFlags = Record<TutorialId, boolean>;
 const freshTutorials = (): TutorialFlags => ({ controls:false, cards:false, xp:false, levelUp:false, skillPoint:false, magic:false, magicAwakened:false, coins:false, gear:false, shop:false, crates:false, hearts:false, anchor:false, scan:false, evolution:false });
@@ -284,7 +291,7 @@ type GameStore = {
   grantDreamCache: () => void;
   setEventTarget: (id: string | null) => void;
   suppressHazard: (durationMs: number) => void;
-  damagePlayer: (amount: number, source?: [number, number, number], hazard?: boolean) => void;
+  damagePlayer: (amount: number, source?: [number, number, number], hazard?: HazardKind | boolean) => void;
   eliminate: (id: string) => void;
   setSensitivity: (value: number) => void;
   setBgmVolume: (value: number) => void;
@@ -1141,6 +1148,7 @@ export const useGameStore = create<GameStore>((set, get) => {
         set({ shieldCharges: state.shieldCharges - 1, guardHp: equippedGearRank(state, "aegis") >= 3 ? Math.max(state.guardHp, 5) : state.guardHp });
         window.dispatchEvent(new CustomEvent("shield-blocked", { detail: { source, chargesRemaining: state.shieldCharges - 1 } }));
         emitCardProc("PAPER ARMOR", "BLOCKED", 300);
+        notifyHazard(hazard, 0, true);
         return;
       }
       if (state.upgrades.shieldOrbit && performance.now() >= state.shieldReadyAt) {
@@ -1148,10 +1156,12 @@ export const useGameStore = create<GameStore>((set, get) => {
           guardHp: equippedGearRank(state, "aegis") >= 3 ? Math.max(state.guardHp, 5) : state.guardHp });
         window.dispatchEvent(new CustomEvent("shield-blocked", { detail: { source } }));
         emitCardProc("ORBITAL GUARD", "BLOCKED", 300);
+        notifyHazard(hazard, 0, true);
         return;
       }
       const guardHp = Math.max(0, state.guardHp - amount);
       const next = Math.max(0, state.hp - Math.max(0, amount - state.guardHp));
+      notifyHazard(hazard, state.hp - next, next === state.hp);
       const firstAid = equippedGearRank(state, "vest") >= 5 && !state.vestGuardUsed && next > 0 && next < state.maxHp * .3;
       window.dispatchEvent(
         new CustomEvent("player-damaged", { detail: { amount, source } }),

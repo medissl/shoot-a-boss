@@ -46,6 +46,7 @@ export function JungleThorns() {
   const spikes = useRef<THREE.InstancedMesh>(null);
   const warningGround = useRef<THREE.InstancedMesh>(null);
   const warningMaterial = useRef<THREE.MeshBasicMaterial>(null);
+  const activeMaterial = useRef<THREE.MeshBasicMaterial>(null);
   const elapsed = useRef(0);
   const lastWave = useRef(0);
   const lastDamage = useRef(0);
@@ -116,6 +117,7 @@ export function JungleThorns() {
       const urgency = 1 - untilWave / 6;
       warningMaterial.current.opacity = 0.47 + (0.18 + urgency * 0.22) * Math.abs(Math.sin(time * (4 + urgency * 16)));
     }
+    if (activeMaterial.current) activeMaterial.current.opacity = .66 + .22 * Math.abs(Math.sin(time * 3.6));
     const next = Math.ceil(30 - time % 30);
     const message = next <= 6 ? `THORNS SPREAD IN ${next}S · CLIMB A TREE`
       : patchesRef.current.length > 0 ? `THORNS ACTIVE · NEXT WAVE IN ${next}S · ZIPLINES ARE SAFE`
@@ -136,7 +138,7 @@ export function JungleThorns() {
     const [px, py, pz] = useGameStore.getState().playerPosition;
     const patch = patchesRef.current.find(({ x, z }) => Math.abs(x - px) < 5.8 && Math.abs(z - pz) < 5.8);
     if (py < 2.1 && patch) {
-      live.damagePlayer(hazardDamage(2.5, live.currentLevel, live.ngPlusCycle), [patch.x, 0, patch.z], true);
+      live.damagePlayer(hazardDamage(5, live.currentLevel, live.ngPlusCycle), [patch.x, 0, patch.z], "thorn");
       lastDamage.current = time;
     }
   });
@@ -148,7 +150,7 @@ export function JungleThorns() {
     </instancedMesh>
     <instancedMesh ref={ground} args={[undefined, undefined, patches.length]}>
       <boxGeometry args={[11.7, 0.08, 11.7]} />
-      <meshBasicMaterial color="#488e43" transparent opacity={0.72} depthWrite={false} />
+      <meshBasicMaterial ref={activeMaterial} color="#308e3e" transparent opacity={0.75} depthWrite={false} />
     </instancedMesh>
     <instancedMesh ref={spikes} args={[undefined, undefined, patches.length * 3]}>
       <coneGeometry args={[2.15, 0.9, 4]} />

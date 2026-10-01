@@ -20,7 +20,7 @@ const gearGlyphs: Record<GearId, string> = {
 };
 const masterwork: Record<GearId, string> = { vest: "FIRST AID · 10 GUARD BELOW 30% HP", boots: "RUSH HOUR · +5% AFTER 2S SPRINT", barrel: "FRESH PRINT · FIRST 5 SHOTS +5%", medallion: "GOOD NEWS · EVERY 5TH KILL +4 HEAL", skates: "CARBON SLIDE · BRIEF +8% SPEED", aegis: "THICKER PAGE · +5 GUARD ON BLOCK", lens: "FULL REPORT · SHOW TARGET DISTANCE", satchel: "DOUBLE POCKET · SELECT BOMBS +2", arcana: "SHARP NIB · +11% SPELL SPEED" };
 
-export function GearShopScene({ onBack }: { onBack: () => void }) {
+export function GearShopScene({ onBack, onCrateActiveChange }: { onBack: () => void; onCrateActiveChange?: (active: boolean) => void }) {
   const coins = useGameStore((s) => s.coins);
   const gear = useGameStore((s) => s.gear);
   const equippedGear = useGameStore((s) => s.equippedGear);
@@ -34,6 +34,10 @@ export function GearShopScene({ onBack }: { onBack: () => void }) {
     return initial === "crates" ? "crates" : "gear";
   });
   const [crate, setCrate] = useState<WeaponId | null>(null);
+  useEffect(() => {
+    onCrateActiveChange?.(crate !== null);
+    return () => onCrateActiveChange?.(false);
+  }, [crate, onCrateActiveChange]);
   const [dialogue, setDialogue] = useState(shopkeeperLines[0]);
 
   useEffect(() => {

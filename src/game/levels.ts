@@ -4,7 +4,8 @@ import {
   PICKUP_SPAWNS,
   type LadderZone,
 } from "./config";
-import { isEnemyPositionBlocked } from "./navigation";
+import { isEnemyPositionBlocked, isGemGroundSpawnValid } from "./navigation";
+export { isGemGroundSpawnValid } from "./navigation";
 
 export type MapTheme = "playground" | "jungle" | "gems" | "hell";
 
@@ -258,8 +259,9 @@ export function getEnemySpawnPool(level: number, runId = 0, cycle = 0): [number,
   const valid = (x: number, z: number) =>
     Math.abs(x) < 44 && Math.abs(z) < 44 &&
     Math.hypot(x, z - getPlayerSpawn(level)[2]) > 12 &&
-    !isEnemyPositionBlocked(x, z, getLevelDefinition(level).theme === "gems" || getLevelDefinition(level).theme === "hell" ? 4.6 : 1.4, level) &&
-    selected.every(([sx, , sz]) => Math.hypot(x - sx, z - sz) >= 8);
+    !isEnemyPositionBlocked(x, z, getLevelDefinition(level).theme === "gems" || getLevelDefinition(level).theme === "hell" ? 2.2 : 1.4, level) &&
+    (getLevelDefinition(level).theme !== "gems" || isGemGroundSpawnValid(x, z, .8)) &&
+    selected.every(([sx, , sz]) => Math.hypot(x - sx, z - sz) >= (getLevelDefinition(level).theme === "gems" ? 6 : 8));
   for (let attempt = 0; attempt < 5000 && selected.length < 34; attempt++) {
     const candidate = attempt < pool.length ? pool[attempt] : [(random() - 0.5) * 86, 0, (random() - 0.5) * 86];
     const [x, , z] = candidate;
