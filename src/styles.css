@@ -2689,3 +2689,6 @@ button {
 .guide-card { position:fixed; z-index:122; pointer-events:auto; box-sizing:border-box; padding:14px; background:#fff9e5; border:3px solid #344e87; color:#2a4075; box-shadow:5px 5px 0 #273e77; }
 .guide-card h2 { margin:4px 0; font-size:17px; }.guide-card p { margin:4px 0 12px; }.guide-card div { display:flex; gap:8px; }
 .guide-card button { border:2px solid #344e87; background:#315fa5; color:white; padding:6px 12px; cursor:pointer; }.guide-card button+button { background:white; color:#344e87; }
+.dream-desk__content .skill-scene--focused { padding-bottom:145px; }
+.loadout-page--focused .loadout-hero>.equipment-avatar { width:100px; transform:scale(.65); transform-origin:center; }
+@media(max-width:700px){.magic-element-picker { overflow-x:auto; grid-template-columns:repeat(5,minmax(78px,1fr)); }.loadout-page--focused .loadout-hero>.equipment-avatar { display:none; }}
