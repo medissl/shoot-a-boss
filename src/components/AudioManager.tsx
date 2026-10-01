@@ -39,6 +39,7 @@ function bgmFor(screen: GameScreen, level: number) {
     jungle: "/audio/JungleIsleBGM.mp3",
     gems: "/audio/GemstoneIslandBGM.mp3",
     hell: "/audio/TheHellBGM.mp3",
+    heaven: "/audio/GemstoneIslandBGM.mp3",
   }[theme];
 }
 

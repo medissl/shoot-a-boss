@@ -150,7 +150,7 @@ export function PaperGrenadeSystem() {
   function explode(id: number, position: [number, number, number]) {
     const state = useGameStore.getState();
     const stats = getUpgradeStats(state.upgrades);
-    const effectiveLevel = state.currentLevel + state.ngPlusCycle * 10;
+    const effectiveLevel = state.currentLevel + state.ngPlusCycle * 12;
     const radius = 6.5 * (1 + state.upgrades.grenadePower * .08);
     const before = state.eliminated.length;
     window.dispatchEvent(

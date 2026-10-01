@@ -39,6 +39,8 @@ export function GearShopScene({ onBack, onCrateActiveChange }: { onBack: () => v
     return () => onCrateActiveChange?.(false);
   }, [crate, onCrateActiveChange]);
   const [dialogue, setDialogue] = useState(shopkeeperLines[0]);
+  const [swapGear, setSwapGear] = useState<GearId | null>(null);
+  const [details, setDetails] = useState<GearId | null>(null);
 
   useEffect(() => {
     const selectTutorialCategory = (event: Event) => {
@@ -60,8 +62,12 @@ export function GearShopScene({ onBack, onCrateActiveChange }: { onBack: () => v
   }, []);
 
   const purchase = (id: GearId, name: string) => {
+    if (coins < gearCost(id, gear[id]) || gear[id] >= gearCap(id)) return;
+    const wasEquipped = equippedGear.includes(id);
     buyGear(id);
-    setDialogue(`${name}? Nice choice. See you on the next stage!`);
+    if (!wasEquipped && equippedGear.length < 4) useGameStore.getState().toggleGear(id);
+    else if (!wasEquipped) setSwapGear(id);
+    setDialogue(`${name} · RANK ${gear[id]+1}${wasEquipped || equippedGear.length < 4 ? " · EQUIPPED ✓" : " · STORED"}`);
   };
 
   if (crate) return <CrateOpening key={crate} weapon={crate} onBack={() => setCrate(null)} />;
@@ -79,18 +85,19 @@ export function GearShopScene({ onBack, onCrateActiveChange }: { onBack: () => v
         <p className="gear-scene__note">Spend coins earned from cleared stages. Gear and skins carry across stages; your dream returns to an anchor.</p>
       </div>
       <section className="gear-shelf" aria-label="Gear for sale">
-        <nav className="shop-tabs"><button className={category === "gear" ? "is-active" : ""} onClick={() => setCategory("gear")}>GEAR & HEARTS</button><button className={category === "crates" ? "is-active" : ""} onClick={() => setCategory("crates")}>SKIN CRATES</button></nav>
+        <nav className="shop-tabs"><button className={category === "gear" ? "is-active" : ""} onClick={() => setCategory("gear")}>GEAR & HEARTS</button><button data-tutorial="crate-tab" className={category === "crates" ? "is-active" : ""} onClick={() => setCategory("crates")}>SKIN CRATES</button></nav>
+        {swapGear && <div className="shop-swap-drawer"><b>{GEAR.find(item=>item.id===swapGear)?.name} PURCHASED · EQUIP NOW?</b><div>{equippedGear.map(id=><button key={id} onClick={()=>{useGameStore.getState().toggleGear(id);useGameStore.getState().toggleGear(swapGear);setSwapGear(null);}}>{GEAR.find(item=>item.id===id)?.name}</button>)}</div><button onClick={()=>setSwapGear(null)}>KEEP STORED</button></div>}
         {category === "gear" ? <>
         <h2><ShoppingBag size={23} /> PICK YOUR GEAR <small>PERMANENT · UP TO 5 RANKS</small></h2>
         <div className="gear-shelf__grid">{GEAR.map((item) => {
           const rank = gear[item.id];
           const maxRank = gearCap(item.id);
           const cost = gearCost(item.id, rank);
-          return <article key={item.id} className="gear-item">
+          return <article key={item.id} className={`gear-item ${rank < maxRank && coins >= cost ? "is-affordable" : ""}`} data-tutorial={item.id === "vest" ? "shop-gear-card" : undefined}>
             <span className="gear-item__glyph" aria-hidden="true">{gearGlyphs[item.id]}</span>
-            <div className="gear-item__copy"><h3>{item.name}</h3><p>{item.detail}</p><small>RANK {rank}/{maxRank} · {"●".repeat(rank)}{"○".repeat(maxRank - rank)} · {equippedGear.includes(item.id) ? "EQUIPPED" : rank ? "STORED" : "UNOWNED"}</small><small>{rank < maxRank ? `NEXT RANK ${rank + 1}: ${item.detail}` : `MASTERWORK · ${masterwork[item.id]}`}</small></div>
-            <button type="button" disabled={rank >= maxRank || coins < cost} onClick={() => purchase(item.id, item.name)}>
-              {rank >= maxRank ? "MAXED" : `◉ ${cost} · BUY`}
+            <div className="gear-item__copy"><h3>{item.name}</h3><p>{item.detail}</p><small>RANK {rank} → {Math.min(maxRank,rank+1)} · {equippedGear.includes(item.id) ? "EQUIPPED" : rank ? "STORED" : "UNOWNED"}</small><button className="gear-details" onClick={()=>setDetails(details===item.id?null:item.id)}>DETAILS</button>{details===item.id&&<small>NEXT: {item.detail} · MASTERWORK: {masterwork[item.id]}</small>}</div>
+            <button type="button" data-tutorial={item.id === "vest" ? "shop-buy-equip" : undefined} disabled={rank >= maxRank || coins < cost} onClick={() => purchase(item.id, item.name)}>
+              {rank >= maxRank ? "MAXED" : `◉ ${cost} · ${equippedGear.includes(item.id) ? "UPGRADE" : equippedGear.length < 4 ? rank ? "UPGRADE & EQUIP" : "BUY & EQUIP" : "BUY · SWAP"}`}
             </button>
           </article>;
         })}<article className="gear-item"><span className="gear-item__glyph">♥</span><div className="gear-item__copy"><h3>ONE MORE CHANCE</h3><p>Refill one campaign heart for the next stage.</p><small>HEARTS {hearts}/5 · SPECIAL STOCK</small></div><button disabled={hearts >= 5 || coins < 275} onClick={buyHeart}>{hearts >= 5 ? "FULL HEARTS" : "◉ 275 · BUY"}</button></article><article className="gear-item"><span className="gear-item__glyph">♥♥</span><div className="gear-item__copy"><h3>FULL REFILL</h3><p>Restore all five hearts.</p></div><button disabled={hearts >= 5 || coins < 700} onClick={refillHearts}>{hearts >= 5 ? "FULL HEARTS" : "◉ 700 · BUY"}</button></article></div></> : <><h2>THEME CRATES <small>◉ 300 EACH</small></h2><p>Twenty-two complete builds per weapon: ten rare, seven epic, five legendary. New themes are guaranteed until that weapon's collection is complete.</p><div className="crate-list">{(["rifle","sniper","shotgun","knife"] as WeaponId[]).map((weapon) => <button key={weapon} disabled={coins < 300 || skins[weapon].length>=23} onClick={() => setCrate(weapon)}><span>✦ ◆ ✧</span><b>{weapon.toUpperCase()} CRATE</b><small>{skins[weapon].length-1}/22 OWNED · {skins[weapon].length>=23?"COLLECTION COMPLETE":"◉ 300 · OPEN"}</small></button>)}</div></>}

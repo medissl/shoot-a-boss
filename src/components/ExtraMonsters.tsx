@@ -42,7 +42,7 @@ export function ExtraMonster({ id, spawn, kind }: { id: string; spawn: [number, 
   const screen = useGameStore((s) => s.screen);
   const eliminate = useGameStore((s) => s.eliminate);
   const tuning = getEnemyTuning(level, cycle);
-  const effectiveLevel = level + cycle * 10;
+  const effectiveLevel = level + cycle * 12;
   const index = Number(id.split("-")[1]) || 0;
   const maxHp = Math.round((kind === "statue" ? 300 : 120) * enemyHpScale(level, cycle));
   const hp = useRef(maxHp);

@@ -47,11 +47,32 @@ export function magicHit(kind:Element,rank:number,id:string,position:[number,num
       for(let i=0;i<count;i++){const next=Object.entries(live.enemyPositions).filter(([other,p])=>!used.has(other)&&!live.eliminated.includes(other)&&distance(p,origin)<6.5+stats.milestone).sort((a,b)=>distance(a[1],origin)-distance(b[1],origin))[0];if(!next)break;shock(next[0],.42+stats.milestone*.06);link(origin,next[1],"#ffe850");used.add(next[0]);origin=next[1];}
     }
   }
-  if(kind==="fire"&&(stats.milestone||overtime))pools.push({position,runId:live.runId,until:now+4000+(stats.milestone-1)*500+(live.upgrades.fireBloom?1500:0),radius:2.7+stats.craft*.23+stats.milestone*.28+(overtime?1.2:0),damage:Math.round((8+rank*.75+stats.craft*1.4)*(live.upgrades.fireBloom?1.15:1)),nextTick:now+500});
+  if(kind==="fire")pools.push({position,runId:live.runId,until:now+3500+stats.milestone*500+(live.upgrades.fireBloom?1500:0),radius:2.4+stats.craft*.23+stats.milestone*.28+(overtime?1.2:0),damage:Math.round((8+rank*.75+stats.craft*1.4)*(live.upgrades.fireBloom?1.15:1)),nextTick:now+500});
   effects.set(id,{kind,id,rank,runId:live.runId,until:now+(kind==="ice"?2400+stats.craft*260+stats.milestone*280:kind==="crystal"?5000+stats.craft*350+(stats.milestone>=3?1800:0):kind==="thunder"?2000+stats.craft*200:5000+stats.craft*180),
     nextTick:now+500,lastPosition:null,spreadLeft:kind==="crystal"?(stats.milestone>=4?3:stats.milestone>=2?2:stats.milestone?1:0)+(overtime?1:0):kind==="fire"&&stats.milestone>=3?1:0});
 }
-export function magicSplash(kind:Element,rank:number,position:[number,number,number]){if(kind==="water")splash(rank,position,null,.52);}
+export function magicSplash(kind:Element,rank:number,position:[number,number,number]){
+  if(kind==="water")splash(rank,position,null,.52);
+  if(kind==="fire"){
+    const live=state(),stats=magicStats(kind,rank,live.magicChoices);
+    pools.push({position:[position[0],0,position[2]],runId:live.runId,until:performance.now()+3500+stats.milestone*500,radius:2.4+stats.milestone*.28,damage:Math.round(8+rank*.75+stats.craft*1.4),nextTick:performance.now()+500});
+  }
+}
+export function magicAreaPulse(kind:Exclude<Element,"fire"|"thunder">,rank:number,position:[number,number,number],first:boolean){
+  const live=state(),stats=magicStats(kind,rank,live.magicChoices);
+  const radius=kind==="water"?4.5:kind==="ice"?5.2:4.8;
+  const nearby=Object.entries(live.enemyPositions).filter(([id,p])=>!live.eliminated.includes(id)&&Math.hypot(p[0]-position[0],p[2]-position[2])<radius&&Math.abs(p[1]-position[1])<5);
+  for(const [id] of nearby){
+    hit(id,stats.damage*(kind==="water"?.17:1));
+    if(first&&kind==="ice")applyEnemyStatus(id,live.runId,1100+stats.craft*100+stats.milestone*100,stats.milestone?3000:0);
+    if(first&&kind==="crystal")applyEnemyStatus(id,live.runId,1750+stats.craft*90,1100);
+  }
+  if(kind==="crystal"&&first) for(let i=0;i<7;i++){
+    const a=i*Math.PI*2/7;
+    trails.push({position:[position[0]+Math.cos(a)*2.8,.08,position[2]+Math.sin(a)*2.8],until:performance.now()+3500,runId:live.runId,damage:Math.round(6+rank*.7),radius:1.2,owner:"prison",lastHit:{}});
+  }
+  if(kind==="water"&&first&&live.upgrades.waterHealing)useGameStore.setState(s=>({hp:Math.min(s.maxHp,s.hp+6)}));
+}
 export function tickMagic(){
   const live=state(),now=performance.now();if(live.screen!=="playing"||now-lastTick<140)return;lastTick=now;
   for(let i=trails.length-1;i>=0;i--)if(trails[i].until<now||trails[i].runId!==live.runId)trails.splice(i,1);

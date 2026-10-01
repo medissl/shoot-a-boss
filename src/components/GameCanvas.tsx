@@ -16,6 +16,9 @@ import { SurfaceDamageSystem } from "./SurfaceDamageSystem";
 import { PaperDustStorm } from "./PaperDustStorm";
 import { JungleThorns } from "./JungleThorns";
 import { ExtraMonster } from "./ExtraMonsters";
+import { OfficeEnemy } from "./OfficeEnemies";
+import { type OfficeKind } from "../game/officeEnemies";
+import { PaperworkDragon } from "./PaperworkDragon";
 import { CombatAura } from "./CombatAura";
 import { MagicSystem } from "./MagicSystem";
 import { RoundResult } from "./RoundResult";
@@ -110,19 +113,42 @@ export function GameCanvas() {
     enemy.bosses + enemy.paperwork + enemy.pens,
   );
   const extraSpawns = spawnPool.slice(enemy.bosses + enemy.paperwork + enemy.pens);
+  let extraOffset = (enemy.flying ?? 0) + (enemy.statues ?? 0);
+  const officeRoster = (["sticky", "stapler", "highlighter", "shredder", "clipboard"] as const).flatMap(kind => {
+    const count = enemy[kind] ?? 0;
+    const entries = extraSpawns.slice(extraOffset, extraOffset + count).map((spawn, index) => ({ kind, spawn, index }));
+    extraOffset += count;
+    return entries;
+  });
+  const eliteKind: OfficeKind = currentLevel === 4 ? "hr" : currentLevel === 6 ? "auditor" : "director";
+  const eliteRoster = extraSpawns.slice(extraOffset, extraOffset + (enemy.elite ?? 0)).map((spawn, index) => ({ kind: eliteKind, spawn, index }));
   const roster = [
     ...bossSpawns.map((spawn, index) => ({ kind: "boss" as const, spawn, index })),
     ...paperSpawns.map((spawn, index) => ({ kind: "paper" as const, spawn, index })),
     ...penSpawns.map((spawn, index) => ({ kind: "pen" as const, spawn, index })),
     ...extraSpawns.slice(0, enemy.flying ?? 0).map((spawn, index) => ({ kind: "fly" as const, spawn, index })),
     ...extraSpawns.slice(enemy.flying ?? 0, (enemy.flying ?? 0) + (enemy.statues ?? 0)).map((spawn, index) => ({ kind: "statue" as const, spawn, index })),
-  ].sort((a, b) => a.index - b.index || ["boss", "paper", "pen", "fly", "statue"].indexOf(a.kind) - ["boss", "paper", "pen", "fly", "statue"].indexOf(b.kind));
+    ...officeRoster,
+    ...eliteRoster,
+  ].sort((a, b) => a.index - b.index || ["boss", "paper", "pen", "fly", "statue", "sticky", "stapler", "highlighter", "shredder", "clipboard", "hr", "auditor", "director"].indexOf(a.kind) - ["boss", "paper", "pen", "fly", "statue", "sticky", "stapler", "highlighter", "shredder", "clipboard", "hr", "auditor", "director"].indexOf(b.kind));
   const gemExtras = definition.theme === "gems" ? 3 : 0;
   const remainingRatio = (targetCount - eliminated) / Math.max(1, targetCount);
   const intensity = remainingRatio > .65 ? "OPENING" : remainingRatio > .30 ? "SURGE" : "FINAL PUSH";
   const activeCap = Math.min(12, Math.max(4, 5 + Math.floor(currentLevel * .7) + (intensity === "FINAL PUSH" ? 2 : intensity === "SURGE" ? 1 : -1)));
   const [spawnedCount, setSpawnedCount] = useState(() => Math.min(roster.length, Math.max(1, activeCap - gemExtras)));
   const [phaseNotice, setPhaseNotice] = useState("");
+  const [dragonArrived, setDragonArrived] = useState(false);
+  useEffect(() => {
+    if (currentLevel !== 12 || eliminated < roster.length || screen !== "playing" || dragonArrived) return;
+    const announce = window.setTimeout(() => setPhaseNotice("FINAL DEADLINE · THE PAPERWORK DRAGON"), 0);
+    const arrive = window.setTimeout(() => setDragonArrived(true), 3000);
+    return () => { window.clearTimeout(announce); window.clearTimeout(arrive); };
+  }, [currentLevel, eliminated, roster.length, screen, dragonArrived]);
+  useEffect(() => {
+    if (!dragonArrived) return;
+    const clear = window.setTimeout(() => setPhaseNotice(""), 1400);
+    return () => window.clearTimeout(clear);
+  }, [dragonArrived]);
   const phaseSeen = useRef("OPENING");
   useEffect(() => {
     setAttackPhase(intensity);
@@ -182,9 +208,11 @@ export function GameCanvas() {
               if (kind === "paper") return <PaperworkMonster key={id} id={id} spawn={spawn} />;
               if (kind === "pen") return <PenMonster key={id} id={id} spawn={spawn} />;
               if (kind === "fly" || kind === "statue") return <ExtraMonster key={id} id={id} spawn={spawn} kind={kind} />;
+              if (kind !== "boss") return <OfficeEnemy key={id} id={id} spawn={spawn} kind={kind} />;
               const ranged = index % 3 === 1 || index % 5 === 4;
               return <Dummy key={id} id={id} spawn={spawn} archetype={ranged ? "ranged" : "melee"} rangedWeapon={index % 2 === 0 ? "bow" : "handgun"} />;
             })}
+            {dragonArrived && currentLevel === 12 && <PaperworkDragon />}
           </Physics>
         </Suspense>
       </Canvas>
@@ -201,6 +229,7 @@ export function GameCanvas() {
       {definition.theme === "jungle" && <div className="map-hint">THORNS SPREAD EVERY 30S · E ZIPLINE FORWARD · SHIFT+E BACK</div>}
       {definition.theme === "gems" && <div className="map-hint">LEAVE THE MARKED GEMS BEFORE THEIR LASERS FIRE · CLIMB THE INNER SPIRAL</div>}
       {definition.theme === "hell" && <div className="map-hint">FIVE STONE BRIDGES CROSS THE LAVA · DODGE THE RED CIRCLES EVERY 10 SECONDS</div>}
+      {definition.theme === "heaven" && <div className="map-hint">RED CIRCLES WARN OF JUDGEMENT RAYS · CLEAR THE PRELUDE TO FACE THE DRAGON</div>}
       <div className="game-fade-in" />
     </div>
   );

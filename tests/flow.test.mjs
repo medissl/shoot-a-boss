@@ -138,11 +138,21 @@ test('old save migrates tutorials and retains unlocked cosmetics', async () => {
   assert.equal(reloaded.getState().equippedSkins.rifle, 'inkspill');
 });
 
-test('a clean campaign can advance through all ten result flows', () => {
+test('former Stage 10 champion save continues at Stage 11', async () => {
+  memory.set('shoot-a-boss:campaign', JSON.stringify({ level:10, saveVersion:2, claimedRewards:['0:10'] }));
+  memory.set('shoot-a-boss:unlocked-level', '10');
+  memory.set('shoot-a-boss:champion', JSON.stringify({ cycle:0,level:10,hearts:3,upgrades:useGameStore.getState().upgrades,ready:true }));
+  const reloaded=await reloadStore();
+  assert.equal(reloaded.getState().currentLevel,11);
+  assert.equal(reloaded.getState().unlockedLevel,11);
+  assert.equal(reloaded.getState().champion.ready,false);
+});
+
+test('a clean campaign can advance through all twelve result flows', () => {
   useGameStore.getState().resetData();
   useGameStore.getState().startGame();
   useGameStore.getState().closeTutorial();
-  for (let level = 1; level <= 10; level++) {
+  for (let level = 1; level <= 12; level++) {
     const count = useGameStore.getState().targetCount;
     for (let i = 0; i < count; i++) useGameStore.getState().eliminate(`stage-${level}-target-${i}`);
     assert.equal(useGameStore.getState().screen, 'stageClear');
@@ -163,12 +173,12 @@ test('a clean campaign can advance through all ten result flows', () => {
       assert.ok(useGameStore.getState().selectedEvolution);
       useGameStore.getState().continueEvolution();
     }
-    if (level < 10) {
+    if (level < 12) {
       assert.deepEqual(useGameStore.getState().preStage, { level: level + 1, practice: false });
       useGameStore.getState().startPreparedStage();
       assert.equal(useGameStore.getState().currentLevel, level + 1);
     }
   }
   assert.equal(useGameStore.getState().screen, 'won');
-  assert.equal(useGameStore.getState().claimedRewards.length, 10);
+  assert.equal(useGameStore.getState().claimedRewards.length, 12);
 });

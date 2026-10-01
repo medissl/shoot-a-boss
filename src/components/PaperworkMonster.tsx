@@ -58,7 +58,7 @@ export function PaperworkMonster({
   const sideBias = Number(id.split("-")[1]) % 2 === 0 ? 1 : -1;
   const currentLevel = useGameStore((state) => state.currentLevel);
   const ngPlusCycle = useGameStore((state) => state.ngPlusCycle);
-  const effectiveLevel = currentLevel + ngPlusCycle * 10;
+  const effectiveLevel = currentLevel + ngPlusCycle * 12;
   const tuning = getEnemyTuning(currentLevel, ngPlusCycle);
   const safeSpawn = useMemo(
     () => safeEnemySpawn(spawn, MONSTER_RADIUS, currentLevel),

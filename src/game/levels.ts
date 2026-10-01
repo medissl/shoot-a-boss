@@ -7,7 +7,8 @@ import {
 import { isEnemyPositionBlocked, isGemGroundSpawnValid } from "./navigation";
 export { isGemGroundSpawnValid } from "./navigation";
 
-export type MapTheme = "playground" | "jungle" | "gems" | "hell";
+export const MAX_STAGE = 12;
+export type MapTheme = "playground" | "jungle" | "gems" | "hell" | "heaven";
 
 export type EnemyTuning = {
   speed: number;
@@ -18,6 +19,13 @@ export type EnemyTuning = {
   pens: number;
   flying?: number;
   statues?: number;
+  sticky?: number;
+  stapler?: number;
+  highlighter?: number;
+  shredder?: number;
+  clipboard?: number;
+  elite?: number;
+  dragon?: number;
 };
 
 export type LevelDefinition = {
@@ -90,7 +98,7 @@ export const LEVELS: LevelDefinition[] = [
     subtitle: "back to the office",
     theme: "playground",
     difficulty: "NORMAL",
-    enemy: { speed: 1.06, vision: 1.04, damage: 1, bosses: 6, paperwork: 2, pens: 2, statues: 1 },
+    enemy: { speed: 1.06, vision: 1.04, damage: 1, bosses: 5, paperwork: 2, pens: 2, statues: 1, sticky: 1, elite: 1 },
   },
   {
     level: 5,
@@ -98,7 +106,7 @@ export const LEVELS: LevelDefinition[] = [
     subtitle: "the jungle noticed you",
     theme: "jungle",
     difficulty: "NORMAL +",
-    enemy: { speed: 1.12, vision: 1.1, damage: 1.08, bosses: 6, paperwork: 2, pens: 2, flying: 2, statues: 1 },
+    enemy: { speed: 1.12, vision: 1.1, damage: 1.08, bosses: 5, paperwork: 2, pens: 2, flying: 2, statues: 1, stapler: 1 },
   },
   {
     level: 6,
@@ -106,7 +114,7 @@ export const LEVELS: LevelDefinition[] = [
     subtitle: "nothing stays calm",
     theme: "gems",
     difficulty: "HARD",
-    enemy: { speed: 1.18, vision: 1.15, damage: 1.16, bosses: 5, paperwork: 2, pens: 2, flying: 2, statues: 1 },
+    enemy: { speed: 1.18, vision: 1.15, damage: 1.16, bosses: 4, paperwork: 2, pens: 2, flying: 2, statues: 1, highlighter: 1, elite: 1 },
   },
   {
     level: 7,
@@ -114,7 +122,7 @@ export const LEVELS: LevelDefinition[] = [
     subtitle: "the shift fights back",
     theme: "playground",
     difficulty: "HARD +",
-    enemy: { speed: 1.24, vision: 1.2, damage: 1.24, bosses: 7, paperwork: 3, pens: 3, flying: 2, statues: 2 },
+    enemy: { speed: 1.24, vision: 1.2, damage: 1.24, bosses: 5, paperwork: 3, pens: 3, flying: 2, statues: 2, sticky: 1, clipboard: 1 },
   },
   {
     level: 8,
@@ -122,7 +130,7 @@ export const LEVELS: LevelDefinition[] = [
     subtitle: "no quiet path left",
     theme: "jungle",
     difficulty: "VERY HARD",
-    enemy: { speed: 1.3, vision: 1.25, damage: 1.32, bosses: 7, paperwork: 3, pens: 3, flying: 3, statues: 3 },
+    enemy: { speed: 1.3, vision: 1.25, damage: 1.32, bosses: 5, paperwork: 3, pens: 3, flying: 3, statues: 3, stapler: 1, clipboard: 1, elite: 1 },
   },
   {
     level: 9,
@@ -130,20 +138,28 @@ export const LEVELS: LevelDefinition[] = [
     subtitle: "everything is hunting",
     theme: "gems",
     difficulty: "BRUTAL",
-    enemy: { speed: 1.36, vision: 1.3, damage: 1.4, bosses: 7, paperwork: 3, pens: 3, flying: 3, statues: 2 },
+    enemy: { speed: 1.36, vision: 1.3, damage: 1.4, bosses: 5, paperwork: 3, pens: 3, flying: 3, statues: 2, highlighter: 1, clipboard: 1 },
   },
   {
     level: 10,
     name: "THE HELL",
-    subtitle: "final deadline",
+    subtitle: "the fire below",
     theme: "hell",
     difficulty: "ALMOST IMPOSSIBLE",
-    enemy: { speed: 1.42, vision: 1.35, damage: 1.48, bosses: 8, paperwork: 4, pens: 4, flying: 4, statues: 3 },
+    enemy: { speed: 1.42, vision: 1.35, damage: 1.48, bosses: 6, paperwork: 4, pens: 4, flying: 4, statues: 3, shredder: 2, clipboard: 1 },
+  },
+  {
+    level: 11, name: "PURGATORY SHIFT", subtitle: "one desk left", theme: "hell", difficulty: "NIGHTMARE",
+    enemy: { speed: 1.44, vision: 1.36, damage: 1.52, bosses: 4, paperwork: 3, pens: 2, flying: 2, statues: 1, sticky: 1, stapler: 1, shredder: 2, clipboard: 1 },
+  },
+  {
+    level: 12, name: "THE HEAVENS", subtitle: "final approval", theme: "heaven", difficulty: "FINAL",
+    enemy: { speed: 1.46, vision: 1.38, damage: 1.56, bosses: 3, paperwork: 2, pens: 1, flying: 3, statues: 2, highlighter: 2, clipboard: 1, dragon: 1 },
   },
 ];
 
 export function getLevelDefinition(level: number) {
-  return LEVELS[Math.min(10, Math.max(1, level)) - 1];
+  return LEVELS[Math.min(MAX_STAGE, Math.max(1, level)) - 1];
 }
 
 export function getEnemyTuning(level: number, cycle = 0): EnemyTuning {
@@ -162,7 +178,9 @@ export function getEnemyTuning(level: number, cycle = 0): EnemyTuning {
 
 export function getTargetCount(level: number, cycle = 0) {
   const enemy = getEnemyTuning(level, cycle);
-  return enemy.bosses + enemy.paperwork + enemy.pens + (enemy.flying ?? 0) + (enemy.statues ?? 0) + (getLevelDefinition(level).theme === "gems" ? 3 : 0);
+  return enemy.bosses + enemy.paperwork + enemy.pens + (enemy.flying ?? 0) + (enemy.statues ?? 0) +
+    (enemy.sticky ?? 0) + (enemy.stapler ?? 0) + (enemy.highlighter ?? 0) + (enemy.shredder ?? 0) +
+    (enemy.clipboard ?? 0) + (enemy.elite ?? 0) + (enemy.dragon ?? 0) + (getLevelDefinition(level).theme === "gems" ? 3 : 0);
 }
 
 const JUNGLE_BLOCKERS: NavBlocker[] = [
@@ -192,12 +210,14 @@ const JUNGLE_BLOCKERS: NavBlocker[] = [
 const GEM_BLOCKERS: NavBlocker[] = [];
 
 const HELL_BLOCKERS: NavBlocker[] = [];
+const HEAVEN_BLOCKERS: NavBlocker[] = [[-27,-26],[27,-26],[-27,24],[27,24]].map(([x,z])=>({x,z,w:19,d:19}));
 
 export function getLevelBlockers(level: number): NavBlocker[] {
   const theme = getLevelDefinition(level).theme;
   if (theme === "playground") return ENEMY_BLOCKERS;
   if (theme === "jungle") return JUNGLE_BLOCKERS;
   if (theme === "gems") return GEM_BLOCKERS;
+  if (theme === "heaven") return HEAVEN_BLOCKERS;
   return HELL_BLOCKERS;
 }
 
@@ -270,4 +290,4 @@ export function getEnemySpawnPool(level: number, runId = 0, cycle = 0): [number,
   return selected;
 }
 
-export function enemyHpScale(level: number, cycle = 0) { return 1 + .07 * Math.min(level + cycle * 10 - 1, 9) + .045 * Math.max(level + cycle * 10 - 10, 0); }
+export function enemyHpScale(level: number, cycle = 0) { return 1 + .07 * Math.min(level + cycle * MAX_STAGE - 1, 9) + .045 * Math.max(level + cycle * MAX_STAGE - 10, 0); }

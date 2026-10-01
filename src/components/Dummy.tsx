@@ -330,7 +330,7 @@ export function Dummy({
   const elite = useGameStore((state) => state.eventTarget === id);
   const eliteSeen = useRef(false);
   const initialState = useGameStore.getState();
-  const finale = initialState.currentLevel === 10 && id === `target-${getEnemyTuning(10, initialState.ngPlusCycle).bosses - 1}`;
+  const finale = false;
   const baseHp = Math.round(BOSS_MAX_HP * enemyHpScale(initialState.currentLevel, initialState.ngPlusCycle) * (finale ? 2 : 1));
   const maxHp = Math.round(baseHp * (eliteSeen.current ? 1.2 : 1));
   const [hp, setHp] = useState(maxHp);
@@ -383,7 +383,7 @@ export function Dummy({
   const drift = Number(id.split("-")[1]) % 2 === 0 ? 1 : -1;
   const currentLevel = useGameStore((state) => state.currentLevel);
   const ngPlusCycle = useGameStore((state) => state.ngPlusCycle);
-  const effectiveLevel = currentLevel + ngPlusCycle * 10;
+  const effectiveLevel = currentLevel + ngPlusCycle * 12;
   const baseline = getEnemyTuning(currentLevel, ngPlusCycle);
   const tuning = eliteSeen.current ? { ...baseline, speed: baseline.speed * 1.12, damage: baseline.damage * 1.15 } : baseline;
   const safeSpawn = useMemo(

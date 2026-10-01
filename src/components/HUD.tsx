@@ -139,7 +139,7 @@ export function HUD() {
   return (
     <div className="hud" aria-hidden="true">
       <div className="hud-level">
-        <span>{ngPlusCycle ? `NG+ ${ngPlusCycle} · ` : ""}LEVEL {currentLevel}/10</span>
+        <span>{ngPlusCycle ? `NG+ ${ngPlusCycle} · ` : ""}LEVEL {currentLevel}/12</span>
         <strong>{level.name}</strong>
         <div className="hud-xp"><span>LV {playerLevel} · {xp}/{xpToNextLevel(playerLevel)} XP · {skillPoints} SP</span><i><b style={{ width: `${Math.min(100, xp / xpToNextLevel(playerLevel) * 100)}%` }} /></i></div>
         <span className="hud-hearts" aria-label={`${hearts} hearts remaining`}>

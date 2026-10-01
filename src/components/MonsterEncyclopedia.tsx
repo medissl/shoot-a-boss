@@ -2,12 +2,13 @@ import { Canvas } from "@react-three/fiber";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react";
 import * as THREE from "three";
-import { enemyHpScale } from "../game/levels";
+import { enemyHpScale, MAX_STAGE } from "../game/levels";
 import { BOSS_MAX_HP, PAPER_MONSTER_MAX_HP, PEN_MONSTER_MAX_HP } from "../game/config";
 import { getEnemyTuning } from "../game/levels";
 import { drawBoss } from "./Dummy";
+import { OFFICE_ENEMIES, type OfficeKind } from "../game/officeEnemies";
 
-type Kind = "boss" | "ranged" | "paper" | "pen" | "fly" | "statue";
+type Kind = "boss" | "ranged" | "paper" | "pen" | "fly" | "statue" | OfficeKind | "dragon";
 const entries: { kind: Kind; name: string; slogan: string; description: string; attack: string; hp: number; baseDamage: number }[] = [
   { kind: "boss", name: "Mr. Boss", slogan: "Your work is due yesterday.", description: "The office boss has left the desk to personally collect your soul. He spots you, closes the distance, and throws heavy punches. Keep moving while you aim for that enormous head.", attack: "Close-range punch", hp: BOSS_MAX_HP, baseDamage: 10 },
   { kind: "ranged", name: "The Feedback Manager", slogan: "Just one more revision.", description: "The same boss, but armed with either a handgun or a bow. A red line shows the shot he is lining up. Break his line of sight or sidestep before it fires.", attack: "Telegraphed shot", hp: BOSS_MAX_HP, baseDamage: 12 },
@@ -15,6 +16,8 @@ const entries: { kind: Kind; name: string; slogan: string; description: string; 
   { kind: "pen", name: "The Inktern", slogan: "Five shots, then a coffee break.", description: "This little pen fires five ink shots in a burst. Each shot gives you a red warning line. It needs time to refill, so rush it after the fifth shot.", attack: "Five ink projectiles", hp: PEN_MONSTER_MAX_HP, baseDamage: 8 },
   { kind: "fly", name: "Airmail Menace", slogan: "Special delivery to your face.", description: "A flying courier that cruises above the arena. It dives to face level for one hard bite, then climbs away to recover before attacking again. Track it overhead.", attack: "Single diving strike", hp: 120, baseDamage: 11 },
   { kind: "statue", name: "Burn the Deadline Statue", slogan: "Your deadline follows you.", description: "A monument with long sight. A red line from its head warns you for five seconds before its laser strikes a fixed area for five seconds. Break line of sight or leave the marked circle.", attack: "Targeted red laser", hp: 300, baseDamage: 8 },
+  ...(["sticky","stapler","highlighter","shredder","clipboard","hr","auditor","director"] as OfficeKind[]).map(kind=>({kind,name:OFFICE_ENEMIES[kind].name,slogan:OFFICE_ENEMIES[kind].attack,description:`${OFFICE_ENEMIES[kind].attack} warns in red before striking. Move out of the marked area, then punish the recovery.`,attack:OFFICE_ENEMIES[kind].attack,hp:OFFICE_ENEMIES[kind].hp,baseDamage:OFFICE_ENEMIES[kind].damage})),
+  { kind:"dragon", name:"The Paperwork Dragon", slogan:"FINAL DEADLINE", description:"Three binder seals protect its paper shell. Break them, dodge the red attack zones, then strike its head. The dive leaves a grounded opening.", attack:"Breath · dive · barrage · ring", hp:2800, baseDamage:24 },
 ];
 
 function BossImage({ ranged }: { ranged: boolean }) {
@@ -32,6 +35,21 @@ function BossImage({ ranged }: { ranged: boolean }) {
 
 function Model({ kind }: { kind: Kind }) {
   if (kind === "boss" || kind === "ranged") return <BossImage ranged={kind === "ranged"} />;
+  if (kind in OFFICE_ENEMIES) {
+    const enemy=OFFICE_ENEMIES[kind as OfficeKind];
+    return <group position={[0,-.4,0]}>
+      <mesh position={[0,0,0]}><boxGeometry args={[kind==="stapler"?2.3:1.7,kind==="stapler"?1.2:2.4,1.1]}/><meshStandardMaterial color={enemy.color}/></mesh>
+      <mesh position={[0,kind==="stapler"?.6:1.45,.5]}><boxGeometry args={[1,.6,.65]}/><meshStandardMaterial color="#f9f7ee"/></mesh>
+      {[-1,1].map(side=><mesh key={side} position={[side*.62,-1,.2]}><boxGeometry args={[.3,.8,.45]}/><meshStandardMaterial color="#425d91"/></mesh>)}
+      {kind==="clipboard"&&<mesh position={[0,0,.65]}><boxGeometry args={[2.1,2.4,.12]}/><meshStandardMaterial color="#a5784c"/></mesh>}
+      {kind==="highlighter"&&<mesh position={[0,-1.35,0]} rotation={[0,0,Math.PI]}><coneGeometry args={[.6,.9,8]}/><meshStandardMaterial color="#d9ef5b"/></mesh>}
+      {kind==="shredder"&&Array.from({length:4},(_,i)=><mesh key={i} position={[(i-1.5)*.35,-1.5,.45]}><boxGeometry args={[.15,.9,.12]}/><meshStandardMaterial color="#f2f2e8"/></mesh>)}
+      {kind==="hr"&&<mesh position={[0,.35,.65]}><boxGeometry args={[.2,.9,.12]}/><meshStandardMaterial color="#d44853"/></mesh>}
+      {kind==="auditor"&&<mesh position={[0,-.1,.7]}><boxGeometry args={[1.3,1.4,.12]}/><meshStandardMaterial color="#81dbe8"/></mesh>}
+      {kind==="director"&&[-1,1].map(side=><mesh key={side} position={[side*1.1,.2,0]}><boxGeometry args={[.95,1.4,.15]}/><meshStandardMaterial color="#f7f3e9"/></mesh>)}
+    </group>;
+  }
+  if (kind==="dragon") return <group><mesh><boxGeometry args={[2.9,1.8,1.5]}/><meshStandardMaterial color="#f6f5ef"/></mesh><mesh position={[0,1,1]}><boxGeometry args={[1.5,1.1,1]}/><meshStandardMaterial color="#dcebf1"/></mesh>{[-1,1].map(side=><mesh key={side} position={[side*2.5,.35,0]} rotation={[0,0,side*.25]}><boxGeometry args={[3,1.7,.18]}/><meshStandardMaterial color="#f9f9f0"/></mesh>)}</group>;
   return <group position={[0, kind === "fly" ? 0 : -0.35, 0]}>
     {kind === "paper" && <>
       <mesh><planeGeometry args={[2.2, 2.85]} /><meshBasicMaterial color="#2548b8" side={THREE.DoubleSide} /></mesh>
@@ -71,7 +89,7 @@ export function MonsterEncyclopedia({ onBack }: { onBack: () => void }) {
   const [level, setLevel] = useState(1);
   const entry = entries[index];
   const tuning = getEnemyTuning(level);
-  const hp = Math.round(entry.hp * enemyHpScale(level));
+  const hp = Math.round(entry.hp * enemyHpScale(level) / (entry.kind in OFFICE_ENEMIES ? enemyHpScale(OFFICE_ENEMIES[entry.kind as OfficeKind].stage) : entry.kind === "dragon" ? enemyHpScale(12) : 1));
   const damage = Math.round(entry.baseDamage * tuning.damage);
   return <main className="encyclopedia-scene">
     <div className="encyclopedia-paper">
@@ -82,10 +100,10 @@ export function MonsterEncyclopedia({ onBack }: { onBack: () => void }) {
           <h1>{entry.name}</h1>
           <blockquote>“{entry.slogan}”</blockquote>
           <p>{entry.description}</p>
-          <label className="encyclopedia-level">SEE STATS AT LEVEL <strong>{level}</strong><input type="range" min="1" max="10" value={level} onChange={(event) => setLevel(Number(event.target.value))} /></label>
+          <label className="encyclopedia-level">SEE STATS AT LEVEL <strong>{level}</strong><input type="range" min="1" max={MAX_STAGE} value={level} onChange={(event) => setLevel(Number(event.target.value))} /></label>
           <div className="encyclopedia-stats"><div><small>HEALTH</small><strong>{hp} HP</strong><span>+8.5% per level</span></div><div><small>ATTACK</small><strong>{entry.attack}</strong><span>{damage} damage at level {level}{entry.kind === "ranged" ? " (handgun)" : ""}</span></div></div>
-          <div className="encyclopedia-hitboxes"><small>WHERE TO AIM</small><span><b>HEAD</b> ×1.5</span><span><b>BODY</b> ×1</span><span><b>LEGS</b> ×0.3</span></div>
-          <p className="encyclopedia-footnote">Speed, sight and attack power increase with the stage. NG+ keeps scaling beyond level 10.</p>
+          <div className="encyclopedia-hitboxes"><small>WHERE TO AIM</small><span><b>HEAD</b> ×1.6</span><span><b>BODY</b> ×1</span><span><b>LEGS</b> ×0.65</span></div>
+          <p className="encyclopedia-footnote">Speed, sight and attack power increase with the stage. NG+ keeps scaling beyond level {MAX_STAGE}.</p>
         </section>
         <section className="encyclopedia-portrait" aria-label={`${entry.name} in-game model`}><span>FIG. {String(index + 1).padStart(2, "0")} // FIELD SKETCH</span><EnemyPortrait kind={entry.kind} /><strong>{entry.name.toUpperCase()}</strong></section>
       </div>

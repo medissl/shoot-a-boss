@@ -129,7 +129,7 @@ export function PenMonster({
   const eliminate = useGameStore((state) => state.eliminate);
   const eliminated = useGameStore((state) => state.eliminated.includes(id));
   const ngPlusCycle = useGameStore((state) => state.ngPlusCycle);
-  const effectiveLevel = currentLevel + ngPlusCycle * 10;
+  const effectiveLevel = currentLevel + ngPlusCycle * 12;
   const tuning = getEnemyTuning(currentLevel, ngPlusCycle);
   const penIndex = Number(id.split("-")[1]) || 0;
   const sideBias = penIndex % 2 === 0 ? 1 : -1;

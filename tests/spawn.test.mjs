@@ -7,7 +7,7 @@ import { pathToFileURL } from 'node:url';
 const output = new URL('../.spawn-test.mjs', import.meta.url);
 const bundle = await build({ entryPoints: ['src/game/levels.ts'], bundle: true, platform: 'node', format: 'esm', write: false, packages: 'external' });
 await writeFile(output, bundle.outputFiles[0].contents);
-const { getEnemySpawnPool, getEnemyTuning, isGemGroundSpawnValid, getTargetCount } = await import(pathToFileURL(output.pathname).href);
+const { getEnemySpawnPool, getEnemyTuning, isGemGroundSpawnValid, getTargetCount, getLevelDefinition } = await import(pathToFileURL(output.pathname).href);
 await unlink(output);
 
 test('Gem stages have sufficient valid, separated ground spawns across ten layouts', () => {
@@ -22,4 +22,14 @@ test('Gem stages have sufficient valid, separated ground spawns across ten layou
     }
     assert.ok(tuning.paperwork > 0);
   }
+});
+
+test('new campaign stages have enough reachable objective spawns', () => {
+  for (const level of [4,5,6,7,8,9,10,11,12]) for (let runId=0;runId<5;runId++) {
+    const enemies=getTargetCount(level)-(getLevelDefinition(level).theme==='gems'?3:0)-(getEnemyTuning(level).dragon??0);
+    const pool=getEnemySpawnPool(level,runId);
+    assert.ok(pool.length>=enemies,`Stage ${level}, layout ${runId}: ${pool.length}/${enemies}`);
+  }
+  assert.equal(getLevelDefinition(12).theme,'heaven');
+  assert.equal(getEnemyTuning(12).dragon,1);
 });

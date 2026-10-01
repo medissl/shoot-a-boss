@@ -1,5 +1,7 @@
 type Status = { runId: number; freezeUntil: number; slowUntil: number; freezeImmuneUntil: number; slowImmuneUntil: number; slowFactor: number };
 const statuses = new Map<string, Status>();
+const delegated = new Map<string,{runId:number;until:number}>();
+export function delegateEnemy(id:string,runId:number,durationMs=4000){delegated.set(id,{runId,until:performance.now()+durationMs});}
 
 export function applyEnemyStatus(id: string, runId: number, freezeMs = 0, slowMs = 0, slowFactor = .48, slowImmunityMs = 0) {
   const previous = statuses.get(id);
@@ -18,11 +20,13 @@ export function applyEnemyStatus(id: string, runId: number, freezeMs = 0, slowMs
 }
 
 export function enemyMotionFactor(id: string, runId: number) {
+  const buff=delegated.get(id);
+  const boost=buff?.runId===runId&&performance.now()<buff.until?1.15:1;
   const status = statuses.get(id);
-  if (!status || status.runId !== runId) return 1;
+  if (!status || status.runId !== runId) return boost;
   const now = performance.now();
   if (now < status.freezeUntil) return 0;
-  if (now < status.slowUntil) return status.slowFactor;
+  if (now < status.slowUntil) return status.slowFactor*boost;
   if (now >= status.freezeImmuneUntil) statuses.delete(id);
-  return 1;
+  return boost;
 }

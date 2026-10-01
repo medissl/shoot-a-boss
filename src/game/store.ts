@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { GRENADE_COUNT, WEAPONS, type WeaponId } from "./config";
 import { stageCoinReward, stageXpReward } from "./balance";
-import { getPlayerSpawn, getTargetCount } from "./levels";
+import { getPlayerSpawn, getTargetCount, MAX_STAGE } from "./levels";
 import { ELEMENTS, emptyMagicChoices, isMilestone, magicCost, magicStats, type Element, type Branch, type MagicChoices } from "./magicTree";
 import { SKIN_IDS, normalizeSkin, rollSkin, type SkinId } from "./skins";
 import { availableEvolutions, EVOLUTIONS, type EvolutionId } from "./evolutions";
@@ -26,7 +26,7 @@ function notifyHazard(kind: HazardKind | boolean, amount: number, blocked = fals
   window.dispatchEvent(new CustomEvent("hazard-damage", { detail: { kind, label: hazardLabels[kind], amount: Math.round(amount), blocked } }));
   if (kind === "thorn") window.dispatchEvent(new CustomEvent("world-sfx", { detail: { kind: "thornHit" } }));
 }
-export const SAVE_VERSION = 2;
+export const SAVE_VERSION = 3;
 type TutorialFlags = Record<TutorialId, boolean>;
 const freshTutorials = (): TutorialFlags => ({ controls:false, cards:false, xp:false, levelUp:false, skillPoint:false, magic:false, magicAwakened:false, coins:false, gear:false, shop:false, crates:false, hearts:false, anchor:false, scan:false, evolution:false });
 export const MAGIC_TYPES = ELEMENTS;
@@ -60,6 +60,13 @@ const SAVE_KEY = "shoot-a-boss:campaign";
 function migrateSave(raw: Record<string, unknown>): Record<string, unknown> {
   const version = Number(raw.saveVersion) || 0;
   if (version >= SAVE_VERSION) return raw;
+  // The old finale at 10 is now a completed checkpoint into Stage 11.
+  const oldChampion = (() => { try { return JSON.parse(localStorage.getItem(CHAMPION_KEY) || "null") as Champion | null; } catch { return null; } })();
+  if (version < 3 && oldChampion?.ready && oldChampion.level === 10) {
+    localStorage.setItem(CHAMPION_KEY, JSON.stringify({ ...oldChampion, level: 11, ready: false }));
+    localStorage.setItem("shoot-a-boss:unlocked-level", "11");
+    raw = { ...raw, level: 11, unlockedLevel: 11, preStage: null, postStageScreen: null, pendingDraft: false };
+  }
   const tutorials = { ...freshTutorials(), ...(raw.tutorials && typeof raw.tutorials === "object" ? raw.tutorials as Partial<TutorialFlags> : {}) };
   tutorials.controls = tutorials.controls || raw.tutorialSeen === true;
   const magic = raw.magic as Partial<Record<MagicType, number>> | undefined;
@@ -318,14 +325,14 @@ function readSensitivity() {
 function readUnlockedLevel() {
   if (typeof window === "undefined") return 1;
   const parsed = Number(window.localStorage.getItem("shoot-a-boss:unlocked-level"));
-  return Number.isFinite(parsed) ? Math.min(10, Math.max(1, parsed)) : 1;
+  return Number.isFinite(parsed) ? Math.min(MAX_STAGE, Math.max(1, parsed)) : 1;
 }
 
 function writeUnlockedLevel(level: number) {
   if (typeof window !== "undefined") {
     window.localStorage.setItem(
       "shoot-a-boss:unlocked-level",
-      String(Math.min(10, Math.max(1, level))),
+      String(Math.min(MAX_STAGE, Math.max(1, level))),
     );
   }
 }
@@ -371,7 +378,7 @@ function readChampion(): Champion | null {
     }
     return {
       cycle: Math.max(0, Math.floor(value.cycle!)),
-      level: Math.min(10, Math.max(1, value.level!)),
+      level: Math.min(MAX_STAGE, Math.max(1, value.level!)),
       hearts: Math.min(MAX_HEARTS, value.hearts!),
       upgrades: clean,
       ready: value.ready === true,
@@ -568,7 +575,7 @@ export const useGameStore = create<GameStore>((set, get) => {
     },
 
     startLevel: (level) => {
-      const safeLevel = Math.min(10, Math.max(1, level));
+      const safeLevel = Math.min(MAX_STAGE, Math.max(1, level));
       const state = get();
       if (safeLevel !== state.currentLevel || state.ngPlusCycle > 0 || safeLevel > state.unlockedLevel) return;
       const upgrades = state.upgrades;
@@ -593,7 +600,7 @@ export const useGameStore = create<GameStore>((set, get) => {
 
     prepareStage: (level, practice = false) => {
       const state = get();
-      if (level < 1 || level > 10 || (practice ? level > (state.champion?.ready ? 10 : state.currentLevel - 1) : level !== state.currentLevel && !(level === 1 && state.champion?.ready))) return;
+      if (level < 1 || level > MAX_STAGE || (practice ? level > (state.champion?.ready ? MAX_STAGE : state.currentLevel - 1) : level !== state.currentLevel && !(level === 1 && state.champion?.ready))) return;
       set({ preStage: { level, practice }, screen: "menu" });
       persist(get());
     },
@@ -632,7 +639,7 @@ export const useGameStore = create<GameStore>((set, get) => {
 
     startNewGamePlus: () => {
       const { champion, unlockedLevel } = get();
-      if (!champion || unlockedLevel < 10 || champion.hearts <= 0 || get().hearts <= 0) return;
+      if (!champion || unlockedLevel < MAX_STAGE || champion.hearts <= 0 || get().hearts <= 0) return;
       const hearts = Math.min(champion.hearts, get().hearts);
       const cycle = champion.ready ? champion.cycle + 1 : champion.cycle;
       const level = champion.ready ? 1 : champion.level;
@@ -654,8 +661,8 @@ export const useGameStore = create<GameStore>((set, get) => {
 
     nextLevel: () => {
       const state = get();
-      if (state.currentLevel >= 10) {
-        const champion: Champion = { cycle: state.ngPlusCycle, level: 10, hearts: state.hearts, upgrades: state.upgrades, ready: true };
+      if (state.currentLevel >= MAX_STAGE) {
+        const champion: Champion = { cycle: state.ngPlusCycle, level: MAX_STAGE, hearts: state.hearts, upgrades: state.upgrades, ready: true };
         writeChampion(champion);
         set({ screen: "won", champion });
         return;
@@ -689,11 +696,11 @@ export const useGameStore = create<GameStore>((set, get) => {
       if (state.upgrades[id] >= card.maxStacks) return;
       const newUpgrades = { ...state.upgrades, [id]: state.upgrades[id] + 1 };
       const maxHp = getUpgradeStats(newUpgrades).maxHp + activeGear(state).vest * 8;
-      const champion = state.ngPlusCycle > 0 || state.currentLevel === 10 ? {
-        cycle: state.ngPlusCycle, level: Math.min(10, state.currentLevel + 1), hearts: state.hearts,
-        upgrades: newUpgrades, ready: state.currentLevel === 10,
+      const champion = state.ngPlusCycle > 0 || state.currentLevel === MAX_STAGE ? {
+        cycle: state.ngPlusCycle, level: Math.min(MAX_STAGE, state.currentLevel + 1), hearts: state.hearts,
+        upgrades: newUpgrades, ready: state.currentLevel === MAX_STAGE,
       } : state.champion;
-      if (state.ngPlusCycle > 0 || state.currentLevel === 10) writeChampion(champion);
+      if (state.ngPlusCycle > 0 || state.currentLevel === MAX_STAGE) writeChampion(champion);
 
       set({
         upgrades: newUpgrades,
@@ -730,8 +737,8 @@ export const useGameStore = create<GameStore>((set, get) => {
       const id = state.selectedUpgrade;
       const upgrades = { ...state.upgrades, [id]: state.upgrades[id] - 1 };
       const maxHp = getUpgradeStats(upgrades).maxHp + activeGear(state).vest * 8;
-      const champion = state.ngPlusCycle > 0 || state.currentLevel === 10 ? { cycle: state.ngPlusCycle, level: Math.min(10, state.currentLevel + 1), hearts: state.hearts, upgrades, ready: state.currentLevel === 10 } : state.champion;
-      if (state.ngPlusCycle > 0 || state.currentLevel === 10) writeChampion(champion);
+      const champion = state.ngPlusCycle > 0 || state.currentLevel === MAX_STAGE ? { cycle: state.ngPlusCycle, level: Math.min(MAX_STAGE, state.currentLevel + 1), hearts: state.hearts, upgrades, ready: state.currentLevel === MAX_STAGE } : state.champion;
+      if (state.ngPlusCycle > 0 || state.currentLevel === MAX_STAGE) writeChampion(champion);
       set({ upgrades, champion, maxHp, hp: Math.min(maxHp, state.hp), grenades: Math.min(state.grenades, getUpgradeStats(upgrades).grenadeCapacity + satchelBonus(activeGear(state).satchel)), selectedUpgrade: null });
       if (state.anchor.level === state.currentLevel + 1 && state.anchor.cycle === state.ngPlusCycle) set({ anchor: { ...state.anchor, upgrades } });
       persist(get());
@@ -758,7 +765,7 @@ export const useGameStore = create<GameStore>((set, get) => {
     continueEvolution: () => {
       const state = get();
       if (state.screen === "evolution" && !state.selectedEvolution) return;
-      if (state.currentLevel >= 10) { set({ screen: "won", preStage: null }); persist(get()); return; }
+      if (state.currentLevel >= MAX_STAGE) { set({ screen: "won", preStage: null }); persist(get()); return; }
       const next = state.currentLevel + 1;
       const champion = state.ngPlusCycle > 0 ? { cycle: state.ngPlusCycle, level: next, hearts: state.hearts, upgrades: state.upgrades, ready: false } : state.champion;
       if (state.ngPlusCycle > 0) writeChampion(champion);
@@ -961,13 +968,13 @@ export const useGameStore = create<GameStore>((set, get) => {
         return;
       }
       if (state.screen === "purged") { get().resetData(); set({ screen: "menu" }); return; }
-      const checkpointLevel = ["stageClear", "levelUp", "reward", "upgrade", "evolution"].includes(state.screen) && state.currentLevel < 10 ? state.currentLevel + 1 : state.currentLevel;
-      if (state.ngPlusCycle > 0 && state.screen !== "won" && !(state.screen === "stageClear" && state.currentLevel === 10)) {
+      const checkpointLevel = ["stageClear", "levelUp", "reward", "upgrade", "evolution"].includes(state.screen) && state.currentLevel < MAX_STAGE ? state.currentLevel + 1 : state.currentLevel;
+      if (state.ngPlusCycle > 0 && state.screen !== "won" && !(state.screen === "stageClear" && state.currentLevel === MAX_STAGE)) {
         const champion = {
           cycle: state.ngPlusCycle,
-          level: state.screen === "upgrade" ? Math.min(10, state.currentLevel + 1) : state.currentLevel,
+          level: state.screen === "upgrade" ? Math.min(MAX_STAGE, state.currentLevel + 1) : state.currentLevel,
           hearts: state.hearts,
-          upgrades: state.upgrades, ready: state.screen === "upgrade" && state.currentLevel === 10,
+          upgrades: state.upgrades, ready: state.screen === "upgrade" && state.currentLevel === MAX_STAGE,
         };
         writeChampion(champion);
         set({ champion });
@@ -1243,18 +1250,18 @@ export const useGameStore = create<GameStore>((set, get) => {
         const lastLevelGain = playerLevel - state.playerLevel;
         const lastSpGain = skillPoints - state.skillPoints;
         const claimedRewards = firstClear ? [...state.claimedRewards, claimKey] : state.claimedRewards;
-        const anchor = firstClear && (state.currentLevel === 3 || state.currentLevel === 6)
+        const anchor = firstClear && [3, 6, 9].includes(state.currentLevel)
           ? { level: state.currentLevel + 1, cycle: state.ngPlusCycle, upgrades: { ...state.upgrades }, evolutions: [...state.evolutions] } : state.anchor;
         window.localStorage.setItem("shoot-a-boss:coins", String(coins));
         const unlockedLevel = Math.min(
-          10,
+          MAX_STAGE,
           Math.max(state.unlockedLevel, state.currentLevel + 1),
         );
         writeUnlockedLevel(unlockedLevel);
 
-        if (state.currentLevel >= 10) {
+        if (state.currentLevel >= MAX_STAGE) {
           const champion: Champion = {
-            cycle: state.ngPlusCycle, level: 10, hearts: state.hearts,
+            cycle: state.ngPlusCycle, level: MAX_STAGE, hearts: state.hearts,
             upgrades: state.upgrades, ready: true,
           };
           writeChampion(champion);

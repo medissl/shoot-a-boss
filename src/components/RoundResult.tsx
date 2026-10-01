@@ -59,7 +59,7 @@ function ResultScene() {
         <button className="result-primary" onClick={next}>CHOOSE A DREAM CARD →</button>
       </>}
       {state.screen === "won" && <>
-        <p>ALL TEN DEADLINES FILED</p><h2>DREAM<br />COMPLETE!</h2>
+        <p>ALL TWELVE DEADLINES FILED</p><h2>DREAM<br />COMPLETE!</h2>
         <p>Your build carries forward. NG+ begins a harder dream from Stage 1.</p>
         <button className="result-primary" onClick={() => state.prepareStage(1)}>PREPARE FOR NG+ →</button>
         <button onClick={state.goToMenu}>MAIN MENU</button>

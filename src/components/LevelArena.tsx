@@ -8,6 +8,7 @@ import { ReactiveFoliage } from "./Foliage";
 import { JungleHuts, JungleLogs, JungleTowers, JungleUndergrowth } from "./WorldFeatures";
 import { GemCavern } from "./GemCavern";
 import { HellHazards, HellMountain } from "./HellFeatures";
+import { HeavenArena } from "./HeavenArena";
 
 const BLUE = "#2548b8";
 const GREEN = "#78a85d";
@@ -179,5 +180,6 @@ export function LevelArena() {
   if (definition.theme === "playground") return <Arena />;
   if (definition.theme === "jungle") return <JungleArena level={level} />;
   if (definition.theme === "gems") return <GemArena />;
+  if (definition.theme === "heaven") return <HeavenArena />;
   return <GemArena hell />;
 }

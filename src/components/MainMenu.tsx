@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { BookOpen, ChevronLeft, LockKeyhole, Play, SlidersHorizontal, Sparkles } from "lucide-react";
-import { LEVELS } from "../game/levels";
+import { LEVELS, MAX_STAGE } from "../game/levels";
 import { useGameStore } from "../game/store";
 import { type UpgradeId } from "../game/progression";
 import { ControlsList } from "./ControlsList";
@@ -33,7 +33,7 @@ export function MainMenu() {
   useEffect(() => {
     const open = (event: Event) => {
       const tab = (event as CustomEvent<string>).detail;
-      if (tab === "shop" || tab === "crates") { setScene("desk"); setDeskTab("shop"); }
+      if (tab === "shop" || tab === "crates" || tab === "magic" || tab === "loadout") { setScene("desk"); setDeskTab(tab === "crates" ? "shop" : tab); }
     };
     window.addEventListener("tutorial-desk-tab", open);
     return () => window.removeEventListener("tutorial-desk-tab", open);
@@ -62,7 +62,7 @@ export function MainMenu() {
     </section>}
     {scene === "stages" && <section className="main-menu-card is-level-select"><div className="stage-select">
       <button className="stage-select__back" onClick={back}><ChevronLeft size={16} /> BACK</button>
-      <p className="main-menu-kicker">PLAY DREAM // TEN DEADLINES</p><h2>DREAM<br />MAP</h2>
+      <p className="main-menu-kicker">PLAY DREAM // {MAX_STAGE} DEADLINES</p><h2>DREAM<br />MAP</h2>
       <ProgressStrip compact />
       <div className="stage-run-summary">
         <span>RUN CARDS <b>{activeCards.reduce((sum, [, count]) => sum + count, 0)}</b></span>
@@ -70,7 +70,7 @@ export function MainMenu() {
         <span>GEAR <b>{state.equippedGear.length}/4 EQUIPPED</b></span>
       </div>
       <p className="stage-select__copy">Continue your active dream. Clearing a stage unlocks the next deadline.</p>
-      {state.unlockedLevel >= 10 && state.champion && <button className="ng-plus-button" onClick={() => selectStage(state.champion?.ready ? 1 : state.champion?.level ?? state.currentLevel)}>
+      {state.unlockedLevel >= MAX_STAGE && state.champion && <button className="ng-plus-button" onClick={() => selectStage(state.champion?.ready ? 1 : state.champion?.level ?? state.currentLevel)}>
         {state.champion.ready ? `START NG+ LOOP ${state.champion.cycle + 1}` : `CONTINUE NG+ LOOP ${state.champion.cycle}`}
       </button>}
       <div className="stage-road">{LEVELS.map((level, index) => {
@@ -86,9 +86,9 @@ export function MainMenu() {
     </div></section>}
     {scene === "desk" && <div className="dream-desk">
       <header className="dream-desk__header"><button onClick={back}><ChevronLeft size={17} /> {state.postStageReturn ? "RETURN TO REWARDS" : returnTo === "stages" ? "DREAM MAP" : "MENU"}</button><div><small>ONE HOME FOR YOUR BUILD</small><h1>DREAM DESK</h1></div><ProgressStrip compact /></header>
-      <nav className="dream-desk__tabs" aria-label="Dream Desk">{deskTabs.map(tab => <button key={tab} className={deskTab === tab ? "is-active" : ""} onClick={() => setDeskTab(tab)}>{tab.toUpperCase()}</button>)}</nav>
+      <nav className="dream-desk__tabs" aria-label="Dream Desk">{deskTabs.map(tab => <button key={tab} data-tutorial={`desk-${tab}-tab`} className={deskTab === tab ? "is-active" : ""} onClick={() => setDeskTab(tab)}>{tab.toUpperCase()}</button>)}</nav>
       <div className="dream-desk__content">
-        {deskTab === "loadout" && <EquipmentHub />}
+        {deskTab === "loadout" && <EquipmentHub openShop={() => setDeskTab("shop")} />}
         {deskTab === "magic" && <SkillTree onBack={back} />}
         {deskTab === "shop" && <GearShopScene onBack={back} onCrateActiveChange={setCrateActive} />}
         {deskTab === "arsenal" && <Arsenal onBack={back} />}

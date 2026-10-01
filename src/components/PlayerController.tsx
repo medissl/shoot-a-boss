@@ -42,6 +42,7 @@ export function PlayerController() {
   const climbingActive = useRef(false);
   const ziplineRoute = useRef<(typeof ZIPLINES)[number] | null>(null);
   const ziplineProgress = useRef(0);
+  const stickySlowUntil = useRef(0);
 
   const { camera, gl } = useThree();
   const cameraRef = useRef(camera);
@@ -52,6 +53,14 @@ export function PlayerController() {
   const pause = useGameStore((state) => state.pause);
   const setPlayerPosition = useGameStore((state) => state.setPlayerPosition);
   const setMovementMode = useGameStore((state) => state.setMovementMode);
+
+  useEffect(() => {
+    const slow = (event: Event) => { stickySlowUntil.current = Math.max(stickySlowUntil.current, (event as CustomEvent<{until:number}>).detail.until); };
+    const lift = () => {const rigid=body.current;if(rigid){const velocity=rigid.linvel();rigid.setLinvel({x:velocity.x,y:8.7,z:velocity.z},true);}};
+    window.addEventListener("sticky-slow", slow);
+    window.addEventListener("heaven-cloud-lift", lift);
+    return () => {window.removeEventListener("sticky-slow", slow);window.removeEventListener("heaven-cloud-lift", lift);};
+  }, []);
 
   useEffect(() => {
     const activeCamera = cameraRef.current;
@@ -308,7 +317,7 @@ export function PlayerController() {
       now < useGameStore.getState().speedBoostUntil ? 1.25 : 1;
     const knifeSpeed = weapon === "knife" ? 1.2 : 1;
     const speedMultiplier =
-      pickupSpeed * upgradeStats.movement * knifeSpeed * (now < useGameStore.getState().paperTrailUntil ? 1.2 : 1) *
+      pickupSpeed * upgradeStats.movement * knifeSpeed * (now < stickySlowUntil.current ? .8 : 1) * (now < useGameStore.getState().paperTrailUntil ? 1.2 : 1) *
       (1 + equippedGearRank(useGameStore.getState(), "boots") * 0.025 + (equippedGearRank(useGameStore.getState(), "boots") >= 5 && sprintStartedAt.current && now - sprintStartedAt.current >= 2000 ? .05 : 0) +
       (now < useGameStore.getState().skateBoostUntil ? .08 : 0));
 

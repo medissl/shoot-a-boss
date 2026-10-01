@@ -1,5 +1,5 @@
 import { WEAPONS, type WeaponId } from "./config";
-import { enemyHpScale, getEnemyTuning, getLevelDefinition, getTargetCount } from "./levels";
+import { enemyHpScale, getEnemyTuning, getLevelDefinition, getTargetCount, MAX_STAGE } from "./levels";
 
 function enemyRewards(level: number, cycle: number) {
   const e = getEnemyTuning(level, cycle);
@@ -11,11 +11,11 @@ function enemyRewards(level: number, cycle: number) {
 }
 
 export function stageCoinReward(level: number, cycle: number) {
-  const effective = level + cycle * 10;
+  const effective = level + cycle * MAX_STAGE;
   return Math.round((90 + effective * 20 + enemyRewards(level, cycle).coins) * (1 + cycle * .15));
 }
 export function stageXpReward(level: number, cycle: number) {
-  const effective = level + cycle * 10;
+  const effective = level + cycle * MAX_STAGE;
   return Math.round((90 + effective * 30 + getTargetCount(level, cycle) * 6 + enemyRewards(level, cycle).xp) * (1 + cycle * .12));
 }
 export function weaponBalance(id: WeaponId, level: number, cycle = 0) {
